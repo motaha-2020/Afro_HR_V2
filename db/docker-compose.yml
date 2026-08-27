@@ -1,0 +1,19 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: afro_hr_db
+    environment:
+      POSTGRES_DB: afro_hr
+      POSTGRES_USER: afro
+      POSTGRES_PASSWORD: afro_dev_only
+    ports:
+      - "55432:5432"
+    volumes:
+      - afro_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U afro -d afro_hr"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+volumes:
+  afro_pgdata:

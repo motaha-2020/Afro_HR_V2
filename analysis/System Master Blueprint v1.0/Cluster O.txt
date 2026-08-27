@@ -1,0 +1,3293 @@
+تمام. **Cluster O** مهم جدًا لأن الوثائق في نظام HR ليست مجرد Attachments؛ هي جزء من **الـlegal record، compliance evidence، workflow approvals، employee lifecycle history، audit trail، والتكامل مع جهات خارجية**.
+
+وفي الـOperations Manual الموجود عندكم، هذا واضح جدًا: onboarding يتطلب مجموعة محددة من المستندات، العقود والتوقيعات، Form 1، NDA، handbook acknowledgment، medical examination، certifications، ثم offboarding يحتاج handover، clearance، Form 6، final settlement، receipt acknowledgments، وأرشفة ملف الموظف. 
+
+لذلك Cluster O يجب أن يكون **Document Platform مركزية** تخدم كل الـModules بدل أن يصبح عندنا:
+
+```text
+Recruitment Attachments
+Personnel Attachments
+Payroll Attachments
+HSE Files
+ER Evidence
+Expense Receipts
+Training Certificates
+```
+
+وكل Module يخزنها بطريقته.
+
+# Cluster O — Enterprise Document & Records Platform
+
+أقسمه إلى **18 Sub-Domains**:
+
+```text
+O1   Document Master & Repository
+O2   File / Binary Storage
+O3   Document Classification
+O4   Document Versioning
+O5   Business Object Attachments
+O6   Digital Personnel File
+O7   Document Requirements & Checklists
+O8   Evidence Management
+O9   Template Rendering
+O10  e-Signature
+O11  Document Verification & Approval
+O12  OCR / Extraction / Classification
+O13  Malware & File Security
+O14  Secure Sharing & External Access
+O15  Retention / Archiving / Disposal
+O16  Legal Hold & Records Governance
+O17  Document Access Security
+O18  Document Audit & Operational Monitoring
+```
+
+---
+
+# 1. Architectural Principle
+
+لا نضع:
+
+```text
+employee_contract_file
+employee_id_copy
+medical_pdf
+cv_file
+```
+
+كـcolumns في Employee Table.
+
+ولا نخزن Binary Files داخل كل Domain DB.
+
+الأفضل:
+
+```text
+Business Domain
+      |
+      | document_id
+      v
+Enterprise Document Platform
+      |
+      +---- Metadata DB
+      |
+      +---- Object Storage
+      |
+      +---- Security
+      |
+      +---- Versioning
+      |
+      +---- Retention
+      |
+      +---- OCR
+      |
+      +---- Signature
+```
+
+الـBusiness Module يعرف:
+
+> هذا المستند يخص Employee 1042.
+
+ولا يحتاج أن يعرف أين وكيف خُزن الملف فعليًا.
+
+---
+
+# O1. Document Master
+
+### `document`
+
+```text
+document
+--------
+document_id PK
+
+tenant_id
+
+document_number
+
+document_type_id FK
+document_category_id FK
+
+title
+description
+
+document_status
+  DRAFT
+  ACTIVE
+  PENDING_VERIFICATION
+  VERIFIED
+  REJECTED
+  EXPIRED
+  ARCHIVED
+  DISPOSED
+
+confidentiality_level
+  PUBLIC
+  INTERNAL
+  CONFIDENTIAL
+  RESTRICTED
+  HIGHLY_RESTRICTED
+
+current_version_id FK NULL
+
+owner_user_id FK NULL
+owner_employee_id FK NULL
+
+source_type
+  UPLOAD
+  GENERATED
+  SCANNED
+  IMPORTED
+  API
+  SIGNED
+
+language_code
+
+effective_date
+expiry_date NULL
+
+issued_date NULL
+received_date NULL
+
+issuing_authority NULL
+
+is_record
+is_evidence
+
+created_at
+created_by
+updated_at
+```
+
+---
+
+# 2. Document Type
+
+### `document_type`
+
+```text
+document_type
+-------------
+document_type_id PK
+
+tenant_id NULL
+
+document_type_code
+document_type_name
+
+business_domain
+
+classification_level
+
+expiry_required
+verification_required
+signature_required
+
+retention_policy_id FK NULL
+
+allowed_file_types_json
+max_file_size_mb
+
+default_confidentiality_level
+
+status
+```
+
+أمثلة:
+
+```text
+NATIONAL_ID
+BIRTH_CERTIFICATE
+ACADEMIC_CERTIFICATE
+MILITARY_CERTIFICATE
+POLICE_CLEARANCE
+MEDICAL_FORM_111
+
+EMPLOYMENT_CONTRACT
+NDA
+EMPLOYEE_ACKNOWLEDGEMENT
+
+FORM_1
+FORM_6
+
+CV
+OFFER_LETTER
+
+TRAINING_CERTIFICATE
+HSE_CERTIFICATE
+
+DISCIPLINARY_EVIDENCE
+
+EXPENSE_RECEIPT
+
+CLEARANCE_FORM
+FINAL_SETTLEMENT
+```
+
+وهذه الأنواع تتطابق بشكل مباشر مع المستندات المذكورة في onboarding/offboarding الحالي. 
+
+---
+
+# O2. Document Category
+
+### `document_category`
+
+```text
+document_category
+-----------------
+document_category_id PK
+
+category_code
+category_name
+
+parent_category_id FK NULL
+
+module_code
+
+status
+```
+
+مثال:
+
+```text
+Employee Documents
+│
+├── Identity
+├── Education
+├── Legal
+├── Employment
+├── Social Insurance
+├── Medical
+├── HSE
+├── Payroll
+├── Training
+└── Separation
+```
+
+---
+
+# O3. File Object
+
+نفصل بين:
+
+```text
+Document
+```
+
+و:
+
+```text
+Physical File
+```
+
+لأن نفس Document قد يكون له عدة Versions وRepresentations.
+
+### `file_object`
+
+```text
+file_object
+-----------
+file_object_id PK
+
+tenant_id
+
+storage_provider
+
+storage_bucket
+storage_key
+
+original_file_name
+
+mime_type
+
+file_extension
+
+file_size_bytes
+
+checksum_sha256
+
+encryption_status
+
+encryption_key_reference NULL
+
+storage_class
+  HOT
+  COOL
+  ARCHIVE
+
+uploaded_at
+
+virus_scan_status
+
+status
+```
+
+---
+
+# لماذا Checksum؟
+
+حتى نعرف:
+
+```text
+هل الملف تغير؟
+هل هو Duplicate؟
+هل tampering حدث؟
+```
+
+مثال:
+
+```text
+SHA-256:
+84ab...927c
+```
+
+---
+
+# O4. Document Version
+
+### `document_version`
+
+```text
+document_version
+----------------
+document_version_id PK
+
+document_id FK
+file_object_id FK
+
+version_no
+
+version_label
+
+change_type
+  INITIAL
+  REPLACEMENT
+  CORRECTION
+  RENEWAL
+  SIGNED_COPY
+
+change_reason
+
+created_by
+created_at
+
+is_current
+
+supersedes_version_id FK NULL
+
+status
+```
+
+---
+
+# Important Rule
+
+لا نستبدل Contract Version القديمة.
+
+مثال:
+
+```text
+Employment Contract
+
+V1
+01-Jan-2025
+
+V2
+01-Jan-2026
+
+V3
+01-Jan-2027
+```
+
+كل Version محفوظة.
+
+---
+
+# O5. Document Business Link
+
+نحتاج Generic Link.
+
+### `document_link`
+
+```text
+document_link
+-------------
+document_link_id PK
+
+document_id FK
+
+entity_type
+  EMPLOYEE
+  CANDIDATE
+  POSITION
+  CONTRACT
+  PAYROLL_RUN
+  EXPENSE
+  ER_CASE
+  HSE_CASE
+  TRAINING
+  OFFBOARDING
+  PROJECT
+
+entity_id
+
+link_type
+  PRIMARY
+  SUPPORTING
+  EVIDENCE
+  REFERENCE
+
+created_at
+created_by
+```
+
+وبالتالي نفس Document يمكن أن يكون مرتبطًا مثلًا بـ:
+
+```text
+Employee
++
+Training Record
+```
+
+بدون نسختين.
+
+---
+
+# 3. Digital Personnel File
+
+من أهم أجزاء Cluster O.
+
+لا نريد Personnel File أن تكون مجرد Folder.
+
+نريد Logical Dossier.
+
+### `personnel_file`
+
+```text
+personnel_file
+--------------
+personnel_file_id PK
+
+tenant_id
+employee_id FK
+
+file_number
+
+file_status
+  OPEN
+  ACTIVE
+  INCOMPLETE
+  ARCHIVED
+  CLOSED
+
+completeness_pct
+
+compliance_status
+
+opened_at
+closed_at NULL
+
+owner_team
+
+status
+```
+
+---
+
+# O6. Personnel File Section
+
+### `personnel_file_section`
+
+```text
+personnel_file_section
+----------------------
+personnel_file_section_id PK
+
+personnel_file_id FK
+
+section_type
+
+section_name
+
+sequence_no
+
+status
+```
+
+مثال:
+
+```text
+01 Identity
+02 Employment
+03 Contracts
+04 Social Insurance
+05 Medical Insurance
+06 HSE
+07 Training
+08 Payroll
+09 Performance
+10 Employee Relations
+11 Movement
+12 Offboarding
+```
+
+---
+
+# O7. Personnel File Item
+
+```text
+personnel_file_item
+-------------------
+personnel_file_item_id PK
+
+personnel_file_section_id FK
+
+document_id FK
+
+document_requirement_id FK NULL
+
+item_status
+  RECEIVED
+  MISSING
+  PENDING
+  VERIFIED
+  REJECTED
+  EXPIRED
+  WAIVED
+
+received_at
+verified_at
+
+verified_by
+
+notes
+```
+
+---
+
+# 4. Document Requirement Engine
+
+مهم جدًا لأن المطلوب يختلف حسب:
+
+```text
+Country
+Company
+Position
+Employee Type
+Project
+Customer
+Job
+HSE Risk
+```
+
+---
+
+# O8. Document Requirement
+
+### `document_requirement`
+
+```text
+document_requirement
+--------------------
+document_requirement_id PK
+
+tenant_id
+
+requirement_code
+requirement_name
+
+document_type_id FK
+
+requirement_scope
+  EMPLOYEE
+  CANDIDATE
+  POSITION
+  PROJECT
+  ONBOARDING
+  OFFBOARDING
+
+is_mandatory
+
+validity_required
+
+validity_days NULL
+
+required_before_event
+  OFFER
+  JOINING
+  ACTIVATION
+  DEPLOYMENT
+  PAYROLL
+  OFFBOARDING
+
+effective_from
+effective_to
+
+status
+```
+
+---
+
+# O9. Requirement Rule
+
+### `document_requirement_rule`
+
+```text
+document_requirement_rule
+-------------------------
+requirement_rule_id PK
+
+document_requirement_id FK
+
+rule_id FK
+
+priority
+
+status
+```
+
+---
+
+# Example
+
+```text
+IF
+Job Family = Technician
+
+THEN require:
+Skill Assessment Certificate
+Professional Practice License
+```
+
+وهذا موجود بالفعل في الـManual للـtechnicians. 
+
+ومثال آخر:
+
+```text
+IF
+Position is Safety Sensitive
+
+THEN require:
+Medical Clearance
+Working at Heights
+Electrical Safety
+Risk Assessment
+```
+
+---
+
+# O10. Document Checklist
+
+### `document_checklist`
+
+```text
+document_checklist
+------------------
+document_checklist_id PK
+
+tenant_id
+
+checklist_code
+checklist_name
+
+process_type
+  HIRING
+  ONBOARDING
+  ACTIVATION
+  PROJECT_DEPLOYMENT
+  OFFBOARDING
+  AUDIT
+
+version_no
+
+status
+```
+
+---
+
+### `document_checklist_item`
+
+```text
+document_checklist_item
+-----------------------
+checklist_item_id PK
+
+document_checklist_id FK
+
+document_requirement_id FK
+
+sequence_no
+
+mandatory_flag
+
+status
+```
+
+---
+
+# O11. Checklist Instance
+
+```text
+document_checklist_instance
+---------------------------
+checklist_instance_id PK
+
+document_checklist_id FK
+
+entity_type
+entity_id
+
+workflow_instance_id FK NULL
+
+started_at
+completed_at
+
+completion_pct
+
+status
+```
+
+---
+
+### `document_checklist_result`
+
+```text
+document_checklist_result
+-------------------------
+checklist_result_id PK
+
+checklist_instance_id FK
+
+checklist_item_id FK
+
+document_id FK NULL
+
+result_status
+  MISSING
+  RECEIVED
+  VERIFIED
+  WAIVED
+  REJECTED
+  EXPIRED
+
+verified_by NULL
+
+completed_at NULL
+```
+
+---
+
+# 5. Activation Gate
+
+هذه نقطة مهمة جدًا.
+
+الـManual ينص على أن employee لا يتم activation قبل اكتمال المستندات والعقود والموافقات المطلوبة. 
+
+لذلك لا يرسل Onboarding Module مجرد:
+
+```text
+Documents complete = true
+```
+
+بل يسأل Document Platform:
+
+```text
+EvaluateChecklist(
+ employee,
+ EMPLOYMENT_ACTIVATION
+)
+```
+
+ويرجع:
+
+```json
+{
+  "eligible": false,
+  "completion": 83,
+  "missingMandatoryDocuments": [
+    "Medical Form 111",
+    "Professional License"
+  ]
+}
+```
+
+---
+
+# 6. Verification Engine
+
+Upload ≠ Valid Document.
+
+### `document_verification`
+
+```text
+document_verification
+---------------------
+document_verification_id PK
+
+document_id FK
+document_version_id FK
+
+verification_type
+  MANUAL
+  OCR
+  AUTHORITY_CHECK
+  DIGITAL_SIGNATURE
+  SYSTEM_VALIDATION
+
+verification_status
+  PENDING
+  VERIFIED
+  FAILED
+  NEEDS_REVIEW
+
+verified_by NULL
+
+verified_at NULL
+
+verification_details_json
+
+failure_reason NULL
+```
+
+---
+
+# O12. Verification Rule
+
+```text
+document_verification_rule
+--------------------------
+verification_rule_id PK
+
+document_type_id FK
+
+verification_method
+
+mandatory_fields_json
+
+expiry_validation_required
+
+issuer_validation_required
+
+identity_match_required
+
+status
+```
+
+---
+
+# Example — National ID
+
+النظام يمكن أن يتحقق من:
+
+```text
+Employee Name
+National ID
+Expiry Date
+```
+
+لكن لا يعتمد OCR وحده كدليل نهائي.
+
+---
+
+# 7. Evidence Management
+
+ER/HSE/Investigation تحتاج مستوى أعلى من Attachments.
+
+### `evidence_record`
+
+```text
+evidence_record
+---------------
+evidence_id PK
+
+tenant_id
+
+document_id FK
+
+case_type
+  ER
+  DISCIPLINARY
+  HSE
+  GRIEVANCE
+  LEGAL
+  AUDIT
+
+case_id
+
+evidence_type
+  DOCUMENT
+  IMAGE
+  VIDEO
+  AUDIO
+  EMAIL
+  STATEMENT
+  SYSTEM_RECORD
+
+source_description
+
+collected_by
+
+collected_at
+
+confidentiality_level
+
+integrity_hash
+
+status
+```
+
+---
+
+# O13. Evidence Chain of Custody
+
+ضروري جدًا للـsensitive cases.
+
+```text
+evidence_custody_event
+----------------------
+custody_event_id PK
+
+evidence_id FK
+
+event_type
+  COLLECTED
+  RECEIVED
+  VIEWED
+  COPIED
+  TRANSFERRED
+  EXPORTED
+  SEALED
+  RELEASED
+
+from_actor NULL
+to_actor NULL
+
+event_at
+
+reason
+
+location_reference NULL
+
+checksum
+
+created_by
+```
+
+---
+
+# Rule مهم
+
+Evidence لا يمكن:
+
+```text
+Delete
+Replace
+Overwrite
+```
+
+بعد اعتمادها.
+
+التعديل يكون:
+
+```text
+New Evidence
+```
+
+أو metadata correction مع audit.
+
+---
+
+# 8. Template Rendering
+
+Cluster L يحتوي على Template Configuration، بينما O ينفذ عملية التوليد.
+
+### `render_template`
+
+يمكننا إما reference إلى `document_template` من L أو الاحتفاظ بالـruntime metadata فقط.
+
+### `document_render_job`
+
+```text
+document_render_job
+-------------------
+render_job_id PK
+
+tenant_id
+
+document_template_id FK
+
+template_version
+
+entity_type
+entity_id
+
+language_code
+
+merge_data_snapshot_json
+
+requested_by
+
+requested_at
+completed_at
+
+output_document_id FK NULL
+
+status
+
+error_details NULL
+```
+
+---
+
+# Generated Documents
+
+مثل:
+
+```text
+Offer Letter
+Employment Contract
+Salary Certificate
+Experience Certificate
+Warning Letter
+Bank Letter
+Promotion Letter
+Clearance Form
+```
+
+---
+
+# Merge Fields
+
+مثال:
+
+```text
+{{employee.full_name}}
+{{employee.hr_code}}
+{{position.title}}
+{{salary.basic}}
+{{company.legal_name}}
+{{joining_date}}
+```
+
+لكن financial values يجب أن تأتي من authoritative service لحظة generation.
+
+---
+
+# 9. Generated Document Snapshot
+
+مهم جدًا.
+
+لو الراتب تغير بعد شهر:
+
+Offer القديمة لا يجب أن يعاد Rendering لها بالقيمة الجديدة.
+
+لذلك:
+
+```text
+merge_data_snapshot_json
+```
+
+يحفظ البيانات المستخدمة وقت التوليد.
+
+---
+
+# 10. e-Signature
+
+نفصل بين:
+
+```text
+Electronic Acknowledgment
+```
+
+و:
+
+```text
+Digital Signature
+```
+
+لأنهما ليسا نفس الشيء.
+
+---
+
+# O14. Signature Request
+
+### `signature_request`
+
+```text
+signature_request
+-----------------
+signature_request_id PK
+
+tenant_id
+
+document_id FK
+document_version_id FK
+
+signature_provider
+
+signature_type
+  ELECTRONIC
+  DIGITAL
+  OTP
+  CERTIFICATE
+
+workflow_instance_id FK NULL
+
+requested_by
+requested_at
+
+expires_at
+
+status
+  DRAFT
+  SENT
+  PARTIALLY_SIGNED
+  COMPLETED
+  DECLINED
+  EXPIRED
+  CANCELLED
+```
+
+---
+
+# O15. Signature Participant
+
+```text
+signature_participant
+---------------------
+signature_participant_id PK
+
+signature_request_id FK
+
+participant_type
+  EMPLOYEE
+  USER
+  EXTERNAL_PERSON
+
+participant_reference_id NULL
+
+name
+email
+mobile
+
+signing_order
+
+authentication_method
+  EMAIL
+  OTP
+  SSO
+  CERTIFICATE
+
+required_flag
+
+status
+```
+
+---
+
+# O16. Signature Event
+
+```text
+signature_event
+---------------
+signature_event_id PK
+
+signature_request_id FK
+participant_id FK
+
+event_type
+  OPENED
+  AUTHENTICATED
+  SIGNED
+  DECLINED
+  EXPIRED
+
+event_at
+
+ip_address
+device_reference
+
+provider_event_id
+
+signature_hash NULL
+```
+
+---
+
+# O17. Signed Document
+
+```text
+signed_document
+---------------
+signed_document_id PK
+
+signature_request_id FK
+
+original_document_version_id FK
+signed_document_version_id FK
+
+signature_completed_at
+
+signature_provider_reference
+
+certificate_reference NULL
+
+document_hash
+
+validation_status
+```
+
+---
+
+# 11. Multi-Party Signature
+
+مثل Contract:
+
+```text
+Employee
+    ↓
+HR Authorized Signatory
+    ↓
+Company Authorized Signatory
+```
+
+أو:
+
+```text
+Employee
++
+Manager
++
+HR
+```
+
+مع:
+
+```text
+signing_order
+```
+
+---
+
+# 12. OCR Processing
+
+OCR وظيفة Processing وليست Document Master.
+
+### `ocr_job`
+
+```text
+ocr_job
+-------
+ocr_job_id PK
+
+document_version_id FK
+
+ocr_provider
+
+language_codes
+
+requested_at
+started_at
+completed_at
+
+status
+
+confidence_score
+
+raw_result_reference
+```
+
+---
+
+# O18. OCR Page
+
+```text
+ocr_page
+--------
+ocr_page_id PK
+
+ocr_job_id FK
+
+page_no
+
+extracted_text
+
+confidence_score
+```
+
+---
+
+# O19. Extracted Field
+
+```text
+document_extracted_field
+------------------------
+extracted_field_id PK
+
+document_version_id FK
+
+field_code
+
+field_value
+
+confidence_score
+
+extraction_method
+
+page_no NULL
+
+bounding_box_json NULL
+
+validation_status
+```
+
+---
+
+# مثال Form 111
+
+قد نستخرج:
+
+```text
+Employee Name
+National ID
+Exam Date
+Medical Fitness Result
+```
+
+لكن:
+
+> لا يتم اعتبار OCR result medical clearance تلقائيًا بدون business verification rule.
+
+---
+
+# 13. Document Classification AI
+
+### `document_classification_result`
+
+```text
+document_classification_result
+------------------------------
+classification_result_id PK
+
+document_version_id FK
+
+predicted_document_type_id FK
+
+confidence_score
+
+model_version
+
+review_required
+
+reviewed_by NULL
+
+final_document_type_id FK NULL
+
+created_at
+```
+
+مثال المستخدم يرفع:
+
+```text
+IMG_4822.jpg
+```
+
+النظام يقترح:
+
+> National ID — 98.4%
+
+ثم ينتقل verification.
+
+---
+
+# 14. Duplicate Detection
+
+### `document_duplicate_match`
+
+```text
+document_duplicate_match
+------------------------
+duplicate_match_id PK
+
+document_id_a
+document_id_b
+
+match_type
+  EXACT_HASH
+  VISUAL_SIMILARITY
+  OCR_SIMILARITY
+
+confidence_score
+
+resolution_status
+
+reviewed_by
+```
+
+---
+
+# 15. Malware / Virus Scanning
+
+القاعدة:
+
+```text
+UPLOAD
+  ↓
+QUARANTINE
+  ↓
+SCAN
+  ↓
+SAFE?
+```
+
+وليس:
+
+```text
+Upload → Immediately available
+```
+
+---
+
+# O20. File Scan
+
+```text
+file_security_scan
+------------------
+scan_id PK
+
+file_object_id FK
+
+scanner_engine
+
+scanner_version
+
+scan_type
+  ANTIVIRUS
+  MALWARE
+  CONTENT
+
+started_at
+completed_at
+
+scan_status
+  PENDING
+  CLEAN
+  INFECTED
+  ERROR
+
+threat_name NULL
+
+action_taken
+  ALLOW
+  QUARANTINE
+  BLOCK
+  DELETE
+
+scan_details
+```
+
+---
+
+# O21. File Quarantine
+
+```text
+file_quarantine
+---------------
+quarantine_id PK
+
+file_object_id FK
+
+reason
+
+quarantined_at
+
+release_status
+
+reviewed_by NULL
+reviewed_at NULL
+```
+
+---
+
+# 16. File Policy
+
+### `file_upload_policy`
+
+```text
+file_upload_policy
+------------------
+file_upload_policy_id PK
+
+tenant_id
+
+document_type_id FK NULL
+
+max_size_mb
+
+allowed_mime_types_json
+
+blocked_extensions_json
+
+virus_scan_required
+
+content_scan_required
+
+password_protected_allowed
+
+status
+```
+
+مثال منع:
+
+```text
+.exe
+.bat
+.ps1
+.js
+```
+
+كـemployee document.
+
+---
+
+# 17. Secure Sharing
+
+لا نرسل direct storage URLs.
+
+### `document_share`
+
+```text
+document_share
+--------------
+document_share_id PK
+
+document_id FK
+document_version_id FK
+
+created_by
+
+recipient_type
+  USER
+  EMPLOYEE
+  EXTERNAL
+
+recipient_reference NULL
+recipient_email NULL
+
+permission
+  VIEW
+  DOWNLOAD
+
+expires_at
+
+password_required
+
+max_views NULL
+max_downloads NULL
+
+watermark_required
+
+status
+```
+
+---
+
+# O22. Share Token
+
+```text
+document_share_token
+--------------------
+share_token_id PK
+
+document_share_id FK
+
+token_hash
+
+issued_at
+expires_at
+
+revoked_at NULL
+
+status
+```
+
+لا نخزن token plaintext.
+
+---
+
+# O23. Share Access Log
+
+```text
+document_share_access
+---------------------
+share_access_id PK
+
+document_share_id FK
+
+accessed_at
+
+action
+  OPEN
+  VIEW
+  DOWNLOAD
+  FAILED_AUTH
+
+ip_address
+
+device_reference
+```
+
+---
+
+# 18. Watermark
+
+للمستندات الحساسة:
+
+```text
+Confidential
+Downloaded by Mohamed
+10-Aug-2026 16:42
+```
+
+### `document_watermark_policy`
+
+```text
+document_watermark_policy
+-------------------------
+watermark_policy_id PK
+
+document_type_id NULL
+
+confidentiality_level
+
+watermark_template
+
+apply_on_view
+apply_on_download
+apply_on_print
+
+status
+```
+
+---
+
+# 19. Retention Management
+
+Document lifecycle:
+
+```text
+Active
+   ↓
+Inactive
+   ↓
+Archived
+   ↓
+Disposition Review
+   ↓
+Destroyed / Preserved
+```
+
+وليس:
+
+```text
+Keep forever
+```
+
+---
+
+# O24. Records Classification
+
+### `record_classification`
+
+```text
+record_classification
+---------------------
+record_classification_id PK
+
+classification_code
+classification_name
+
+business_domain
+
+record_category
+
+retention_policy_id FK
+
+legal_hold_supported
+
+status
+```
+
+---
+
+# O25. Retention Policy
+
+Cluster L قد يملك policy configuration العامة، لكن O يدير document-specific runtime lifecycle.
+
+```text
+document_retention_policy
+-------------------------
+retention_policy_id PK
+
+policy_code
+policy_name
+
+retention_trigger
+  DOCUMENT_CREATED
+  EMPLOYEE_TERMINATED
+  CONTRACT_EXPIRED
+  CASE_CLOSED
+  PROJECT_CLOSED
+
+retention_period
+retention_unit
+
+archive_after
+
+disposition_action
+  REVIEW
+  DELETE
+  ANONYMIZE
+  PRESERVE
+
+status
+```
+
+---
+
+# O26. Retention Instance
+
+```text
+document_retention_instance
+---------------------------
+retention_instance_id PK
+
+document_id FK
+
+retention_policy_id FK
+
+trigger_date
+
+archive_due_date
+disposition_due_date
+
+legal_hold_flag
+
+status
+```
+
+---
+
+# 20. Legal Hold
+
+لدينا Legal Hold في Cluster L على مستوى Data Governance، لكن هنا نحتاج document-level application.
+
+### `document_legal_hold`
+
+```text
+document_legal_hold
+-------------------
+document_legal_hold_id PK
+
+document_id FK
+
+legal_hold_id FK
+
+hold_reason
+
+placed_at
+placed_by
+
+released_at NULL
+released_by NULL
+
+status
+```
+
+طالما Legal Hold Active:
+
+```text
+Delete = blocked
+Archive cleanup = blocked
+Retention destruction = blocked
+```
+
+---
+
+# 21. Disposal Governance
+
+لا يتم:
+
+```text
+DELETE FROM documents
+```
+
+فقط.
+
+### `document_disposition_request`
+
+```text
+document_disposition_request
+----------------------------
+disposition_request_id PK
+
+retention_instance_id FK
+
+document_id FK
+
+disposition_action
+
+reason
+
+requested_by
+requested_at
+
+approval_status
+
+approved_by NULL
+approved_at NULL
+
+executed_at NULL
+
+destruction_certificate_id FK NULL
+```
+
+---
+
+# O27. Destruction Certificate
+
+```text
+destruction_certificate
+-----------------------
+destruction_certificate_id PK
+
+certificate_number
+
+disposition_batch_id
+
+documents_count
+
+executed_by
+
+executed_at
+
+method
+
+certificate_document_id FK
+
+status
+```
+
+---
+
+# 22. Archive Storage
+
+### `document_archive_event`
+
+```text
+document_archive_event
+----------------------
+archive_event_id PK
+
+document_id FK
+
+from_storage_class
+to_storage_class
+
+archived_at
+
+storage_reference
+
+reason
+```
+
+---
+
+# 23. Access Security
+
+Document access لا يعتمد فقط على:
+
+```text
+CanViewDocument = true
+```
+
+بل:
+
+```text
+Tenant
+Entity Permission
+Document Classification
+Business Role
+Relationship
+Purpose
+```
+
+---
+
+# O28. Document Permission Policy
+
+```text
+document_permission_policy
+--------------------------
+document_permission_policy_id PK
+
+document_type_id NULL
+
+confidentiality_level
+
+permission_type
+  VIEW
+  DOWNLOAD
+  UPLOAD
+  REPLACE
+  VERIFY
+  SHARE
+  DELETE
+
+role_id NULL
+
+condition_rule_id NULL
+
+status
+```
+
+---
+
+# Example
+
+Payroll Specialist:
+
+```text
+VIEW Payslip
+VIEW Payroll Supporting Files
+```
+
+لكن لا يرى:
+
+```text
+Medical Records
+Investigation Evidence
+```
+
+Personnel:
+
+```text
+VIEW Identity Documents
+VERIFY Contracts
+```
+
+لكن ليس بالضرورة أن يرى ER investigation details.
+
+وهذا مناسب للهيكل الحالي الذي يفصل Payroll وPersonnel وER & Compliance وHR Operations وظيفيًا. 
+
+---
+
+# 24. Purpose-Based Access
+
+بعض الوثائق يجب ألا تصبح مفتوحة حتى للشخص صاحب Role معين بدون سبب.
+
+### `document_access_request`
+
+```text
+document_access_request
+-----------------------
+access_request_id PK
+
+document_id FK
+
+requested_by
+
+requested_permission
+
+business_purpose
+
+requested_at
+
+expires_at
+
+approval_status
+
+approved_by NULL
+```
+
+مثال:
+
+```text
+ER Case Investigator
+requests access to
+medical supporting evidence
+```
+
+---
+
+# 25. Break-Glass Access
+
+للظروف الاستثنائية:
+
+### `document_break_glass_access`
+
+```text
+document_break_glass_access
+---------------------------
+break_glass_id PK
+
+document_id FK
+
+user_id
+
+reason
+
+accessed_at
+
+access_expiry_at
+
+manager_review_required
+
+reviewed_by NULL
+
+review_status
+
+audit_reference
+```
+
+يولد Alert تلقائيًا.
+
+---
+
+# 26. Document Audit
+
+### `document_audit_event`
+
+```text
+document_audit_event
+--------------------
+document_audit_event_id PK
+
+tenant_id
+
+document_id
+document_version_id NULL
+
+actor_type
+actor_id
+
+action
+  CREATE
+  UPLOAD
+  VIEW
+  DOWNLOAD
+  UPDATE_METADATA
+  VERIFY
+  SIGN
+  SHARE
+  ARCHIVE
+  DELETE_REQUEST
+  LEGAL_HOLD
+
+occurred_at
+
+ip_address
+device_reference
+
+correlation_id
+
+details_json
+```
+
+---
+
+# 27. Print Tracking
+
+حتى الطباعة يمكن تسجيلها للمستندات الحساسة.
+
+```text
+PRINT
+```
+
+خصوصًا:
+
+```text
+Contracts
+Payroll Reports
+Employee Investigations
+Medical Records
+```
+
+---
+
+# 28. Document Expiry
+
+### `document_expiry_event`
+
+```text
+document_expiry_event
+---------------------
+document_expiry_event_id PK
+
+document_id FK
+
+expiry_date
+
+days_before_expiry
+
+event_type
+  REMINDER
+  WARNING
+  EXPIRED
+
+notification_status
+
+created_at
+```
+
+---
+
+# Example
+
+```text
+Professional License
+
+Expiry = 01-Oct
+
+90 days:
+Info
+
+30 days:
+Warning
+
+7 days:
+Critical
+
+Expired:
+Block deployment
+```
+
+بحسب Rule configured.
+
+---
+
+# 29. Renewal Relationship
+
+### `document_renewal`
+
+```text
+document_renewal
+----------------
+document_renewal_id PK
+
+old_document_id FK
+new_document_id FK
+
+renewal_reason
+
+renewed_at
+
+status
+```
+
+هذا أفضل من استبدال الملف القديم.
+
+---
+
+# 30. External Authority
+
+### `document_issuer`
+
+```text
+document_issuer
+---------------
+issuer_id PK
+
+issuer_code
+issuer_name
+
+issuer_type
+  GOVERNMENT
+  UNIVERSITY
+  CERTIFICATION_BODY
+  COMPANY
+  INSURANCE
+  MEDICAL_PROVIDER
+
+country_code
+
+verification_supported
+
+status
+```
+
+---
+
+# O29. Issuer Verification
+
+```text
+issuer_verification_request
+---------------------------
+issuer_verification_request_id PK
+
+document_id FK
+issuer_id FK
+
+verification_method
+  API
+  MANUAL
+  EMAIL
+  PORTAL
+
+requested_at
+completed_at
+
+external_reference
+
+result
+
+status
+```
+
+مستقبلًا يمكن مثلًا التحقق من:
+
+```text
+Certificates
+Professional Licenses
+Training Credentials
+```
+
+لو الجهة توفر API.
+
+---
+
+# 31. Document Request from Employee
+
+بدل HR يرسل email:
+
+### `document_submission_request`
+
+```text
+document_submission_request
+---------------------------
+submission_request_id PK
+
+tenant_id
+
+employee_id
+document_requirement_id
+
+requested_by
+
+request_date
+due_date
+
+submission_status
+  REQUESTED
+  UPLOADED
+  VERIFIED
+  REJECTED
+  OVERDUE
+
+reminder_policy_id FK NULL
+
+completed_at NULL
+```
+
+---
+
+# Employee Self-Service
+
+الموظف يرى:
+
+```text
+My Documents
+
+✓ National ID
+✓ Contract
+⚠ Professional License — expires in 27 days
+✕ Medical Form — missing
+
+Upload
+```
+
+---
+
+# 32. Document Request from Candidate
+
+نفس الـengine يعمل قبل إنشاء Employee.
+
+```text
+candidate_id
+```
+
+عبر entity polymorphism أو submission target abstraction.
+
+---
+
+# 33. Bulk Import
+
+مهم عند migration.
+
+### `document_import_batch`
+
+```text
+document_import_batch
+---------------------
+import_batch_id PK
+
+tenant_id
+
+source_type
+
+source_reference
+
+total_files
+
+processed_files
+failed_files
+
+started_at
+completed_at
+
+status
+```
+
+---
+
+### `document_import_item`
+
+```text
+document_import_item
+--------------------
+import_item_id PK
+
+import_batch_id
+
+source_file_name
+
+matched_entity_type
+matched_entity_id
+
+detected_document_type
+
+created_document_id NULL
+
+processing_status
+
+error_message NULL
+```
+
+---
+
+# 34. Matching Engine
+
+مثال أسماء الملفات القديمة:
+
+```text
+EMP_1021_NID.pdf
+Taha Contract New.pdf
+Ahmed Form6 Final.pdf
+```
+
+يمكن للنظام استخدام:
+
+```text
+Filename
+OCR
+HR Code
+National ID
+Employee Name
+Folder Path
+```
+
+ليعمل Candidate Match، لكن الـlow-confidence cases تذهب Manual Review.
+
+---
+
+# 35. Document Processing Pipeline
+
+المسار الكامل:
+
+```text
+UPLOAD
+   |
+   v
+Quarantine
+   |
+   v
+Virus Scan
+   |
+   +---- Infected → Block
+   |
+   v
+Checksum / Duplicate Check
+   |
+   v
+OCR
+   |
+   v
+Classification
+   |
+   v
+Field Extraction
+   |
+   v
+Validation
+   |
+   v
+Human Verification
+   |
+   v
+Active Document
+```
+
+---
+
+# 36. Generated Document Pipeline
+
+```text
+Business Event
+   |
+   v
+Template
+   |
+   v
+Fetch Authorized Data
+   |
+   v
+Data Snapshot
+   |
+   v
+Render PDF
+   |
+   v
+Signature Request
+   |
+   v
+Signed Version
+   |
+   v
+Record Classification
+   |
+   v
+Personnel File
+```
+
+---
+
+# 37. Example — Complete Employee Contract Lifecycle
+
+```text
+Offer Accepted
+      ↓
+Select Contract Template
+      ↓
+Render Contract
+      ↓
+Document V1 created
+      ↓
+Employee Signature
+      ↓
+Company Signature
+      ↓
+Signed V2 generated
+      ↓
+Verification
+      ↓
+Personnel File / Contracts
+      ↓
+Retention Policy applied
+      ↓
+Renewal Reminder
+```
+
+---
+
+# 38. Example — Offboarding
+
+الـManual يطلب عند offboarding clearance، legal closure، Form 6، final settlement، receipt acknowledgments وأرشفة employee file. 
+
+Cluster O يجعلها:
+
+```text
+Offboarding Started
+       ↓
+Document Checklist
+       |
+       +-- Resignation / Termination Approval
+       +-- Handover
+       +-- Clearance
+       +-- Form 6
+       +-- Final Settlement
+       +-- Original Document Receipt
+       |
+       v
+Checklist Complete
+       ↓
+Personnel File Close
+       ↓
+Retention Trigger:
+Employee Termination Date
+```
+
+---
+
+# 39. Example — ER Investigation
+
+```text
+ER Case
+   |
+   +-- Incident Report
+   +-- Employee Statement
+   +-- Manager Statement
+   +-- Evidence Photos
+   +-- Emails
+   +-- Investigation Minutes
+   +-- Legal Recommendation
+   +-- Decision Letter
+```
+
+هذه لا تخزن كـnormal Employee Attachments.
+
+بل:
+
+```text
+Restricted Evidence Collection
++
+Chain of Custody
++
+Case-level permissions
++
+Legal Hold capability
+```
+
+---
+
+# 40. Medical Documents
+
+نحتاج فصل metadata عن محتوى المستند.
+
+General HR قد يرى:
+
+```text
+Medical Clearance:
+FIT
+
+Valid Until:
+30-Jun-2027
+```
+
+لكن لا يجب بالضرورة أن يرى:
+
+```text
+Medical Report PDF
+Diagnosis
+Detailed examination
+```
+
+لذلك:
+
+```text
+Operational Status
+```
+
+من Cluster J/G.
+
+والـmedical document نفسه:
+
+```text
+Cluster O
+Highly Restricted
+```
+
+---
+
+# 41. Storage Strategy
+
+أوصي:
+
+```text
+Metadata:
+PostgreSQL / SQL Database
+
+Binary Files:
+S3-compatible Object Storage
+
+Large Archive:
+Cold / Archive Storage
+```
+
+ولا:
+
+```text
+varbinary(max)
+```
+
+لكل ملفات الموظفين داخل operational DB.
+
+---
+
+# 42. Storage Path
+
+لا نعتمد على أسماء Folder بسيطة:
+
+```text
+/employee/taha/contracts/
+```
+
+الأفضل Object Key غير قابل للتخمين:
+
+```text
+tenant/{tenant_uuid}/documents/{uuid}/versions/{uuid}
+```
+
+مع metadata منفصلة.
+
+---
+
+# 43. Encryption
+
+كل files:
+
+```text
+Encryption At Rest
++
+TLS In Transit
+```
+
+والمستندات شديدة الحساسية يمكن استخدام:
+
+```text
+Separate encryption key
+```
+
+حسب Tenant أو security classification.
+
+---
+
+# 44. Tenant Isolation
+
+مهم جدًا في Document Storage.
+
+ليس فقط DB:
+
+```text
+tenant_id
+```
+
+بل أيضًا:
+
+```text
+Object Storage Prefix
+Encryption Context
+Access Policy
+Search Index
+OCR Processing
+Temporary Files
+Cache
+```
+
+---
+
+# 45. Search Engine
+
+### `document_search_index`
+
+قد لا يكون table فعلية، لكن منطقيًا نحتاج metadata:
+
+```text
+document_search_index
+---------------------
+document_id
+
+tenant_id
+
+title
+document_type
+employee_code
+employee_name
+
+ocr_text_searchable
+
+tags
+
+security_classification
+
+indexed_at
+```
+
+---
+
+# ولكن:
+
+لا تجعل كل OCR Content:
+
+```text
+globally searchable
+```
+
+خصوصًا ER / Medical.
+
+---
+
+# 46. Document Tag
+
+### `document_tag`
+
+```text
+document_tag
+------------
+document_tag_id PK
+
+tenant_id
+
+tag_code
+tag_name
+
+status
+```
+
+### `document_tag_assignment`
+
+```text
+document_tag_assignment
+-----------------------
+document_id
+document_tag_id
+```
+
+---
+
+# 47. Document Relationship
+
+### `document_relationship`
+
+```text
+document_relationship
+---------------------
+document_relationship_id PK
+
+from_document_id
+to_document_id
+
+relationship_type
+  SUPERSEDES
+  RENEWS
+  SUPPORTS
+  GENERATED_FROM
+  SIGNED_VERSION_OF
+  TRANSLATION_OF
+  ATTACHMENT_TO
+
+created_at
+```
+
+---
+
+# 48. Translation Relationship
+
+مثال:
+
+```text
+Contract Arabic
+Contract English
+Contract French
+```
+
+يمكن ربطهم:
+
+```text
+TRANSLATION_OF
+```
+
+ولا نفترض أنهم نفس Binary.
+
+---
+
+# 49. Document Bundle
+
+أحيانًا نحتاج إرسال مجموعة كاملة.
+
+### `document_bundle`
+
+```text
+document_bundle
+---------------
+document_bundle_id PK
+
+tenant_id
+
+bundle_name
+
+business_context
+
+created_by
+created_at
+
+status
+```
+
+### `document_bundle_item`
+
+```text
+document_bundle_item
+--------------------
+document_bundle_id
+document_id
+
+sequence_no
+```
+
+مثال:
+
+```text
+New Hire Package
+Customer Mobilization Package
+Audit Package
+Offboarding Package
+```
+
+---
+
+# 50. Customer Deployment Pack
+
+مهم جدًا للـfield business.
+
+مثال Huawei/Nokia/Ericsson account workforce.
+
+يمكن إنشاء:
+
+```text
+Employee Deployment Pack
+
+National ID
+Medical Fitness
+HSE Certificates
+Customer Certificates
+Professional License
+Company ID
+```
+
+لكن يتم Export حسب authorization وليس تجميع الملفات يدويًا.
+
+---
+
+# 51. Document Compliance Snapshot
+
+### `document_compliance_snapshot`
+
+```text
+document_compliance_snapshot
+----------------------------
+snapshot_id PK
+
+tenant_id
+employee_id
+
+snapshot_date
+
+required_documents_count
+valid_documents_count
+missing_count
+expired_count
+expiring_count
+
+compliance_pct
+
+deployment_eligible
+
+status
+```
+
+مفيد للDashboards في Cluster M.
+
+---
+
+# 52. AI Usage Rules
+
+AI يمكن أن يساعد في:
+
+```text
+OCR
+Classification
+Field Extraction
+Duplicate Identification
+Document Summary
+Missing Document Detection
+```
+
+لكن لا أوصي أن يقوم AI تلقائيًا بـ:
+
+```text
+Approve contract validity
+Declare employee medically fit
+Determine legal evidence authenticity
+Reject legal document permanently
+```
+
+بدون rules/human verification مناسبة.
+
+---
+
+# 53. Document Events
+
+Cluster O ينشر Events عبر Cluster N:
+
+```text
+Document.Uploaded
+Document.ScanCompleted
+Document.Classified
+Document.Verified
+Document.Rejected
+
+Document.Expiring
+Document.Expired
+
+Document.Signed
+
+Document.Archived
+Document.LegalHoldPlaced
+
+Checklist.Completed
+PersonnelFile.Compliant
+PersonnelFile.NonCompliant
+```
+
+---
+
+# 54. Consumers
+
+مثال:
+
+```text
+Document.Verified
+       |
+       +---- Onboarding
+       +---- Personnel
+       +---- HSE
+       +---- Training
+```
+
+و:
+
+```text
+Document.Expired
+       |
+       +---- Compliance
+       +---- HSE
+       +---- Workflow
+       +---- Notification
+```
+
+---
+
+# 55. Cluster O ERD
+
+```text
+                         DOCUMENT_TYPE
+                               |
+                               v
+                           DOCUMENT
+                               |
+            +------------------+------------------+
+            |                  |                  |
+            v                  v                  v
+     DOCUMENT_VERSION     DOCUMENT_LINK      DOCUMENT_TAG
+            |
+            v
+        FILE_OBJECT
+            |
+      +-----+-------+
+      |             |
+      v             v
+FILE_SCAN         OCR_JOB
+                    |
+                    v
+          EXTRACTED_FIELD
+```
+
+Personnel:
+
+```text
+EMPLOYEE
+   |
+   v
+PERSONNEL_FILE
+   |
+   v
+PERSONNEL_FILE_SECTION
+   |
+   v
+PERSONNEL_FILE_ITEM
+   |
+   v
+DOCUMENT
+```
+
+Requirements:
+
+```text
+DOCUMENT_REQUIREMENT
+       |
+       +---- REQUIREMENT_RULE
+       |
+       v
+DOCUMENT_CHECKLIST
+       |
+       v
+CHECKLIST_INSTANCE
+       |
+       v
+CHECKLIST_RESULT
+       |
+       v
+DOCUMENT
+```
+
+Signature:
+
+```text
+DOCUMENT
+   |
+   v
+SIGNATURE_REQUEST
+   |
+   +---- SIGNATURE_PARTICIPANT
+   |
+   +---- SIGNATURE_EVENT
+   |
+   v
+SIGNED_DOCUMENT
+   |
+   v
+DOCUMENT_VERSION
+```
+
+Records:
+
+```text
+DOCUMENT
+   |
+   v
+RETENTION_INSTANCE
+   |
+   +---- LEGAL_HOLD
+   |
+   v
+DISPOSITION_REQUEST
+   |
+   v
+DESTRUCTION_CERTIFICATE
+```
+
+---
+
+# 56. Core Production Entities
+
+إذا اختصرنا Cluster O إلى production core schema:
+
+```text
+01 document
+02 document_type
+03 document_category
+
+04 file_object
+05 document_version
+06 document_link
+07 document_relationship
+
+08 document_tag
+09 document_tag_assignment
+
+10 personnel_file
+11 personnel_file_section
+12 personnel_file_item
+
+13 document_requirement
+14 document_requirement_rule
+15 document_checklist
+16 document_checklist_item
+17 document_checklist_instance
+18 document_checklist_result
+
+19 document_verification
+20 document_verification_rule
+
+21 evidence_record
+22 evidence_custody_event
+
+23 document_render_job
+
+24 signature_request
+25 signature_participant
+26 signature_event
+27 signed_document
+
+28 ocr_job
+29 ocr_page
+30 document_extracted_field
+31 document_classification_result
+32 document_duplicate_match
+
+33 file_security_scan
+34 file_quarantine
+35 file_upload_policy
+
+36 document_share
+37 document_share_token
+38 document_share_access
+39 document_watermark_policy
+
+40 record_classification
+41 document_retention_policy
+42 document_retention_instance
+
+43 document_legal_hold
+44 document_disposition_request
+45 destruction_certificate
+46 document_archive_event
+
+47 document_permission_policy
+48 document_access_request
+49 document_break_glass_access
+
+50 document_audit_event
+51 document_expiry_event
+52 document_renewal
+
+53 document_issuer
+54 issuer_verification_request
+
+55 document_submission_request
+
+56 document_import_batch
+57 document_import_item
+
+58 document_bundle
+59 document_bundle_item
+
+60 document_compliance_snapshot
+```
+
+إذن لدينا تقريبًا **60 core entities** داخل Cluster O.
+
+---
+
+# 57. أهم قواعد Cluster O
+
+أعتبر الآتي Non-Negotiable:
+
+1. **Files are not stored inside business-domain tables.**
+2. Document metadata منفصلة عن binary storage.
+3. كل document لها classification واضحة.
+4. كل Version قديمة تظل محفوظة حسب retention policy.
+5. Upload لا يعني Verified.
+6. Virus scan قبل إتاحة الملف.
+7. Sensitive documents لا تستخدم permanent public URLs.
+8. Access يتم عبر authorization checks وليس storage path.
+9. Digital Personnel File هو logical dossier وليس Folder فقط.
+10. Mandatory document requirements تعتمد على Rules.
+11. Employee Activation يمكن أن يعتمد على Document Compliance Gate.
+12. Expired document لا يُستبدل بصمت؛ Renewal يولد record جديد.
+13. ER/legal evidence يجب أن تدعم chain of custody.
+14. Medical documents تكون في highly restricted security zone.
+15. Legal Hold يوقف disposition.
+16. Document deletion يجب أن يكون governed وليس direct delete.
+17. Generated documents تحفظ data snapshot المستخدم في التوليد.
+18. Signed copy تصبح immutable record.
+19. OCR لا يعتبر Verification تلقائيًا.
+20. كل View / Download / Share للمستندات الحساسة يسجل Audit.
+21. External sharing يجب أن يكون time-limited وقابلًا للإلغاء.
+22. Tenant isolation يجب أن تشمل storage وsearch وprocessing.
+23. AI لا يحصل على unrestricted access لكل ملفات الموظفين.
+24. Raw file binaries لا تمر داخل Event Bus.
+
+---
+
+# 58. الفرق بين Cluster O وClusters الأخرى
+
+هذه نقطة مهمة جدًا حتى لا نكرر المسؤوليات.
+
+```text
+Cluster G
+Personnel / Compliance
+owns:
+What document is required
+business compliance status
+```
+
+لكن الأدق بعد O:
+
+```text
+G defines business need
+O manages physical/legal document lifecycle
+```
+
+مثال:
+
+```text
+Cluster G:
+Employee requires valid employment contract.
+
+Cluster O:
+stores, versions, signs, verifies,
+retains and audits the contract.
+```
+
+ومثلًا:
+
+```text
+Cluster J:
+Medical Fitness = FIT / UNFIT / RESTRICTED
+
+Cluster O:
+stores the medical report securely.
+```
+
+ومثلًا:
+
+```text
+Cluster E:
+Investigation case.
+
+Cluster O:
+stores evidence and chain of custody.
+```
+
+ومثلًا:
+
+```text
+Cluster I:
+Expense claim.
+
+Cluster O:
+stores receipt/invoice evidence.
+```
+
+هذا separation ممتاز.
+
+---
+
+# وضع الـEnterprise Architecture حتى الآن
+
+أصبح لدينا:
+
+```text
+A–J
+HR Business Domains
+
+K
+Integration / Migration / Data Quality
+
+L
+Configuration & SaaS Control Plane
+
+M
+Analytics / BI / AI
+
+N
+Runtime / API / Events / Distributed Processing
+
+O
+Enterprise Documents / Records / Evidence
+```
+
+وهنا المنصة أصبحت قريبة جدًا من **Enterprise-grade foundation** وليست مجرد HRIS.
+
+**الخطوة التالية المنطقية التي أنصح بها هي Cluster P — Enterprise Search, Knowledge Graph, Global Search, Employee/Org/Skill/Document Indexing, Full-Text Search, Semantic Search, Search Security, Saved Searches, Smart Filters, Knowledge Retrieval, RAG Indexes & AI Knowledge Access ERD.**
+
+لأننا الآن أصبح لدينا عشرات الـdomains ومئات الـentities وآلاف الوثائق، ولو لم نبنِ Search/Knowledge Layer مركزية فكل Module سيبدأ ببناء search خاص به، والـAI Copilot سيضطر للاستعلام من مصادر متفرقة بدون permission-aware retrieval أو unified knowledge model.

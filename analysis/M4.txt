@@ -1,0 +1,2445 @@
+# Module 04 — Employee Master Data & Digital Employee File
+
+بعد ما بنينا في Modules 01–03:
+
+```text
+Tenant / Company
+        ↓
+Organization Structure
+        ↓
+Position / Job
+        ↓
+User / Role / Permission
+```
+
+نصل الآن إلى **الموظف نفسه كـMaster Record داخل النظام**.
+
+الهدف من Module 04 ليس مجرد صفحة Employee Profile، بل إنشاء **Single Source of Truth** لكل موظف طوال دورة حياته:
+
+```text
+Candidate
+   ↓
+New Hire
+   ↓
+Employee
+   ↓
+Transfer / Promotion / Project Movement
+   ↓
+Active Employment
+   ↓
+Offboarding
+   ↓
+Archived Employee Record
+```
+
+وهذا يتوافق مباشرة مع الـPeople & Culture Operations Manual، الذي يطلب إنشاء Employee Record أثناء onboarding، تسجيل الموظف في ERP وPayroll، توليد HR Code، الاحتفاظ بالمستندات، متابعة التغييرات طوال دورة الموظف، ثم غلق وأرشفة الملف عند offboarding. 
+
+---
+
+# 4.1 Core Principle
+
+يجب ألا نبني:
+
+```text
+Employee Table
+```
+
+ضخم يحتوي كل شيء.
+
+الأفضل:
+
+```text
+Employee
+   │
+   ├── Personal Data
+   ├── Employment
+   ├── Organization Assignment
+   ├── Project Assignment
+   ├── Compensation Reference
+   ├── Documents
+   ├── Contacts
+   ├── Emergency Contacts
+   ├── Bank Information
+   ├── Insurance
+   ├── Certifications
+   ├── Assets
+   ├── Work Eligibility
+   ├── History
+   └── Lifecycle Events
+```
+
+بحيث كل جزء مستقل وقابل للتاريخ والتعديل والتدقيق.
+
+---
+
+# 4.2 Person vs Employee
+
+هذه نقطة أساسية جدًا.
+
+```text
+Person
+   ↓
+Employment
+   ↓
+Employee
+```
+
+لأن نفس الشخص ممكن:
+
+* يترك الشركة.
+* يرجع مرة أخرى.
+* يعمل في Legal Entity مختلفة.
+* يتحول من Outsource إلى Permanent.
+* يتحول من Daily Worker إلى Project-Based.
+
+لذلك لا نربط هوية الشخص بوظيفة واحدة للأبد.
+
+مثال:
+
+```text
+Person ID: P-000146
+
+Employment #1
+AFRO Egypt
+2023–2025
+Project-Based
+
+Employment #2
+AFRO Egypt
+2026–
+Permanent
+```
+
+---
+
+# 4.3 Employee Number / HR Code
+
+الـOperations Manual ينص على توليد HR Code أثناء System Setup. 
+
+سنفرق بين:
+
+```text
+Person ID
+Employee ID
+HR Code
+Payroll ID
+ERP ID
+Customer ID
+```
+
+مثال:
+
+```text
+Person ID      P-000151
+Employee ID    EMP-2026-00182
+HR Code        AFRO-1837
+Nama ERP ID    NMA-76451
+Payroll ID     PAY-1837
+Ericsson ID    ERI-91356
+```
+
+لا يجب استخدام National ID كمفتاح Database.
+
+---
+
+# 4.4 HR Code Generation Rules
+
+لكل Tenant إعداداته.
+
+مثال:
+
+```text
+AFR-EG-2026-000123
+```
+
+أو:
+
+```text
+AFR-000123
+```
+
+ويستطيع الـAdmin تحديد:
+
+```text
+Prefix
+Sequence
+Year Included?
+Legal Entity Included?
+Project Included?
+Leading Zeros
+```
+
+لكن بعد إنشاء HR Code:
+
+> لا يتغير بسبب تغيير Project أو Department.
+
+---
+
+# 4.5 Employee Status
+
+سنفصل عدة Statuses لأن وضعهم في Status واحد يسبب مشاكل.
+
+### Employment Status
+
+```text
+Pre-Hire
+Active
+Inactive
+Suspended
+Notice Period
+Terminated
+Resigned
+Contract Ended
+Retired
+Archived
+```
+
+### Operational Status
+
+```text
+Pending Deployment
+Shadowing
+Ready for Deployment
+Deployed
+Bench
+On Leave
+Secondment
+Blocked
+```
+
+### Payroll Status
+
+```text
+Pending
+Active
+On Hold
+Stopped
+Closed
+```
+
+### System Access Status
+
+```text
+Not Created
+Pending
+Active
+Suspended
+Disabled
+```
+
+وبالتالي قد نجد:
+
+```text
+Employment: Active
+Operational: Pending Deployment
+Payroll: Active
+System Access: Active
+```
+
+بدل Status واحد غامض اسمه:
+
+```text
+Active
+```
+
+---
+
+# 4.6 Employment Types
+
+بما أن النظام لشركات تشغيل ومقاولات ومشروعات، يجب أن يكون مرنًا.
+
+```text
+Permanent
+Temporary
+Fixed-Term
+Project-Based
+Daily Worker
+Hourly
+Part-Time
+Intern
+Consultant
+Outsourced
+Subcontracted
+Freelancer
+Seasonal
+```
+
+الـOperations Manual نفسه يوضح أن نطاق السياسات يشمل permanent وtemporary وproject-based وwhite-collar وblue-collar employees. 
+
+وكل Tenant يستطيع:
+
+```text
+Enable
+Disable
+Rename
+Create Custom Employment Type
+```
+
+---
+
+# 4.7 Worker Classification
+
+نفصل:
+
+```text
+Employment Type
+```
+
+عن:
+
+```text
+Worker Category
+```
+
+مثال:
+
+```text
+White Collar
+Blue Collar
+Technician
+Engineer
+Rigger
+Driver
+Office Staff
+Field Staff
+Support Function
+Management
+```
+
+لأن هذه الفئات تؤثر لاحقًا على:
+
+```text
+Attendance
+Shift
+HSE
+Medical Tests
+Payroll
+Allowances
+PPE
+Training
+```
+
+---
+
+# 4.8 Employee Profile — Basic Information
+
+البيانات الأساسية:
+
+```text
+Employee ID
+HR Code
+
+Full Name Arabic
+Full Name English
+Preferred Name
+
+Gender
+Date of Birth
+Nationality
+
+National ID
+Passport Number
+Passport Expiry
+
+Marital Status
+
+Personal Mobile
+Corporate Mobile
+
+Personal Email
+Corporate Email
+
+Profile Photo
+```
+
+والـHiring Email المحدد في الـManual يطلب بالفعل Arabic/English candidate name، National ID، Mobile Number وغيرها. 
+
+---
+
+# 4.9 Localization
+
+بما أن النظام:
+
+```text
+Arabic
+English
+French
+```
+
+ندعم مثلًا:
+
+```text
+Name_AR
+Name_EN
+Name_FR
+```
+
+لكن لا أجبر المستخدم على إدخال French Name إذا لم يكن مطلوبًا.
+
+الـUI:
+
+```text
+Arabic → RTL
+English → LTR
+French → LTR
+```
+
+---
+
+# 4.10 Contact Information
+
+نفصل Contacts في Entity مستقلة:
+
+```text
+Primary Mobile
+Secondary Mobile
+WhatsApp
+Personal Email
+Corporate Email
+
+Country
+Governorate
+City
+District
+Address
+Postal Code
+```
+
+مع دعم:
+
+```text
+Current Address
+Permanent Address
+```
+
+---
+
+# 4.11 Emergency Contacts
+
+يمكن أن يكون أكثر من Emergency Contact.
+
+```text
+Name
+Relationship
+Mobile
+Alternative Mobile
+Address
+Priority
+```
+
+مثلاً:
+
+```text
+1. Wife
+2. Father
+3. Brother
+```
+
+---
+
+# 4.12 Employment Information
+
+```text
+Company
+Legal Entity
+Business Unit
+Department
+Section
+Position
+Grade
+Job Level
+
+Employment Type
+Worker Category
+
+Hire Date
+Joining Date
+Contract Start
+Contract End
+Probation End
+
+Employment Status
+```
+
+كل عنصر هنا يجب أن يرتبط بـModule 02 وليس Free Text.
+
+---
+
+# 4.13 Organization Assignment
+
+مثلاً:
+
+```text
+Company: AFRO Egypt
+Business Unit: Telecom
+Department: Operations
+Section: Ericsson
+Position: Project Coordinator
+Manager: Ahmed Hassan
+```
+
+مع:
+
+```text
+Effective From
+Effective To
+```
+
+حتى نحتفظ بالتاريخ.
+
+---
+
+# 4.14 Employee Assignment History
+
+لا نكتب فوق البيانات القديمة.
+
+مثلاً:
+
+```text
+2024
+Site Engineer
+Project A
+
+2025
+Senior Site Engineer
+Project B
+
+2026
+Project Coordinator
+Project C
+```
+
+Database:
+
+```text
+EmployeeAssignment
+------------------
+EmployeeId
+PositionId
+DepartmentId
+ManagerId
+StartDate
+EndDate
+Reason
+ApprovalId
+```
+
+---
+
+# 4.15 Multiple Project Assignment
+
+هذه نقطة أساسية في النظام.
+
+موظف واحد يمكن أن يعمل:
+
+```text
+Project A → 60%
+Project B → 30%
+Project C → 10%
+```
+
+أو:
+
+```text
+Primary Project
++
+Secondary Projects
+```
+
+لذلك لا نضع:
+
+```text
+Employee.ProjectId
+```
+
+في Employee Table فقط.
+
+بل:
+
+```text
+EmployeeProjectAssignments
+```
+
+---
+
+# 4.16 Project Allocation
+
+لكل Assignment:
+
+```text
+Project
+Role
+Allocation %
+Start Date
+End Date
+Primary/Secondary
+Cost Allocation %
+Operational Manager
+Location
+Customer
+```
+
+مثال:
+
+```text
+Ahmed Mohamed
+
+Ericsson Project
+Allocation: 70%
+
+Huawei Project
+Allocation: 30%
+```
+
+هذا سيصبح لاحقًا أساسًا لـ:
+
+```text
+Payroll Cost Allocation
+KPI
+Attendance
+Allowances
+Manpower
+Project P&L
+```
+
+والـManual نفسه يتطلب مراجعة employee project allocation ضمن Payroll Cycle. 
+
+---
+
+# 4.17 Reporting Lines
+
+لا نكتفي بـDirect Manager.
+
+ندعم:
+
+```text
+Administrative Manager
+Functional Manager
+Project Manager
+Operational Manager
+HR Operations Owner
+```
+
+وهذا مهم لأن Org Chart نفسه يميز بين **Administrative Reporting Line** و**Functional Reporting Line**. 
+
+مثال:
+
+```text
+Employee
+│
+├── Administrative Manager
+├── Functional Manager
+└── Project Manager
+```
+
+---
+
+# 4.18 HR Operations Ownership
+
+حسب الـOrg Chart، HR Operations مقسم عمليًا على Accounts مثل:
+
+```text
+Huawei & Nokia
+Ericsson
+```
+
+
+
+لذلك Employee Profile يجب أن يحتوي:
+
+```text
+Assigned HR Operations SPOC
+```
+
+مثلاً:
+
+```text
+Employee: Mohamed
+Account: Ericsson
+HR Operations Owner: Esraa Mohamed
+```
+
+ويتم التعيين تلقائيًا عن طريق Rules.
+
+---
+
+# 4.19 Work Location
+
+لا نستخدم Free Text فقط.
+
+```text
+Country
+Region
+Governorate
+City
+Office
+Warehouse
+Project Site
+Customer Site
+Remote
+Hybrid
+```
+
+ثم:
+
+```text
+Employee Work Assignment
+```
+
+مثال:
+
+```text
+Primary Location:
+Cairo HQ
+
+Current Deployment:
+Alexandria Ericsson Site
+```
+
+---
+
+# 4.20 Dynamic Location History
+
+مثل:
+
+```text
+Jan–Mar → Cairo
+Apr–Jun → Alexandria
+Jul–Dec → Suez
+```
+
+وذلك مهم لاحقًا لـ:
+
+```text
+Attendance
+Transportation
+Accommodation
+Allowances
+Travel
+Payroll
+HSE
+```
+
+---
+
+# 4.21 Contract Management
+
+Employee Profile يحتوي Contract Timeline.
+
+```text
+Contract Type
+Contract Number
+Start Date
+End Date
+Probation
+Renewal Status
+Notice Period
+Document
+```
+
+Statuses:
+
+```text
+Draft
+Pending Signature
+Active
+Expiring
+Renewal Pending
+Expired
+Terminated
+```
+
+---
+
+# 4.22 Contract Versioning
+
+لا نستبدل العقد.
+
+```text
+Contract V1
+01-Jan-2025
+31-Dec-2025
+
+Contract V2
+01-Jan-2026
+31-Dec-2026
+```
+
+مع:
+
+```text
+Reason
+Approved By
+Signed Date
+Document
+```
+
+---
+
+# 4.23 Contract Expiry Engine
+
+Dashboard:
+
+```text
+Expiring in 90 days
+Expiring in 60 days
+Expiring in 30 days
+Expired
+```
+
+مع Notifications.
+
+مثلاً:
+
+```text
+HR Operations
+Personnel
+Employee
+Direct Manager
+```
+
+حسب Policy.
+
+---
+
+# 4.24 Documents Repository
+
+بناءً على onboarding requirements في الـManual، النظام يحتاج Document Checklist تشمل مثلًا: birth certificate، academic qualification، military service certificate، Form 6/social insurance printout، employment card، police clearance، personal photos، National ID، medical examination Form 111، Engineers Syndicate card عند الحاجة، skill level assessment والشهادات المهنية للفنيين. 
+
+لذلك Digital File يحتوي:
+
+```text
+Identity
+Education
+Employment
+Insurance
+Medical
+Legal
+Professional
+Contract
+Payroll
+HSE
+Customer
+Other
+```
+
+---
+
+# 4.25 Document Metadata
+
+كل ملف:
+
+```text
+Document Type
+Document Number
+Issue Date
+Expiry Date
+Issuing Authority
+Country
+Mandatory?
+Verified?
+Verified By
+Verification Date
+Status
+File
+```
+
+---
+
+# 4.26 Document Status
+
+```text
+Missing
+Uploaded
+Pending Verification
+Verified
+Rejected
+Expired
+Expiring Soon
+Waived
+```
+
+---
+
+# 4.27 Conditional Required Documents
+
+لا نريد Checklist ثابتة للجميع.
+
+مثلاً:
+
+```text
+IF
+Worker Category = Technician
+THEN
+Skill Level Certificate Required
+Professional Practice License Required
+```
+
+أو:
+
+```text
+IF
+Position = Engineer
+THEN
+Engineers Syndicate Card Required
+```
+
+وهذا يتطابق مع اختلاف متطلبات المستندات الوارد في الـManual. 
+
+---
+
+# 4.28 Document Rules Engine
+
+مثال:
+
+```text
+Country = Egypt
+AND
+Gender = Male
+AND
+Age Between X–Y
+
+→ Military Service Document Required
+```
+
+أو:
+
+```text
+Safety Sensitive Role = Yes
+
+→ Medical Clearance Required
+→ HSE Certificates Required
+```
+
+---
+
+# 4.29 Document Expiry Automation
+
+مثلاً:
+
+```text
+Passport expires in 90 days
+
+→ Employee Notification
+→ HR Operations Notification
+```
+
+وفي:
+
+```text
+30 days
+
+→ Escalation
+```
+
+وبعد expiry:
+
+```text
+Compliance Flag
+```
+
+---
+
+# 4.30 Education
+
+يمكن إضافة أكثر من Qualification.
+
+```text
+Degree
+Field of Study
+University
+Country
+Graduation Year
+Grade
+Certificate Document
+Verified?
+```
+
+---
+
+# 4.31 Previous Experience
+
+```text
+Company
+Job Title
+Industry
+Country
+From
+To
+Years
+Reason for Leaving
+Reference
+```
+
+وهذا يمكن أن ينتقل أصلًا من Recruitment Module بدل إعادة الإدخال.
+
+---
+
+# 4.32 Skills
+
+Employee Skill Profile:
+
+```text
+Skill
+Category
+Level
+Years Experience
+Assessment Score
+Validated By
+Last Assessment Date
+```
+
+مثلاً:
+
+```text
+Fiber Splicing
+OTDR
+Civil Works
+Power
+Huawei
+Nokia
+Ericsson
+Project Management
+```
+
+---
+
+# 4.33 Certifications
+
+```text
+Certificate
+Provider
+Certificate Number
+Issue Date
+Expiry Date
+Attachment
+Verified
+```
+
+مثلاً:
+
+```text
+PMP
+CCNA
+First Aid
+Working at Heights
+Electrical Safety
+Fire Fighting
+```
+
+---
+
+# 4.34 HSE Profile
+
+الـManual يحدد Medical Examination وSafety Courses لبعض الوظائف الحساسة، ومنها CM/PM Engineers وRiggers، ودورات مثل Fire Fighting، First Aid، Electrical Safety، Risk Assessment وWorking at Heights. 
+
+لذلك Employee HSE Profile:
+
+```text
+Medical Clearance
+Medical Expiry
+HSE Fit Status
+
+Required Courses
+Completed Courses
+Expired Courses
+
+Customer HSE Clearance
+Site Access Eligibility
+```
+
+---
+
+# 4.35 Deployment Eligibility
+
+نضيف Engine مهم:
+
+```text
+Can Deploy?
+```
+
+مثال:
+
+```text
+Contract Signed          ✓
+Medical                  ✓
+Working at Heights       ✓
+PPE                      ✓
+Customer Certificate     ✕
+```
+
+النتيجة:
+
+```text
+NOT READY FOR DEPLOYMENT
+```
+
+وهذا يتماشى مع الـManual الذي يمنع نشر safety-sensitive employees قبل استكمال المتطلبات الطبية وHSE والشهادات الخاصة بالعميل. 
+
+---
+
+# 4.36 Employee Readiness Score
+
+يمكن أن يظهر:
+
+```text
+Employee Readiness
+82%
+```
+
+مثلاً:
+
+```text
+Documents       100%
+Contract        100%
+Systems         100%
+Equipment        80%
+HSE              70%
+Customer Access  50%
+```
+
+ليصبح من السهل على HR Operations تحديد المعوقات.
+
+---
+
+# 4.37 Bank Information
+
+بيانات منفصلة عالية الحساسية:
+
+```text
+Bank Name
+Branch
+Account Holder
+Account Number
+IBAN
+Currency
+Payment Method
+Status
+```
+
+مع:
+
+```text
+Verified
+Verification Date
+```
+
+ولا يراها إلا Role مخول.
+
+---
+
+# 4.38 Bank Account Change Control
+
+تغيير Bank Account لا يحدث مباشرة.
+
+```text
+Employee Request
+      ↓
+Document Upload
+      ↓
+Personnel / Payroll Verification
+      ↓
+Approval
+      ↓
+Effective Date
+```
+
+مع Audit.
+
+---
+
+# 4.39 Social Insurance
+
+```text
+Insurance Number
+Insurance Status
+Start Date
+Insured Salary
+Form 1
+Form 6
+End Date
+```
+
+الـManual يطلب Social Insurance Form 1 أثناء onboarding، وForm 6 عند offboarding. 
+
+---
+
+# 4.40 Medical Insurance
+
+```text
+Provider
+Policy Number
+Category
+Start Date
+End Date
+Employee Card Number
+Dependents
+Status
+```
+
+---
+
+# 4.41 Dependents
+
+```text
+Name
+Relationship
+Birth Date
+National ID
+Medical Coverage
+Coverage Start
+Coverage End
+```
+
+لكن هذه البيانات يجب أن تكون اختيارية حسب Tenant Policy.
+
+---
+
+# 4.42 Payroll Reference Data
+
+Module 04 لا يحسب Payroll.
+
+لكنه يحتفظ ببيانات مرجعية مثل:
+
+```text
+Payroll Group
+Salary Grade
+Payment Method
+Bank Account
+Cost Center
+Project Allocation
+Payroll Status
+```
+
+أما الحساب الفعلي سيكون Module Payroll مستقل.
+
+---
+
+# 4.43 Compensation Security
+
+يمكن Employee Master معرفة:
+
+```text
+Compensation Record Exists
+```
+
+لكن تفاصيل:
+
+```text
+Basic
+Gross
+Net
+Allowances
+Deductions
+```
+
+لا تظهر إلا حسب Permission.
+
+---
+
+# 4.44 Equipment / Assets Summary
+
+من Profile:
+
+```text
+Laptop
+Mobile
+SIM
+Access Card
+PPE
+Uniform
+Tools
+Vehicle
+Other Assets
+```
+
+لكن التفاصيل الكاملة ستأتي في Asset Module.
+
+Manual يذكر Equipment Allocation أثناء onboarding ويشمل laptop، mobile، PPE، uniform، access card وغيرها. 
+
+---
+
+# 4.45 Customer-Specific Data
+
+هذه مهمة جدًا لشركة مثل AFRO.
+
+موظف قد يكون:
+
+```text
+AFRO Employee
+```
+
+لكن يحتاج ID لدى:
+
+```text
+Ericsson
+Huawei
+Nokia
+Telecom Egypt
+Vodafone
+Orange
+```
+
+لذلك:
+
+```text
+Employee External Profiles
+```
+
+مثال:
+
+```text
+Customer: Ericsson
+Customer Employee ID: ER-59293
+
+System Account: Active
+Certificate Status: Valid
+Site Access: Approved
+```
+
+---
+
+# 4.46 Employee Tags
+
+يمكن تعريف Tags مثل:
+
+```text
+Critical Resource
+High Potential
+Key Person
+Site-Based
+Night Shift
+Customer Approved
+Visa Required
+Driver
+Rigger
+```
+
+لكن Access للـTags الحساسة يحدد حسب Permissions.
+
+---
+
+# 4.47 Custom Fields
+
+مهم جدًا للـMulti-Company SaaS.
+
+Tenant يمكن أن يضيف:
+
+```text
+Custom Text
+Number
+Date
+Dropdown
+Multi-select
+Checkbox
+File
+Reference
+```
+
+مثلاً شركة تضيف:
+
+```text
+Union ID
+Customer Code
+Camp Number
+Accommodation Room
+```
+
+بدون تعديل Core Code.
+
+---
+
+# 4.48 Custom Field Security
+
+كل Custom Field يجب أن يدعم:
+
+```text
+Visible To
+Editable By
+Required For
+Applies To
+```
+
+مثلاً:
+
+```text
+Salary Category
+Visible only to HR + Payroll
+```
+
+---
+
+# 4.49 Employee Timeline
+
+كل Profile يحتوي Timeline كاملة:
+
+```text
+05-Jan
+Hired
+
+08-Jan
+Contract Signed
+
+10-Jan
+ERP Activated
+
+17-Jan
+Assigned to Project X
+
+01-Apr
+Promoted
+
+15-Jun
+Transferred to Project Y
+
+01-Aug
+New Manager Assigned
+```
+
+---
+
+# 4.50 Employee Lifecycle Events
+
+سنخزن Events بدل تعديل بيانات فقط.
+
+```text
+Hire
+Rehire
+Transfer
+Promotion
+Demotion
+Manager Change
+Department Change
+Project Assignment
+Salary Change
+Grade Change
+Location Transfer
+Contract Renewal
+Suspension
+Return From Leave
+Resignation
+Termination
+Retirement
+```
+
+---
+
+# 4.51 Effective-Dated Data
+
+هذه نقطة Database مهمة جدًا.
+
+مثلاً Salary Grade:
+
+```text
+Grade G5
+Effective:
+01-Jan-2025 → 30-Jun-2026
+
+Grade G6
+Effective:
+01-Jul-2026 →
+```
+
+وبالتالي يمكن سؤال النظام:
+
+> ما هو Position الموظف في 15 مارس 2025؟
+
+ويجيب بدقة.
+
+---
+
+# 4.52 Future-Dated Changes
+
+يمكن اعتماد Transfer اليوم يبدأ الشهر القادم:
+
+```text
+Current:
+Project A
+
+Future:
+Project B
+Effective 01-Sep-2026
+```
+
+النظام يحتفظ بالحركة Pending ويطبقها تلقائيًا.
+
+---
+
+# 4.53 Retroactive Changes
+
+لو تم اكتشاف أن Transfer بدأ فعليًا قبل أسبوع:
+
+```text
+Effective Date:
+01-Aug
+
+Entry Date:
+10-Aug
+```
+
+لا نمسح التاريخ.
+
+نحفظ الاثنين:
+
+```text
+Effective Date
+Recorded Date
+```
+
+---
+
+# 4.54 Data Change Requests
+
+الموظف لا يعدل Master Data مباشرة.
+
+مثلاً:
+
+```text
+Change Mobile
+Change Address
+Change Bank
+Change Marital Status
+```
+
+العملية:
+
+```text
+Request
+ ↓
+Supporting Document if Required
+ ↓
+Approval
+ ↓
+Update Master
+ ↓
+Audit
+```
+
+---
+
+# 4.55 Employee Self-Service Profile
+
+الموظف يستطيع رؤية:
+
+```text
+My Profile
+My Job
+My Manager
+My Projects
+My Documents
+My Certifications
+My Assets
+My Bank Details
+My Contract
+My Emergency Contacts
+```
+
+حسب Policy.
+
+ويستطيع تحديث بعض الأشياء مثل:
+
+```text
+Mobile
+Address
+Emergency Contact
+```
+
+لكن:
+
+```text
+Position
+Salary
+Department
+Grade
+HR Code
+```
+
+لا يعدلها مباشرة.
+
+---
+
+# 4.56 Manager Employee View
+
+Line Manager يرى:
+
+```text
+Basic Employee Info
+Position
+Project
+Attendance Summary
+Leave
+Operational Readiness
+Certifications
+Skills
+```
+
+ولكن ليس تلقائيًا:
+
+```text
+Bank Account
+National ID Full Number
+Payroll Details
+Investigation Details
+Medical Details
+```
+
+---
+
+# 4.57 HR 360 Employee Workspace
+
+واجهة HR الرئيسية للموظف:
+
+```text
+┌────────────────────────────────────┐
+│ Mohamed Ahmed        EMP-00156     │
+│ Project Engineer     ACTIVE        │
+│ Ericsson                           │
+├────────────────────────────────────┤
+│ Overview                           │
+│ Personal                           │
+│ Employment                         │
+│ Organization                       │
+│ Projects                           │
+│ Documents                          │
+│ Contracts                          │
+│ Payroll                            │
+│ Attendance                         │
+│ Leave                              │
+│ HSE                                │
+│ Training                           │
+│ Assets                             │
+│ KPI                                │
+│ Cases                              │
+│ History                            │
+└────────────────────────────────────┘
+```
+
+كل Tab يظهر حسب Permission.
+
+---
+
+# 4.58 Employee Overview Dashboard
+
+مثال:
+
+```text
+Mohamed Ahmed
+Project Engineer
+
+Status:
+Active
+
+Project:
+Ericsson Rollout
+
+Manager:
+Ahmed Ali
+
+HR Operations:
+Esraa Mohamed
+
+Joining Date:
+05-Feb-2026
+
+Contract:
+Expires in 112 Days
+
+Readiness:
+92%
+
+Documents:
+11 / 12 Complete
+
+HSE:
+Compliant
+
+Attendance:
+Active
+
+Payroll:
+Active
+```
+
+---
+
+# 4.59 Employee Compliance Score
+
+نضيف:
+
+```text
+Compliance Status
+```
+
+مثلاً:
+
+```text
+GREEN
+All mandatory requirements satisfied
+```
+
+أو:
+
+```text
+AMBER
+2 documents expiring
+```
+
+أو:
+
+```text
+RED
+Medical expired
+```
+
+---
+
+# 4.60 Employee File Completion
+
+مثل:
+
+```text
+Employee File
+████████░░ 84%
+```
+
+تفاصيل:
+
+```text
+Personal Data        ✓
+Contract             ✓
+National ID          ✓
+Insurance            ✓
+Medical              ✕
+HSE                   ✓
+Bank                  ✓
+Customer Certificate ✕
+```
+
+---
+
+# 4.61 Duplicate Employee Detection
+
+عند New Hire:
+
+النظام يبحث عن:
+
+```text
+National ID
+Passport
+Mobile
+Email
+Name + DOB
+```
+
+ويحذر:
+
+```text
+Possible Existing Person Detected
+```
+
+مهم جدًا لمنع إنشاء Employee جديد عند Rehire.
+
+---
+
+# 4.62 Rehire Process
+
+بدل:
+
+```text
+Create new Person
+```
+
+نعمل:
+
+```text
+Existing Person
+      ↓
+New Employment
+```
+
+مع الحفاظ على:
+
+```text
+Previous Employment History
+Previous Documents
+Previous Employee ID
+Offboarding History
+```
+
+حسب Data Retention Policy.
+
+---
+
+# 4.63 Merge Duplicate Employees
+
+Admin Process:
+
+```text
+Employee A
+Employee B
+    ↓
+Duplicate Check
+    ↓
+Approval
+    ↓
+Merge
+```
+
+ولا يتم Hard Delete.
+
+---
+
+# 4.64 Data Quality Engine
+
+Dashboard:
+
+```text
+Employees Missing National ID
+Missing Bank Account
+Missing Manager
+Missing Project
+Missing Contract
+Expired Document
+Duplicate Mobile
+Invalid Email
+Allocation > 100%
+No HR Operations Owner
+```
+
+---
+
+# 4.65 Validation Rules
+
+مثلاً:
+
+```text
+Project Allocation
+cannot exceed 100%
+```
+
+أو configurable إذا الشركة تسمح Over Allocation.
+
+مثلاً:
+
+```text
+Contract End < Contract Start
+→ BLOCK
+```
+
+```text
+Joining Date < Birth Date
+→ BLOCK
+```
+
+---
+
+# 4.66 Bulk Employee Import
+
+لأن الشركات الموجودة بالفعل تحتاج Migration.
+
+يدعم:
+
+```text
+Excel Upload
+CSV
+API
+ERP Sync
+```
+
+Workflow:
+
+```text
+Upload
+ ↓
+Column Mapping
+ ↓
+Validation
+ ↓
+Duplicate Detection
+ ↓
+Error Report
+ ↓
+Preview
+ ↓
+Approval
+ ↓
+Import
+```
+
+---
+
+# 4.67 Import Templates
+
+Templates منفصلة:
+
+```text
+Employee Master
+Employee Project Allocation
+Documents
+Bank Accounts
+Contracts
+Certifications
+Historical Assignments
+```
+
+---
+
+# 4.68 Bulk Actions
+
+للمستخدم المخول:
+
+```text
+Assign Project
+Change Manager
+Assign HR Operations
+Update Location
+Activate
+Deactivate
+Export
+Request Documents
+```
+
+لكن Bulk Salary Change وغيرها لها Workflow مستقل.
+
+---
+
+# 4.69 Employee Search
+
+Search by:
+
+```text
+Name
+Arabic Name
+English Name
+HR Code
+Mobile
+Email
+National ID
+Position
+Project
+Department
+Manager
+Location
+Customer
+```
+
+National ID results يجب Masking حسب Permission.
+
+---
+
+# 4.70 Advanced Filters
+
+```text
+Company
+Legal Entity
+Business Unit
+Department
+Position
+Project
+Customer
+Manager
+Location
+Employment Type
+Worker Category
+Status
+Hire Date
+Contract Expiry
+Readiness
+Document Status
+HSE Status
+```
+
+---
+
+# 4.71 Saved Views
+
+مثلاً HR Operations ينشئ:
+
+```text
+Ericsson Employees Missing Documents
+```
+
+أو:
+
+```text
+Contracts Expiring Next 60 Days
+```
+
+أو:
+
+```text
+Technicians Not Ready for Deployment
+```
+
+---
+
+# 4.72 Employee Relationship Graph
+
+لاحقًا يمكن عرض:
+
+```text
+Employee
+   │
+   ├── Manager
+   ├── Department
+   ├── Projects
+   ├── HR Operations
+   ├── Cost Center
+   ├── Customer
+   └── Location
+```
+
+مهم جدًا لتحليل الـWorkforce.
+
+---
+
+# 4.73 Employee Snapshot
+
+بدل الاعتماد فقط على Live Data، بعض العمليات تحتاج Snapshot.
+
+مثلاً Payroll August:
+
+```text
+Employee:
+Ahmed
+
+Position:
+Project Engineer
+
+Project:
+Ericsson
+
+Grade:
+G6
+```
+
+حتى لو تم نقله في September تظل بيانات Payroll August صحيحة تاريخيًا.
+
+---
+
+# 4.74 Data Ownership
+
+لا بد من تحديد System Owner لكل Data Domain.
+
+مثال:
+
+| Data                   | Owner               |
+| ---------------------- | ------------------- |
+| Personal Data          | Personnel           |
+| Position               | OD / HR             |
+| Project Assignment     | Operations / HR Ops |
+| Bank                   | Payroll / Personnel |
+| Contract               | Personnel           |
+| HSE                    | HSE                 |
+| Skills                 | HR / Operations     |
+| Customer Certification | Operations          |
+| User Access            | IT / Security       |
+
+وهذا يمنع الجميع من تعديل نفس البيانات.
+
+---
+
+# 4.75 Source of Truth
+
+لكل Field نحدد:
+
+```text
+System of Record
+```
+
+مثلاً إذا Nama ERP هو المصدر لبعض الحقول:
+
+```text
+Nama ERP
+   ↓
+Afro HR
+```
+
+يكون الحقل:
+
+```text
+Read Only
+Synced
+```
+
+ولا يسمح Afro HR بتعديله محليًا.
+
+أما حقول أخرى:
+
+```text
+Afro HR = Master
+```
+
+ثم يتم إرسالها إلى Nama.
+
+---
+
+# 4.76 Integration Status Per Employee
+
+في Profile:
+
+```text
+Nama ERP        ✓ Synced
+Payroll         ✓ Synced
+Corporate Email ✓ Created
+Attendance      ✓ Registered
+Customer Portal ⚠ Pending
+```
+
+---
+
+# 4.77 Data Privacy
+
+كل البيانات الحساسة تصنف:
+
+```text
+Normal
+Internal
+Confidential
+Restricted
+Highly Restricted
+```
+
+مثلاً:
+
+```text
+Name             Internal
+Mobile           Confidential
+National ID      Restricted
+Bank Account     Highly Restricted
+Salary           Highly Restricted
+Medical          Highly Restricted
+Investigation    Highly Restricted
+```
+
+---
+
+# 4.78 Data Masking
+
+مثلاً:
+
+```text
+National ID
+298***********45
+```
+
+Bank:
+
+```text
+**** **** **** 4592
+```
+
+Mobile:
+
+```text
+010****882
+```
+
+حسب Role.
+
+---
+
+# 4.79 Employee Data Audit
+
+كل Field Change:
+
+```text
+Field:
+Project
+
+Before:
+Ericsson
+
+After:
+Huawei
+
+Changed By:
+HR Operations
+
+Effective:
+01-Sep-2026
+
+Approved By:
+HR Manager
+
+Reason:
+Project Transfer
+```
+
+---
+
+# 4.80 No Hard Delete
+
+Employee لا يتم:
+
+```text
+DELETE FROM Employees
+```
+
+بل:
+
+```text
+Archive
+```
+
+مع Data Retention Policy.
+
+خاصة أن الـManual ينص على File Closure & Archiving عند نهاية الخدمة. 
+
+---
+
+# 4.81 Offboarding Integration
+
+عند Offboarding:
+
+```text
+Employment Status
+→ Pending Offboarding
+
+User
+→ Disable
+
+Project Assignments
+→ End Date
+
+Assets
+→ Clearance
+
+Payroll
+→ Final Settlement
+
+Documents
+→ Archive
+```
+
+بعد الإغلاق:
+
+```text
+Employee Record
+→ Archived
+```
+
+والـManual يطلب تحديث HR records، archive personnel file، وإغلاق employee record. 
+
+---
+
+# 4.82 Employee Master Dashboard
+
+على مستوى الشركة:
+
+```text
+5,000 Employees
+
+4,310 Active
+230 Notice Period
+120 Pending Deployment
+190 Inactive
+150 Archived
+```
+
+كذلك:
+
+```text
+Employment Types
+Permanent        2,450
+Project-Based    1,580
+Daily              620
+Outsourced         350
+```
+
+---
+
+# 4.83 Workforce Distribution
+
+يمكن تحليل:
+
+```text
+By Department
+By Project
+By Customer
+By Location
+By Position
+By Grade
+By Employment Type
+By Worker Category
+```
+
+---
+
+# 4.84 Compliance Dashboard
+
+مثلاً:
+
+```text
+4,128 Fully Compliant
+412 Missing Documents
+186 Expiring Contracts
+73 Expired Certifications
+29 Missing Medical Clearance
+12 Allocation Errors
+```
+
+---
+
+# 4.85 Digital Employee File Architecture
+
+الصورة النهائية:
+
+```text
+                    Person
+                      │
+                Employment
+                      │
+                   Employee
+                      │
+ ┌────────────────────┼────────────────────┐
+ │                    │                    │
+Personal          Organization         Compliance
+ │                    │                    │
+Contacts          Position             Documents
+Address           Manager              Contracts
+Emergency         Project              Insurance
+                 Location              HSE
+                 Cost Center           Certification
+                      │
+                Operational Data
+                      │
+        ┌─────────────┼─────────────┐
+        │             │             │
+     Assets       Payroll Ref    Systems
+```
+
+---
+
+# 4.86 Proposed Database Structure
+
+Core:
+
+```text
+Persons
+Employees
+Employments
+
+EmployeeContacts
+EmployeeAddresses
+EmergencyContacts
+
+EmployeeAssignments
+EmployeeProjectAssignments
+EmployeeReportingLines
+EmployeeLocations
+
+EmployeeContracts
+EmployeeDocuments
+EmployeeEducation
+EmployeeExperience
+EmployeeSkills
+EmployeeCertifications
+
+EmployeeHSEProfiles
+EmployeeInsurance
+EmployeeBankAccounts
+
+EmployeeExternalProfiles
+EmployeeCustomFields
+
+EmployeeLifecycleEvents
+EmployeeHistory
+EmployeeSnapshots
+```
+
+---
+
+# 4.87 Key Database Rule
+
+لا نضع Columns مثل:
+
+```text
+Project1
+Project2
+Project3
+
+Document1
+Document2
+
+Certificate1
+Certificate2
+```
+
+بل كل واحدة One-to-Many.
+
+---
+
+# 4.88 Critical Business Rules
+
+أهم قواعد Module 04:
+
+```text
+01. Person can have multiple employments.
+02. HR Code must be unique per tenant.
+03. National ID must not be primary database key.
+04. Employee can belong to multiple projects.
+05. Project allocations must be effective-dated.
+06. Organization changes must preserve history.
+07. Sensitive fields require field-level security.
+08. Mandatory documents depend on employee type/role.
+09. Deployment requires readiness validation.
+10. Changes to master data must be auditable.
+11. Data coming from external master systems may be read-only.
+12. Employee records must never be hard-deleted.
+13. Rehire should reuse Person identity.
+14. Future-dated movements must be supported.
+15. Every employee must belong to one tenant.
+```
+
+---
+
+# 4.89 Connection With Existing Modules
+
+```text
+Module 01
+Tenant / Company
+        ↓
+Module 02
+Organization / Job Architecture
+        ↓
+Module 03
+Identity / Roles / Permissions
+        ↓
+Module 04
+Employee Master & Digital File
+```
+
+والآن أصبح عندنا أساس يمكّننا من بناء العمليات الفعلية.
+
+الـEmployee Master يعرف:
+
+```text
+WHO
+```
+
+Module 02 يعرف:
+
+```text
+WHERE IN ORGANIZATION
+```
+
+Module 03 يعرف:
+
+```text
+WHAT CAN THEY ACCESS
+```
+
+Module 04 يعرف:
+
+```text
+WHO THEY ARE + THEIR COMPLETE EMPLOYMENT RECORD
+```
+
+---
+
+## الخطوة المنطقية التالية
+
+**Module 05 — Recruitment, Manpower Request & Applicant Tracking System (ATS)**
+
+وأقترح أن يكون Module 05 كبيرًا نسبيًا، لأن الـPeople & Culture Manual يحتوي بالفعل دورة Hiring واضحة تبدأ من **Manpower Request → Sourcing → Screening → Interviews → Selection → Offer → Handover to Personnel**، وبالتالي نستطيع تحويل الـManual نفسه إلى Workflow Engine رقمي بدل مجرد تسجيل Candidate Records. 

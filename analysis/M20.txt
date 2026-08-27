@@ -1,0 +1,1988 @@
+ممتاز. **Module 20** هنا لازم يكون هو الـModule الذي يحوّل الـHR من “إدارة موظفين” إلى **إدارة شكل المنظمة نفسها**: كيف تتصمم، كيف تتغير، كيف تتعامل مع النمو أو الانكماش، وكيف نقيس هل الهيكل الحالي فعال أم لا.
+
+وده منطقي جدًا لأن الـOrg Chart الحالي فيه **Organizational Development Leader** كوظيفة مستقلة داخل People & Culture، بينما الـOperations Manual يركز أكثر على التشغيل اليومي: hiring, onboarding, payroll, HR operations, offboarding، ولا يعطي OD دورة تشغيلية متكاملة خاصة به.  
+
+# Module 20 — Strategic Organization Development, Organization Design, Workforce Transformation, Change Management & Organizational Effectiveness
+
+## 20.1 الهدف الرئيسي
+
+بناء نظام يدير:
+
+```text
+Organization Design
++
+Structure Change
++
+Operating Model
++
+Workforce Transformation
++
+Change Programs
++
+Organizational Effectiveness
+```
+
+بدل ما تكون التغييرات التنظيمية عبارة عن:
+
+```text
+PowerPoint
++
+Excel
++
+Emails
++
+Org Chart جديد
+```
+
+نريدها تصبح:
+
+```text
+Business Need
+↓
+Current-State Analysis
+↓
+Target Organization Design
+↓
+Impact Assessment
+↓
+Approval
+↓
+Transition Plan
+↓
+Execution
+↓
+Post-Change Measurement
+```
+
+---
+
+# 20.2 الفرق بين Module 02 وModule 20
+
+دي نقطة مهمة جدًا.
+
+### Module 02 — Organization Structure & Job Architecture
+
+هو:
+
+```text
+System of Record
+```
+
+يعني يحتفظ بالهيكل الحالي المعتمد:
+
+* Company
+* Sector
+* Department
+* Position
+* Job
+* Reporting Line
+* Grade
+
+### Module 20
+
+هو:
+
+```text
+System of Change
+```
+
+يعني يدير:
+
+* لماذا نغير الهيكل؟
+* ما البدائل؟
+* ما الهيكل المقترح؟
+* من سيتأثر؟
+* ما التكلفة؟
+* ما المخاطر؟
+* كيف ننفذ؟
+* هل التغيير نجح؟
+
+بمعنى:
+
+```text
+Module 20 designs the future
+↓
+After approval
+↓
+Module 02 becomes the new official structure
+```
+
+---
+
+# 20.3 المكونات الرئيسية
+
+أقترح تقسيم Module 20 إلى:
+
+```text
+01 Organization Diagnostics
+02 Organization Design
+03 Operating Model Design
+04 Position & Layer Optimization
+05 Workforce Transformation
+06 Restructuring Programs
+07 Change Management
+08 Change Impact Assessment
+09 Organizational Effectiveness
+10 Transformation Governance
+11 Benefits Realization
+```
+
+---
+
+# 20.4 Organization Diagnostics
+
+قبل أي restructuring لازم نفهم الوضع الحالي.
+
+النظام يحلل:
+
+* Headcount
+* FTE
+* Layers
+* Span of Control
+* Management Ratio
+* Vacancies
+* Duplicate Roles
+* Workload
+* Cost
+* Productivity
+* Turnover
+* Skills
+* Performance
+* Project Demand
+
+مصادرها تأتي أساسًا من Modules 02 و17.
+
+---
+
+# 20.5 Current-State Organization Snapshot
+
+أي initiative يبدأ بـSnapshot ثابت.
+
+مثلاً:
+
+```text
+Organization Snapshot
+Date: 01-Aug-2026
+
+Employees       3,850
+FTE             3,720
+Managers          410
+Layers              8
+Avg Span          8.4
+People Cost      85M/month
+Vacant Positions   240
+```
+
+هذا snapshot لا يتغير لاحقًا حتى نقدر نقارن Before / After.
+
+---
+
+# 20.6 Organization Health Indicators
+
+مثلاً:
+
+* Excessive Layers
+* Narrow Span
+* Wide Span
+* Excessive Management Ratio
+* High Vacancy
+* High Cost
+* Low Utilization
+* Duplicate Roles
+* Role Ambiguity
+* Critical Skill Shortage
+
+---
+
+# 20.7 Span of Control
+
+النظام يحسب لكل Manager:
+
+```text
+Direct Reports
+```
+
+لكن ما ينفعش نحط Rule واحدة لكل الشركة.
+
+مثلاً:
+
+```text
+Project Manager
+6–10
+
+Field Supervisor
+8–15
+
+Specialist Manager
+4–7
+```
+
+كلها configurable حسب Job Family.
+
+---
+
+# 20.8 Organizational Layers
+
+النظام يرسم:
+
+```text
+CEO
+↓
+Sector
+↓
+General Manager
+↓
+Department Manager
+↓
+Section Head
+↓
+Supervisor
+↓
+Employee
+```
+
+ويكشف:
+
+> 8 layers between CEO and field employee.
+
+ثم يقارن بالTarget Organization.
+
+---
+
+# 20.9 Management Ratio
+
+مثلاً:
+
+```text
+Managers / Total Workforce
+```
+
+أو:
+
+```text
+Non-Manager FTE per Manager
+```
+
+لكن يتم تفسيرها حسب business model.
+
+---
+
+# 20.10 Duplicate Role Analysis
+
+النظام يستطيع كشف Positions متشابهة جدًا مثل:
+
+```text
+HR Coordinator
+HR Operations Coordinator
+HR Project Coordinator
+```
+
+ثم يرفع:
+
+```text
+Potential Role Duplication
+```
+
+للمراجعة وليس الدمج التلقائي.
+
+---
+
+# 20.11 Role Clarity
+
+يمكن لكل Position تحديد:
+
+```text
+Purpose
+Key Accountabilities
+Decision Rights
+Interfaces
+KPIs
+Required Skills
+```
+
+ثم يظهر overlap.
+
+---
+
+# 20.12 Organization Design Workspace
+
+بدل تعديل الـLive Org مباشرة، نعمل:
+
+```text
+Design Sandbox
+```
+
+OD يستطيع:
+
+* Add Department
+* Remove Department
+* Merge Units
+* Split Units
+* Add Position
+* Remove Position
+* Change Reporting Line
+* Change Span
+* Move Roles
+
+بدون التأثير على الهيكل الحالي.
+
+---
+
+# 20.13 Organization Design Versions
+
+مثلاً:
+
+```text
+Current
+Design A
+Design B
+Design C
+Recommended
+Approved
+```
+
+والنظام يقارنهم.
+
+---
+
+# 20.14 Scenario Comparison
+
+مثلاً:
+
+| Metric     | Current | Design A | Design B |
+| ---------- | ------: | -------: | -------: |
+| HC         |   3,850 |    3,700 |    3,620 |
+| Managers   |     410 |      350 |      325 |
+| Layers     |       8 |        7 |        6 |
+| Cost/month |     85M |      82M |      79M |
+| Avg Span   |     8.4 |      9.6 |     10.4 |
+
+---
+
+# 20.15 Visual Org Design
+
+يفضل يكون عندنا:
+
+```text
+Drag & Drop Org Design
+```
+
+مع:
+
+* reporting lines
+* positions
+* vacancies
+* FTE
+* cost
+* manager span
+
+---
+
+# 20.16 Position Impact
+
+لما أحذف Position:
+
+النظام يسأل:
+
+```text
+Occupied?
+Vacant?
+Critical?
+Successor?
+Employee affected?
+Payroll impact?
+Project impact?
+```
+
+---
+
+# 20.17 Merge Department Example
+
+مثلاً:
+
+```text
+Department A
++
+Department B
+↓
+New Department C
+```
+
+النظام يحسب:
+
+* Employees affected
+* Managers affected
+* Positions duplicated
+* Cost impact
+* System access impact
+* reporting-line changes
+
+---
+
+# 20.18 Operating Model Design
+
+Module 20 لا يجب أن يكون Org Chart فقط.
+
+نحتاج:
+
+```text
+Operating Model
+```
+
+يعني:
+
+> من يعمل ماذا؟ ومن يقرر ماذا؟
+
+---
+
+# 20.19 Operating Model Components
+
+مثلاً:
+
+```text
+People
+Process
+Technology
+Governance
+Decision Rights
+Location
+Service Model
+```
+
+---
+
+# 20.20 Centralized vs Decentralized
+
+مثلاً HR Operations:
+
+### Model A
+
+Central HR team.
+
+### Model B
+
+HR per project.
+
+### Model C
+
+Hybrid.
+
+النظام يمكن مقارنة:
+
+* Cost
+* SLA
+* Capacity
+* Control
+* Employee coverage
+
+---
+
+# 20.21 Shared Services Design
+
+ممكن لاحقًا تصميم:
+
+```text
+HR Shared Services
+```
+
+مثلاً:
+
+* Payroll centralized
+* Personnel centralized
+* HR Operations decentralized
+* TA shared
+
+---
+
+# 20.22 RACI / Responsibility Design
+
+يمكن لكل Process تحديد:
+
+```text
+Responsible
+Accountable
+Consulted
+Informed
+```
+
+مثلاً Hiring:
+
+```text
+Requester
+TA
+Personnel
+Finance
+HR Manager
+```
+
+---
+
+# 20.23 Decision Rights
+
+مهم جدًا ربطه بـModule 18.
+
+مثلاً:
+
+```text
+Who decides manpower?
+Who approves salary?
+Who approves promotion?
+Who owns project allocation?
+```
+
+Module 20 يصمم Operating Model.
+
+Module 18 يحوله إلى DoA Rules فعلية.
+
+---
+
+# 20.24 Workforce Transformation
+
+دي أكبر من Workforce Planning.
+
+Module 17 يقول:
+
+> نحتاج 500 Technician.
+
+Module 20 يسأل:
+
+> هل يجب أن يكونوا Permanent أصلًا؟
+
+---
+
+# 20.25 Transformation Options
+
+يمكن مقارنة:
+
+```text
+Hire
+Reskill
+Redeploy
+Outsource
+Automate
+Subcontract
+Reduce
+```
+
+---
+
+# 20.26 Build / Buy / Borrow / Bot
+
+Framework مفيد:
+
+### Build
+
+Train current employees.
+
+### Buy
+
+External hiring.
+
+### Borrow
+
+Contractors / outsourcing.
+
+### Bot
+
+Automation / technology.
+
+---
+
+# 20.27 Workforce Transition Map
+
+مثلاً:
+
+```text
+Current Role
+↓
+Future Role
+↓
+Gap
+↓
+Transition Action
+```
+
+مثال:
+
+```text
+Data Entry Clerk
+↓
+HR Operations Analyst
+
+Needs:
+Excel
+HR System
+Analytics
+```
+
+ثم Module 11 ينشئ learning path.
+
+---
+
+# 20.28 Role Impact Categories
+
+كل Role أثناء transformation:
+
+```text
+No Change
+Minor Change
+Major Change
+New Role
+Role Merged
+Role Eliminated
+```
+
+---
+
+# 20.29 Employee Impact
+
+وبعدها:
+
+```text
+Employee unaffected
+Employee transferred
+Employee reskilled
+Employee promoted
+Employee redeployed
+Employee role at risk
+```
+
+مع صلاحيات عالية جدًا.
+
+---
+
+# 20.30 Restructuring Program
+
+أي restructuring كبير يجب أن يكون Program مستقل.
+
+مثلاً:
+
+```text
+P&C Operating Model 2027
+```
+
+---
+
+# 20.31 Restructuring Workflow
+
+```text
+Business Case
+↓
+Diagnostic
+↓
+Design
+↓
+Financial Impact
+↓
+People Impact
+↓
+Risk
+↓
+Legal / Compliance Review
+↓
+Approval
+↓
+Transition
+↓
+Go-Live
+↓
+Stabilization
+```
+
+---
+
+# 20.32 Business Case
+
+يجب أن يحتوي:
+
+```text
+Problem
+Objectives
+Scope
+Current Cost
+Target Cost
+Expected Benefits
+Risks
+Timeline
+```
+
+---
+
+# 20.33 Financial Impact
+
+يرتبط بـModule 17.
+
+مثلاً:
+
+```text
+Current People Cost: 85M/month
+Target: 78M/month
+
+Annual Saving:
+84M
+```
+
+لكن نحسب أيضًا:
+
+* Severance
+* Recruitment
+* Training
+* Technology
+* Transition costs
+
+---
+
+# 20.34 Transition Cost
+
+مثلاً:
+
+```text
+Redundancy Cost
+Training
+Recruitment
+Consulting
+System Changes
+Temporary Dual Roles
+```
+
+فممكن restructuring يوفر 10M لكنه يكلف 12M أول سنة.
+
+---
+
+# 20.35 Change Management
+
+ده لازم يكون جزء أساسي وليس مجرد Communication.
+
+نحتاج:
+
+```text
+Change Program
+```
+
+---
+
+# 20.36 Change Types
+
+* Organization Restructure
+* New HR Policy
+* New ERP
+* New Process
+* New Operating Model
+* New Project Mobilization
+* Merger
+* New Leadership
+* Workforce Reduction
+
+---
+
+# 20.37 Change Impact Assessment
+
+لكل change:
+
+```text
+What changes?
+Who is affected?
+How much?
+When?
+```
+
+---
+
+# 20.38 Impact Dimensions
+
+يمكن تقييم:
+
+* Role
+* Process
+* System
+* Manager
+* Location
+* Policy
+* Skill
+* Compensation
+* Reporting Line
+* Daily Work
+
+---
+
+# 20.39 Change Impact Score
+
+مثلاً:
+
+```text
+Low
+Medium
+High
+Critical
+```
+
+أو:
+
+```text
+1–5
+```
+
+---
+
+# 20.40 Stakeholder Mapping
+
+لكل Stakeholder:
+
+```text
+Influence
+Impact
+Support Level
+Resistance Risk
+```
+
+---
+
+# 20.41 Stakeholder Groups
+
+مثلاً:
+
+```text
+CEO
+Directors
+Managers
+HR
+Field Employees
+IT
+Finance
+Project Teams
+```
+
+---
+
+# 20.42 Change Readiness Assessment
+
+قبل Go-Live:
+
+* Leadership readiness
+* Manager readiness
+* Employee awareness
+* Training readiness
+* System readiness
+* Process readiness
+
+---
+
+# 20.43 Readiness Score
+
+مثلاً:
+
+```text
+Overall Change Readiness = 72%
+```
+
+مع breakdown.
+
+---
+
+# 20.44 Change Communication Plan
+
+يرتبط بـModule 19.
+
+مثلاً:
+
+```text
+Audience
+Message
+Channel
+Owner
+Date
+Acknowledgment
+```
+
+---
+
+# 20.45 Training Plan
+
+يرتبط بـModule 11.
+
+مثلاً New HR system:
+
+```text
+HR Admin
+Payroll
+Managers
+Employees
+```
+
+كل مجموعة لها Training مختلف.
+
+---
+
+# 20.46 Resistance Management
+
+يمكن تسجيل:
+
+```text
+Resistance Issue
+Group
+Reason
+Owner
+Action
+```
+
+لكن لا نقوم بعمل “resistance score” سري لكل موظف.
+
+---
+
+# 20.47 Change Champion Network
+
+يمكن اختيار:
+
+```text
+Change Champions
+```
+
+حسب Locations / Departments / Projects.
+
+ومتابعة:
+
+* Activities
+* Feedback
+* Issues
+
+---
+
+# 20.48 Change Feedback
+
+من Module 19:
+
+```text
+Pulse Survey
+Town Hall Feedback
+Manager Feedback
+```
+
+---
+
+# 20.49 Go-Live Readiness
+
+قبل تنفيذ change:
+
+```text
+Structure Approved        ✓
+Positions Defined         ✓
+DoA Updated               ✓
+Systems Configured        ✓
+Employees Communicated    ✓
+Training Completed        88%
+Risk Actions Closed       93%
+```
+
+ثم Go / No-Go decision.
+
+---
+
+# 20.50 Transition Wave Planning
+
+بدل تنفيذ كل الشركة مرة واحدة.
+
+مثلاً:
+
+```text
+Wave 1 — HQ
+Wave 2 — Ericsson
+Wave 3 — Huawei
+```
+
+---
+
+# 20.51 Organizational Effectiveness
+
+بعد التغيير لازم نسأل:
+
+> هل المنظمة بقت أفضل؟
+
+---
+
+# 20.52 Organizational Effectiveness Dimensions
+
+مثل:
+
+* Speed of Decision
+* Span of Control
+* Cost Efficiency
+* Productivity
+* Role Clarity
+* Collaboration
+* Employee Experience
+* Customer Delivery
+* Workforce Capacity
+
+---
+
+# 20.53 Effectiveness KPIs
+
+مثلاً:
+
+```text
+Cost per FTE
+Revenue per FTE
+Management Ratio
+Cycle Time
+Decision Time
+Employee Engagement
+Turnover
+Vacancy Rate
+```
+
+---
+
+# 20.54 Before / After Measurement
+
+مثلاً:
+
+```text
+Before Restructure
+
+Layers = 8
+Approval time = 7 days
+People Cost = 85M
+Engagement = 62
+```
+
+بعد 6 شهور:
+
+```text
+Layers = 6
+Approval time = 4 days
+People Cost = 79M
+Engagement = 68
+```
+
+---
+
+# 20.55 Benefits Realization
+
+الـBusiness Case قال:
+
+```text
+Expected Saving = 10M/year
+```
+
+بعد التنفيذ:
+
+```text
+Realized Saving = 7.2M
+```
+
+النظام يتابع:
+
+```text
+Planned Benefit
+Realized Benefit
+Variance
+Owner
+```
+
+---
+
+# 20.56 Unintended Consequences
+
+مهم جدًا.
+
+مثلاً restructure قلل التكلفة لكن أدى إلى:
+
+```text
+OT ↑
+Turnover ↑
+Engagement ↓
+```
+
+النظام يظهر trade-off.
+
+---
+
+# 20.57 Organization Design Rules
+
+يمكن وضع Guardrails.
+
+مثلاً:
+
+```text
+No Manager Position
+without minimum approved span
+```
+
+أو:
+
+```text
+Critical function cannot have zero backup
+```
+
+لكن تكون Rules configurable.
+
+---
+
+# 20.58 Organization Change Approval
+
+مثلاً:
+
+```text
+OD
+↓
+People & Culture Manager
+↓
+Finance
+↓
+CEO
+```
+
+حسب scope.
+
+ويرتبط بـModule 18.
+
+---
+
+# 20.59 Effective Dating
+
+أي structure change له:
+
+```text
+Approval Date
+Effective Date
+```
+
+مثلاً:
+
+```text
+Approved:
+01-Dec-2026
+
+Effective:
+01-Jan-2027
+```
+
+---
+
+# 20.60 Future-Dated Org Structure
+
+Module 02 يجب أن يحتفظ:
+
+```text
+Current Structure
+Future Approved Structure
+```
+
+ثم في effective date يتحول الجديد إلى active.
+
+---
+
+# 20.61 Retroactive Change
+
+لو حدث تصحيح backdated:
+
+يجب أن يكون exceptional ومراقب من Module 18.
+
+---
+
+# 20.62 Position Mapping
+
+عند restructure:
+
+```text
+Old Position
+→ New Position
+```
+
+مثلاً:
+
+```text
+HR Coordinator
+→ HR Operations Specialist
+```
+
+---
+
+# 20.63 Employee Mapping
+
+```text
+Employee
+Current Position
+Future Position
+Transition Type
+Effective Date
+```
+
+---
+
+# 20.64 Vacancy Mapping
+
+حتى vacant positions يجب تحديد مصيرها:
+
+```text
+Retained
+Cancelled
+Merged
+Replaced
+```
+
+---
+
+# 20.65 Talent Impact
+
+يرتبط بـModule 12.
+
+مثلاً لو تم حذف Manager Position:
+
+النظام ينظر إلى:
+
+```text
+Successor
+Potential Move
+Internal Opportunity
+```
+
+---
+
+# 20.66 Skill Impact
+
+لو الدور الجديد يحتاج Skills إضافية:
+
+يرتبط بـModule 11.
+
+```text
+Required Skill
+Current Skill
+Gap
+Development Plan
+```
+
+---
+
+# 20.67 Performance Impact
+
+لا يتم استخدام restructure كطريقة لإخفاء performance cases.
+
+يعني:
+
+```text
+Organization Design Decision
+```
+
+يجب أن يظل منفصلًا عن:
+
+```text
+Performance / Discipline Decision
+```
+
+---
+
+# 20.68 Legal & Compliance Review
+
+أي major restructure يمر على Module 18.
+
+خصوصًا:
+
+* role elimination
+* contract changes
+* salary changes
+* location changes
+* terminations
+
+---
+
+# 20.69 Employee Experience Impact
+
+Module 19 يقيس:
+
+```text
+Pre-change Engagement
+Change Pulse
+Post-change Engagement
+```
+
+---
+
+# 20.70 Transformation Risk Register
+
+لكل transformation:
+
+* People Risk
+* Operational Risk
+* Skills Risk
+* Customer Risk
+* Legal Risk
+* Cost Risk
+* Delivery Risk
+
+---
+
+# 20.71 Change Risk Example
+
+```text
+Risk:
+Loss of critical engineers during restructure
+
+Likelihood: High
+Impact: High
+```
+
+Mitigation:
+
+```text
+Retention plan
+Critical role mapping
+Succession coverage
+```
+
+---
+
+# 20.72 Transformation Governance Board
+
+يمكن إنشاء:
+
+```text
+Steering Committee
+```
+
+مع:
+
+* Decisions
+* Actions
+* Risks
+* Approvals
+* Milestones
+
+---
+
+# 20.73 Milestone Management
+
+مثلاً:
+
+```text
+Diagnostic Complete
+Design Approved
+Positions Mapped
+Communication Complete
+Training Complete
+Go-Live
+Stabilization Complete
+```
+
+---
+
+# 20.74 Decision Log
+
+كل design decision:
+
+```text
+Decision
+Alternatives
+Reason
+Approver
+Expected Impact
+```
+
+---
+
+# 20.75 Assumption Register
+
+مثلاً:
+
+```text
+Expected 20% growth
+Project X ends in Dec
+Automation saves 15 FTE
+```
+
+وبعدها يمكن مراجعة هل assumptions صحيحة.
+
+---
+
+# 20.76 Organization Design AI Copilot
+
+AI ممكن يساعد في:
+
+* detecting unusual spans
+* comparing design scenarios
+* identifying potential role overlap
+* drafting role descriptions
+* summarizing impact
+
+لكن لا:
+
+```text
+Automatically eliminate employees
+```
+
+ولا:
+
+```text
+Select who should be terminated
+```
+
+---
+
+# 20.77 Scenario Prompt Example
+
+الإدارة تسأل:
+
+> Reduce management layers from 8 to 6 without reducing field capacity.
+
+النظام يقدر يبني simulation.
+
+---
+
+# 20.78 Capacity Preservation
+
+مهم جدًا.
+
+أي design لا يقاس فقط بـHeadcount reduction.
+
+لازم:
+
+```text
+Operational Capacity
+```
+
+تظل محسوبة.
+
+---
+
+# 20.79 Transformation Scenario
+
+مثلاً:
+
+```text
+Scenario A:
+Reduce 50 managers
+
+Scenario B:
+Reduce 30 managers + automate admin work
+
+Scenario C:
+Shared services + redeployment
+```
+
+ثم مقارنة:
+
+* Cost
+* Risk
+* Capacity
+* Transition time
+
+---
+
+# 20.80 Organizational Network Analysis — Future
+
+ميزة متقدمة لاحقًا.
+
+يمكن تحليل:
+
+```text
+Who actually works with whom
+```
+
+من workflows وليس مراقبة private communications.
+
+لمعرفة informal collaboration patterns.
+
+لكن تحتاج privacy governance قوية.
+
+---
+
+# 20.81 OD Portfolio
+
+Organizational Development يجب أن يكون عنده Portfolio:
+
+```text
+Org Redesign
+Role Harmonization
+Culture Program
+Leadership Model
+Change Program
+Workforce Transformation
+```
+
+---
+
+# 20.82 Initiative Prioritization
+
+يمكن ترتيب initiatives حسب:
+
+```text
+Strategic Impact
+Cost
+Risk
+Urgency
+Effort
+```
+
+---
+
+# 20.83 Organizational Effectiveness Scorecard
+
+مثلاً:
+
+```text
+Structure
+30%
+
+Workforce
+20%
+
+Cost
+20%
+
+Decision Efficiency
+15%
+
+Employee Experience
+15%
+```
+
+لكن weighting configurable.
+
+---
+
+# 20.84 Executive Organization Dashboard
+
+للCEO:
+
+```text
+Total HC
+Layers
+Avg Span
+Managers
+People Cost
+Critical Structural Risks
+Active Transformations
+Benefits Realized
+```
+
+---
+
+# 20.85 OD Dashboard
+
+للOrganizational Development:
+
+```text
+Org Design Initiatives
+Open Design Scenarios
+Positions Impacted
+Transformation Programs
+Change Readiness
+Benefits
+Effectiveness
+```
+
+---
+
+# 20.86 Department Manager Dashboard
+
+يرى:
+
+```text
+Current Structure
+Approved Future Structure
+Affected Positions
+Open Actions
+Change Milestones
+```
+
+فقط scope الخاص به.
+
+---
+
+# 20.87 Employee View
+
+الموظف لا يرى design work قبل approval.
+
+بعد communication:
+
+```text
+New Position
+New Manager
+Effective Date
+What Changes
+Required Actions
+```
+
+---
+
+# 20.88 Confidentiality
+
+بعض restructuring scenarios شديدة الحساسية.
+
+نحتاج:
+
+```text
+Need-to-Know Access
+```
+
+حتى بعض HR users لا يرون كل design.
+
+---
+
+# 20.89 Scenario Security
+
+مثلاً:
+
+```text
+Project Alpha
+Confidential
+```
+
+فقط:
+
+* OD Leader
+* P&C Manager
+* CEO
+* Authorized Finance
+
+---
+
+# 20.90 Organization Design Audit Trail
+
+كل تغيير:
+
+```text
+Position Moved
+Old Manager
+New Manager
+User
+Date
+Reason
+```
+
+---
+
+# 20.91 Data Model
+
+أهم Entities:
+
+```text
+organization_diagnostic
+organization_snapshot
+
+org_design_project
+org_design_version
+org_design_node
+position_mapping
+
+operating_model
+decision_right
+raci_assignment
+
+transformation_program
+workforce_transition
+role_impact
+employee_impact
+
+change_program
+stakeholder
+change_impact
+change_readiness
+
+transformation_risk
+transformation_action
+
+benefit
+benefit_measurement
+
+effectiveness_metric
+effectiveness_snapshot
+```
+
+---
+
+# 20.92 التكامل مع باقي Modules
+
+## Module 02
+
+```text
+Approved Organization Design
+→ New Official Structure
+```
+
+## Module 05
+
+```text
+Future Workforce Gap
+→ Recruitment Plan
+```
+
+## Module 09
+
+```text
+Salary / Cost Impact
+→ Payroll
+```
+
+## Module 11
+
+```text
+Skill Gap
+→ Training
+```
+
+## Module 12
+
+```text
+Redeployment
+Promotion
+Succession
+```
+
+## Module 16
+
+إذا نتج separation قانوني:
+
+```text
+Approved Transition
+→ Offboarding
+```
+
+## Module 17
+
+```text
+Cost
+HC
+Forecast
+Scenario Analysis
+```
+
+## Module 18
+
+```text
+Approval
+Governance
+Risk
+Compliance
+```
+
+## Module 19
+
+```text
+Communication
+Experience
+Change Pulse
+Employee Voice
+```
+
+---
+
+# 20.93 مثال كامل لشركة Afro
+
+نفترض أن الشركة تريد إعادة تصميم HR.
+
+الوضع الحالي:
+
+```text
+TA
+Personnel
+Payroll
+HR Operations
+ER & Compliance
+OD
+```
+
+وهو قريب من الهيكل الحالي الظاهر في الـOrg Chart. 
+
+الإدارة تريد دراسة:
+
+```text
+Central HR Shared Services
++
+Project HR Business Partners
+```
+
+Module 20 يعمل 3 scenarios.
+
+### Scenario A — Current Model
+
+```text
+HC: 28
+Cost: 1.8M/month
+```
+
+### Scenario B — Shared Services
+
+```text
+HC: 24
+Cost: 1.55M
+Faster standardization
+Higher centralization risk
+```
+
+### Scenario C — Hybrid
+
+```text
+HC: 26
+Cost: 1.65M
+Central payroll/personnel
+Project-facing HR Ops
+```
+
+ثم نقارن:
+
+```text
+Cost
+SLA
+Control
+Employee Coverage
+Project Responsiveness
+Risk
+```
+
+ويتم اختيار Scenario C.
+
+بعدها:
+
+```text
+Module 20
+Design
+
+→ Module 18
+Approval
+
+→ Module 02
+New Structure
+
+→ Module 12
+Employee Mapping
+
+→ Module 11
+Training
+
+→ Module 19
+Communication
+
+→ Module 17
+Benefits Tracking
+```
+
+ده هو التكامل الحقيقي.
+
+---
+
+# 20.94 أهم قاعدة تصميم
+
+لازم نفرق بين:
+
+```text
+Proposed Organization
+```
+
+و:
+
+```text
+Approved Organization
+```
+
+و:
+
+```text
+Effective Organization
+```
+
+لأن أكبر خطأ ممكن يحصل إن شخص في OD يعدل الهيكل المقترح فتتغير الـreporting lines والpermissions والpayroll مباشرة.
+
+ممنوع.
+
+التسلسل:
+
+```text
+Design
+↓
+Review
+↓
+Approval
+↓
+Future Effective
+↓
+Activation
+```
+
+---
+
+# 20.95 Module Navigation
+
+أقترح:
+
+```text
+Module 20
+│
+├── OD Executive Overview
+│
+├── Organization Diagnostics
+│
+├── Organization Design
+│   ├── Current Organization
+│   ├── Design Workspace
+│   ├── Scenarios
+│   └── Comparison
+│
+├── Operating Model
+│   ├── RACI
+│   ├── Decision Rights
+│   └── Service Model
+│
+├── Workforce Transformation
+│   ├── Role Impact
+│   ├── Employee Mapping
+│   └── Reskilling / Redeployment
+│
+├── Restructuring Programs
+│
+├── Change Management
+│   ├── Stakeholders
+│   ├── Impact Assessment
+│   ├── Readiness
+│   ├── Communication
+│   └── Training
+│
+├── Transformation Risks
+│
+├── Benefits Realization
+│
+├── Organizational Effectiveness
+│
+└── OD Reports
+```
+
+---
+
+## النقطة التي أعتبرها أساسية جدًا
+
+Module 20 يجب ألا يكون أداة هدفها:
+
+> “إزاي نقلل Headcount؟”
+
+بل:
+
+> **إزاي نصمم المنظمة المناسبة لتحقيق business strategy بأفضل توزيع للناس، الأدوار، الصلاحيات، التكلفة، والقدرات؟**
+
+ممكن النتيجة تكون:
+
+```text
+Reduce HC
+```
+
+لكن ممكن أيضًا تكون:
+
+```text
+Increase HC
+Reorganize
+Automate
+Reskill
+Redeploy
+```
+
+حسب الـbusiness case.
+
+وبهذا يصبح لدينا الآن:
+
+```text
+Module 17 → What is happening with our workforce?
+Module 18 → Are we governed and compliant?
+Module 19 → What are employees experiencing?
+Module 20 → Is the organization itself designed correctly, and how should it change?
+```
+
+وده فعليًا يكمل وظيفة **Organizational Development** الموجودة في الهيكل الحالي ويحوّلها من وظيفة استشارية إلى operating system كامل داخل الـHR platform. 

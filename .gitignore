@@ -1,0 +1,13 @@
+# Large source recording — keep out of git history (46 MB)
+*.m4a
+
+# Local env
+deploy/.env
+db/.env
+.env
+
+# Build output
+bin/
+obj/
+node_modules/
+dist/

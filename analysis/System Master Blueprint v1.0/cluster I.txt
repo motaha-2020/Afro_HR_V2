@@ -1,0 +1,3429 @@
+تمام. ننتقل إلى **Cluster I** باعتباره **Travel & Expense Control Engine**، وليس مجرد Expense Form.
+
+الـManual الحالي لا يحتوي على Workflow مستقل ومفصل للسفر والمأموريات والمصروفات، لكنه يذكر ضمن الـPayroll وجود **allowances** و**advances/loan deductions** وproject cost allocation. لذلك سأفصل بوضوح بين ما هو موجود حاليًا في الـManual وبين التصميم الجديد المقترح لهذا الـCluster. 
+
+# Cluster I
+
+## Expense, Travel, Business Trips, Per Diem, Advances, Reimbursements & Travel Policy ERD
+
+أهم قاعدة تصميمية:
+
+> **Location Allowance ≠ Business Trip ≠ Per Diem ≠ Expense ≠ Cash Advance ≠ Reimbursement**
+
+لأن كل واحدة لها Trigger وحساب وتسوية وAccounting Treatment مختلف.
+
+---
+
+# 1. الفصل مع Cluster C — Payroll & Allowances
+
+لدينا بالفعل في Payroll:
+
+```text
+Location / Field Allowance
+```
+
+مثلاً:
+
+```text
+Employee assigned outside Cairo
+→ 150 EGP / day
+```
+
+هذا Compensation Rule مرتبط بالعمل والموقع.
+
+أما هنا:
+
+```text
+Employee travels Cairo → Alexandria
+for 3 days
+to attend project meeting
+```
+
+قد يستحق:
+
+```text
+Hotel
+Transportation
+Meals / Per Diem
+Taxi
+Fuel
+Travel Advance
+Reimbursement
+```
+
+هذه **Travel Expense** وليست Location Allowance.
+
+---
+
+# 2. السيناريو الأخطر: الاثنين قد ينطبقان
+
+مثال:
+
+Employee يعمل أساسًا في Cairo.
+
+ذهب:
+
+```text
+Aswan Project
+5 days
+```
+
+قد يكون لديه:
+
+```text
+Travel Per Diem
++
+Hotel
++
+Transportation
+```
+
+لكن هل يحصل أيضًا على:
+
+```text
+Outside Cairo Location Allowance?
+```
+
+الإجابة يجب ألا تكون hard-coded.
+
+نعمل:
+
+```text
+Allowance Interaction Rule
+```
+
+قد تقول:
+
+```text
+Per Diem replaces Location Allowance
+```
+
+أو:
+
+```text
+Both allowed
+```
+
+أو:
+
+```text
+Pay higher of both
+```
+
+أو:
+
+```text
+Location allowance applies only for long-term assignment
+```
+
+---
+
+# 3. Cluster I Domains
+
+أقسمه إلى 15 Domains:
+
+```text
+I01 Travel Policy
+I02 Travel Eligibility
+I03 Business Trip Request
+I04 Trip Itinerary
+I05 Travel Approval
+I06 Travel Booking
+I07 Per Diem Engine
+I08 Travel Advance
+I09 Expense Claims
+I10 Expense Items & Receipts
+I11 Expense Policy Validation
+I12 Reimbursement
+I13 Financial Settlement & Recovery
+I14 Project / Cost Center Allocation
+I15 Travel Analytics & Audit
+```
+
+---
+
+# 4. Overall Architecture
+
+```text
+EMPLOYEE
+   │
+   ▼
+BUSINESS TRIP REQUEST
+   │
+   ├── Travel Policy
+   ├── Eligibility
+   └── Approval
+          │
+          ▼
+      APPROVED TRIP
+          │
+     ┌────┼─────────────┐
+     ▼    ▼             ▼
+ Booking Per Diem    Advance
+     │    │             │
+     └────┼─────────────┘
+          ▼
+        TRAVEL
+          │
+          ▼
+     EXPENSE CLAIM
+          │
+   ┌──────┼────────┐
+   ▼      ▼        ▼
+Receipts Policy  Advance
+         Check    Offset
+   │      │        │
+   └──────┴────────┘
+          ▼
+   APPROVED EXPENSE
+          │
+     ┌────┴─────┐
+     ▼          ▼
+Reimbursement  Recovery
+     │
+     ▼
+ FINANCE / PAYROLL
+```
+
+---
+
+# 5. I01 — Travel Policy
+
+لا نكتب قواعد السفر في Code.
+
+## travel_policy
+
+```text
+travel_policy
+-------------
+travel_policy_id PK
+
+tenant_id FK
+company_id FK
+
+policy_code
+
+policy_name_ar
+policy_name_en
+policy_name_fr
+
+country_id FK nullable
+
+policy_version
+
+effective_from
+effective_to
+
+policy_status
+
+currency_id FK
+
+approval_workflow_id FK
+
+created_at
+created_by
+approved_at
+approved_by
+```
+
+---
+
+# 6. Travel Policy Versioning
+
+مثلاً:
+
+```text
+Travel Policy Egypt V1
+2026-01-01 → 2026-06-30
+
+Travel Policy Egypt V2
+2026-07-01 →
+```
+
+Business Trip يحفظ:
+
+```text
+travel_policy_version_id
+```
+
+حتى لو السياسة تغيرت بعد الرحلة.
+
+---
+
+# 7. Policy Applicability
+
+## travel_policy_assignment
+
+```text
+travel_policy_assignment_id PK
+
+travel_policy_id FK
+
+company_id FK nullable
+business_unit_id FK nullable
+employee_category_id FK nullable
+employment_type_id FK nullable
+grade_id FK nullable
+job_id FK nullable
+project_id FK nullable
+customer_id FK nullable
+
+priority
+
+effective_from
+effective_to
+```
+
+---
+
+# 8. لماذا Grade مهم؟
+
+لأن الشركة قد تسمح:
+
+```text
+Senior Manager
+→ Flight Business Class
+→ Hotel Ceiling 5,000
+
+Engineer
+→ Economy
+→ Hotel Ceiling 2,000
+```
+
+لكن هذا configurable بالكامل.
+
+---
+
+# 9. Travel Policy Rule
+
+## travel_policy_rule
+
+```text
+travel_policy_rule_id PK
+
+travel_policy_id FK
+
+rule_type
+
+expense_category_id FK nullable
+
+travel_type nullable
+
+origin_zone_id FK nullable
+destination_zone_id FK nullable
+
+employee_grade_id FK nullable
+
+rule_value_type
+
+amount nullable
+percentage nullable
+quantity_limit nullable
+
+currency_id FK nullable
+
+condition_json
+
+mandatory_flag
+
+active_flag
+```
+
+---
+
+# 10. Rule Types
+
+```text
+Eligibility
+Approval
+Transportation Class
+Hotel Ceiling
+Meal Ceiling
+Per Diem
+Mileage
+Taxi
+Fuel
+Receipt Required
+Advance Limit
+Expense Submission Deadline
+Weekend Rule
+Travel Day Rule
+International Travel
+Foreign Currency
+Personal Expense
+Companion Restriction
+```
+
+---
+
+# 11. I02 — Travel Eligibility
+
+## travel_eligibility_rule
+
+```text
+travel_eligibility_rule_id PK
+
+travel_policy_id FK
+
+employee_category_id FK nullable
+employment_type_id FK nullable
+job_id FK nullable
+grade_id FK nullable
+
+minimum_service_days nullable
+
+travel_type
+
+eligible_flag
+
+approval_override_allowed
+
+effective_from
+effective_to
+```
+
+---
+
+# 12. Travel Types
+
+```text
+Domestic
+International
+Local Mission
+Intercity
+Same-Day Trip
+Overnight Trip
+Project Mobilization
+Customer Visit
+Training Travel
+Conference
+Emergency Travel
+Long-Term Assignment
+```
+
+---
+
+# 13. Business Trip ≠ Long-Term Assignment
+
+نحتاج cutoff configurable.
+
+مثلاً:
+
+```text
+1–14 days = Business Trip
+
+15–90 days = Temporary Assignment
+```
+
+لكن هذا ليس universal rule؛ يكون ضمن configuration.
+
+Temporary assignment قد يدخل كذلك في:
+
+```text
+Employee Assignment
+Location Allowance
+Housing
+Rotation
+```
+
+وليس فقط Travel Expense.
+
+---
+
+# 14. I03 — Business Trip Request
+
+## business_trip
+
+```text
+business_trip
+-------------
+business_trip_id PK
+
+tenant_id FK
+company_id FK
+
+trip_number UNIQUE
+
+employee_id FK
+
+trip_type
+
+trip_purpose_id FK
+
+trip_title
+business_reason
+
+origin_location_id FK
+primary_destination_id FK
+
+requested_start_datetime
+requested_end_datetime
+
+approved_start_datetime nullable
+approved_end_datetime nullable
+
+number_of_days
+
+project_id FK nullable
+customer_id FK nullable
+cost_center_id FK nullable
+
+travel_policy_id FK
+travel_policy_version
+
+priority
+
+international_flag
+
+passport_required_flag
+visa_required_flag
+
+advance_requested_flag
+
+booking_required_flag
+
+trip_status
+
+submitted_at
+approved_at nullable
+
+created_by
+created_at
+```
+
+---
+
+# 15. Trip Purposes
+
+## travel_purpose
+
+```text
+Project Execution
+Project Supervision
+Site Survey
+Acceptance
+Customer Meeting
+Training
+Conference
+Audit
+HSE
+Business Development
+Management Meeting
+Technical Support
+Emergency
+Mobilization
+Other
+```
+
+---
+
+# 16. Trip Status
+
+```text
+Draft
+Submitted
+Under Review
+Pending Manager Approval
+Pending Project Approval
+Pending Finance Approval
+Pending Travel Desk
+Approved
+Booking In Progress
+Ready to Travel
+In Progress
+Completed
+Expense Pending
+Settled
+Rejected
+Cancelled
+Closed
+```
+
+---
+
+# 17. Employee Location Snapshot
+
+مهم جدًا حفظ:
+
+```text
+home/work base at request time
+```
+
+لأن الموظف قد يتنقل بعد أشهر.
+
+## business_trip_employment_snapshot
+
+```text
+trip_snapshot_id PK
+
+business_trip_id FK
+
+employee_id FK
+
+position_id FK
+grade_id FK
+department_id FK
+
+base_location_id FK
+
+project_assignment_id FK nullable
+
+snapshot_date
+```
+
+---
+
+# 18. I04 — Itinerary
+
+Business Trip قد يحتوي أكثر من مكان.
+
+## trip_leg
+
+```text
+trip_leg_id PK
+
+business_trip_id FK
+
+sequence_number
+
+origin_location_id FK
+destination_location_id FK
+
+departure_datetime
+arrival_datetime
+
+transport_mode
+
+distance_km nullable
+
+overnight_flag
+
+leg_status
+```
+
+مثال:
+
+```text
+Cairo
+↓
+Alexandria
+↓
+Matrouh
+↓
+Cairo
+```
+
+---
+
+# 19. Travel Location
+
+يفضل shared location master:
+
+```text
+Country
+Governorate
+City
+Zone
+Site
+Project Location
+```
+
+وهذا مهم جدًا للـPer Diem.
+
+---
+
+# 20. Travel Zone
+
+## travel_zone
+
+```text
+travel_zone_id PK
+
+zone_code
+
+zone_name
+
+country_id FK
+
+zone_class
+
+cost_index nullable
+
+active_flag
+```
+
+مثلاً داخل مصر قد تريد:
+
+```text
+Cairo / Giza
+Alexandria
+Delta
+Upper Egypt
+Sinai
+Red Sea
+Remote Sites
+```
+
+لكن التقسيم Business configurable.
+
+---
+
+# 21. I05 — Travel Approval
+
+لا نثبت approval chain.
+
+## trip_approval_request
+
+```text
+trip_approval_request_id PK
+
+business_trip_id FK
+
+approval_type
+
+workflow_instance_id FK
+
+requested_at
+
+status
+
+approved_at nullable
+```
+
+---
+
+# 22. Approval يمكن أن يعتمد على
+
+```text
+Employee Grade
+Trip Cost
+International / Domestic
+Project
+Customer
+Duration
+Advance Amount
+Destination
+Emergency Status
+```
+
+مثلاً:
+
+```text
+Domestic < 5,000
+Manager
+
+Domestic > 5,000
+Manager → Finance
+
+International
+Manager → Department Head → P&C/Admin → Finance → Management
+```
+
+حسب السياسة.
+
+---
+
+# 23. Budget Check
+
+قبل approval:
+
+## travel_budget_check
+
+```text
+travel_budget_check_id PK
+
+business_trip_id FK
+
+budget_owner_type
+
+project_id FK nullable
+cost_center_id FK nullable
+
+budget_period_id FK
+
+estimated_cost
+
+available_budget
+
+budget_status
+
+checked_at
+```
+
+---
+
+# 24. Estimated Cost
+
+## trip_cost_estimate
+
+```text
+trip_cost_estimate_id PK
+
+business_trip_id FK
+
+expense_category_id FK
+
+quantity
+
+estimated_unit_cost
+
+estimated_amount
+
+currency_id FK
+
+source_type
+
+policy_limit_amount nullable
+```
+
+---
+
+# 25. Estimated vs Actual
+
+نحتفظ بكليهما:
+
+```text
+Trip Estimated Cost
+vs
+Actual Expense
+```
+
+حتى نعرف:
+
+```text
+Budget variance
+```
+
+---
+
+# 26. I06 — Travel Booking
+
+قد يتم داخل النظام أو عبر Travel Agency.
+
+## travel_booking
+
+```text
+travel_booking_id PK
+
+business_trip_id FK
+
+booking_type
+
+provider_id FK nullable
+
+booking_reference
+
+booking_status
+
+booking_date
+
+cost_amount
+
+currency_id FK
+
+paid_by
+
+payment_reference nullable
+```
+
+---
+
+# 27. Booking Types
+
+```text
+Flight
+Train
+Bus
+Hotel
+Rental Car
+Transfer
+Other
+```
+
+---
+
+# 28. Hotel Booking
+
+## hotel_booking_detail
+
+```text
+hotel_booking_detail_id PK
+
+travel_booking_id FK
+
+hotel_name
+
+location_id FK
+
+check_in_date
+check_out_date
+
+room_type
+
+night_count
+
+night_rate
+
+tax_amount
+
+total_amount
+```
+
+---
+
+# 29. Booking Paid By
+
+```text
+Company
+Employee
+Advance
+Corporate Card
+Project
+Customer
+```
+
+مهم حتى لا يتم reimbursement لنفس المصروف مرتين.
+
+---
+
+# 30. I07 — Per Diem Engine
+
+Per Diem لا يجب أن يكون expense receipt.
+
+هو entitlement rule.
+
+## per_diem_rule
+
+```text
+per_diem_rule_id PK
+
+travel_policy_id FK
+
+travel_zone_id FK nullable
+country_id FK nullable
+
+employee_grade_id FK nullable
+
+trip_type nullable
+
+daily_rate
+
+currency_id FK
+
+full_day_hours
+
+partial_day_threshold_hours
+
+travel_day_percentage
+
+overnight_required_flag
+
+meal_inclusion_rule_id FK nullable
+
+effective_from
+effective_to
+```
+
+---
+
+# 31. Per Diem Calculation
+
+## trip_per_diem
+
+```text
+trip_per_diem_id PK
+
+business_trip_id FK
+employee_id FK
+
+calculation_start_date
+calculation_end_date
+
+eligible_days
+
+full_days
+partial_days
+
+gross_per_diem_amount
+
+meal_deduction_amount
+
+company_paid_meal_deduction
+
+net_per_diem_amount
+
+currency_id FK
+
+calculation_rule_version
+
+calculation_status
+```
+
+---
+
+# 32. Daily Breakdown
+
+## trip_per_diem_day
+
+```text
+trip_per_diem_day_id PK
+
+trip_per_diem_id FK
+
+per_diem_date
+
+location_zone_id FK
+
+day_type
+
+eligible_percentage
+
+base_rate
+
+meal_deduction
+
+final_amount
+```
+
+---
+
+# 33. Day Types
+
+```text
+Full Travel Day
+Departure Day
+Return Day
+Same-Day Mission
+Non-Eligible Day
+Company Accommodation Day
+Customer-Sponsored Day
+```
+
+---
+
+# 34. Meal Deduction
+
+لو الفندق يشمل Breakfast مثلاً:
+
+```text
+Breakfast = 20%
+Lunch = 30%
+Dinner = 30%
+Incidentals = 20%
+```
+
+هذه percentages configurable.
+
+## per_diem_meal_rule
+
+```text
+meal_rule_id PK
+
+travel_policy_id FK
+
+meal_type
+
+deduction_percentage
+
+active_flag
+```
+
+---
+
+# 35. Double Payment Prevention
+
+إذا:
+
+```text
+Hotel + Breakfast paid by company
+```
+
+Per Diem engine يعرف أن breakfast included.
+
+أو:
+
+```text
+Customer provides all meals
+```
+
+فيخصم الجزء المحدد.
+
+---
+
+# 36. Per Diem vs Actual Meals
+
+Policy يمكن أن تحدد:
+
+```text
+Per Diem
+```
+
+أو:
+
+```text
+Actual Meals with Receipts
+```
+
+أو:
+
+```text
+Hybrid
+```
+
+ولا نسمح بالـdouble claim.
+
+---
+
+# 37. I08 — Travel Advance
+
+## travel_advance_request
+
+```text
+travel_advance_request_id PK
+
+business_trip_id FK
+employee_id FK
+
+requested_amount
+
+approved_amount nullable
+
+currency_id FK
+
+request_date
+
+purpose
+
+required_date
+
+approval_workflow_id FK
+
+advance_status
+```
+
+---
+
+# 38. Advance Status
+
+```text
+Draft
+Submitted
+Approved
+Rejected
+Payment Requested
+Paid
+Partially Settled
+Settled
+Overdue
+Recovery Required
+Cancelled
+```
+
+---
+
+# 39. Advance Payment
+
+## travel_advance_payment
+
+```text
+travel_advance_payment_id PK
+
+travel_advance_request_id FK
+
+payment_date
+
+payment_method
+
+amount
+
+currency_id FK
+
+finance_payment_reference
+
+exchange_rate nullable
+```
+
+---
+
+# 40. Important Ownership
+
+Finance owns actual cash/payment transaction.
+
+Cluster I holds travel advance business reference.
+
+---
+
+# 41. Advance Limit
+
+Policy may say:
+
+```text
+Advance ≤ 80% estimated travel cost
+```
+
+أو:
+
+```text
+Maximum 20,000 EGP
+```
+
+أو:
+
+```text
+No new advance if previous advance unsettled
+```
+
+---
+
+# 42. Advance Eligibility Check
+
+## advance_eligibility_check
+
+```text
+advance_eligibility_check_id PK
+
+travel_advance_request_id FK
+
+estimated_trip_cost
+
+policy_limit
+
+outstanding_previous_advance
+
+employee_advance_limit
+
+eligible_amount
+
+eligibility_status
+
+blocking_reason
+```
+
+---
+
+# 43. I09 — Expense Claim
+
+Expense Claim ≠ Trip.
+
+يمكن:
+
+```text
+one trip
+→ one or multiple claims
+```
+
+خصوصًا لو long trip.
+
+## expense_claim
+
+```text
+expense_claim_id PK
+
+tenant_id FK
+company_id FK
+
+claim_number UNIQUE
+
+employee_id FK
+
+business_trip_id FK nullable
+
+claim_type
+
+claim_period_start
+claim_period_end
+
+submitted_at
+
+claim_currency_id FK
+
+claimed_amount
+approved_amount nullable
+rejected_amount nullable
+
+advance_offset_amount nullable
+
+reimbursement_amount nullable
+
+claim_status
+
+project_id FK nullable
+cost_center_id FK nullable
+
+policy_id FK
+
+created_at
+created_by
+```
+
+---
+
+# 44. Claim Types
+
+```text
+Travel
+Non-Travel Business Expense
+Mileage
+Petty Expense
+Project Expense
+Emergency Expense
+Corporate Card Reconciliation
+```
+
+هذا يسمح بتوسيع module لاحقًا.
+
+---
+
+# 45. Claim Status
+
+```text
+Draft
+Submitted
+Policy Validation
+Manager Review
+Project Review
+Finance Review
+Partially Approved
+Approved
+Rejected
+Returned for Correction
+Payment Pending
+Paid
+Settled
+Cancelled
+```
+
+---
+
+# 46. Expense Category
+
+## expense_category
+
+```text
+expense_category_id PK
+
+category_code
+
+category_name_ar
+category_name_en
+category_name_fr
+
+parent_category_id FK nullable
+
+receipt_required_default
+
+tax_handling_type
+
+active_flag
+```
+
+---
+
+# 47. Categories
+
+```text
+Transportation
+├── Flight
+├── Train
+├── Taxi
+├── Ride Hailing
+├── Bus
+├── Fuel
+├── Tolls
+└── Parking
+
+Accommodation
+
+Meals
+
+Communication
+
+Visa
+
+Travel Insurance
+
+Laundry
+
+Project Materials
+
+Client Entertainment
+
+Emergency
+
+Other
+```
+
+---
+
+# 48. I10 — Expense Item
+
+## expense_item
+
+```text
+expense_item_id PK
+
+expense_claim_id FK
+
+expense_date
+
+expense_category_id FK
+
+description
+
+merchant_name nullable
+
+location_id FK nullable
+
+quantity nullable
+
+unit_amount nullable
+
+gross_amount
+
+tax_amount nullable
+
+currency_id FK
+
+exchange_rate nullable
+
+base_currency_amount
+
+payment_method
+
+receipt_required_flag
+
+receipt_id FK nullable
+
+project_id FK nullable
+cost_center_id FK nullable
+
+billable_to_customer_flag
+
+policy_status
+
+approval_status
+```
+
+---
+
+# 49. Payment Method
+
+```text
+Employee Cash
+Employee Personal Card
+Company Advance
+Corporate Card
+Company Direct Payment
+Customer Paid
+Project Cash
+```
+
+هذه critical لمنع duplication.
+
+---
+
+# 50. Receipt
+
+## expense_receipt
+
+```text
+expense_receipt_id PK
+
+storage_object_id FK
+
+receipt_number nullable
+
+merchant_name nullable
+
+receipt_date nullable
+
+receipt_amount nullable
+
+currency_id FK nullable
+
+tax_number nullable
+
+extraction_status
+
+verification_status
+
+duplicate_hash nullable
+
+uploaded_at
+```
+
+---
+
+# 51. Receipt OCR / AI
+
+يمكن النظام استخراج:
+
+```text
+Merchant
+Date
+Amount
+Currency
+Tax
+Receipt Number
+```
+
+لكن:
+
+```text
+AI Extracted
+≠
+Finance Verified
+```
+
+---
+
+# 52. Duplicate Receipt Detection
+
+نستخدم:
+
+```text
+file_hash
+receipt_number
+merchant
+date
+amount
+```
+
+وننتج:
+
+```text
+Potential Duplicate
+```
+
+ولا نرفض تلقائيًا إلا حسب policy.
+
+---
+
+# 53. Expense Item Allocation
+
+مصروف واحد يمكن أن يتوزع على أكثر من Project.
+
+## expense_item_allocation
+
+```text
+expense_item_allocation_id PK
+
+expense_item_id FK
+
+allocation_type
+
+project_id FK nullable
+cost_center_id FK nullable
+customer_id FK nullable
+
+allocation_percentage
+
+allocated_amount
+
+allocation_status
+```
+
+---
+
+# 54. Example
+
+Taxi:
+
+```text
+1,000 EGP
+```
+
+قد يتوزع:
+
+```text
+Project A 60% = 600
+Project B 40% = 400
+```
+
+---
+
+# 55. I11 — Policy Validation Engine
+
+## expense_policy_validation
+
+```text
+expense_policy_validation_id PK
+
+expense_item_id FK
+
+validation_rule_id FK
+
+validation_result
+
+policy_limit nullable
+claimed_value nullable
+
+variance_amount nullable
+
+severity
+
+validation_message
+
+override_allowed
+
+validated_at
+```
+
+---
+
+# 56. Validation Examples
+
+```text
+Hotel ceiling exceeded
+
+Receipt missing
+
+Expense submitted after 30 days
+
+Meal claimed while Per Diem paid
+
+Weekend expense
+
+Duplicate receipt suspected
+
+Taxi outside approved trip dates
+
+Foreign currency rate missing
+
+Expense category not eligible
+
+Alcohol / personal expense not reimbursable
+
+Advance not settled
+```
+
+---
+
+# 57. Policy Violation Severity
+
+```text
+Info
+Warning
+Approval Required
+Finance Review
+Hard Block
+```
+
+---
+
+# 58. Expense Override
+
+بعض expenses فوق policy قد تكون صحيحة.
+
+## expense_policy_override
+
+```text
+expense_policy_override_id PK
+
+expense_item_id FK
+
+validation_id FK
+
+override_reason
+
+requested_by
+
+requested_at
+
+approved_by nullable
+approved_at nullable
+
+approval_status
+```
+
+---
+
+# 59. مثال واقعي
+
+Hotel ceiling:
+
+```text
+2,000 EGP
+```
+
+لكن في remote site:
+
+```text
+only hotel available = 2,500
+```
+
+لا نرفض expense آليًا.
+
+نعمل:
+
+```text
+Policy Exception
+→ Approval
+→ Approved 2,500
+```
+
+---
+
+# 60. I12 — Expense Approval
+
+## expense_claim_approval
+
+```text
+expense_claim_approval_id PK
+
+expense_claim_id FK
+
+approval_stage
+
+approver_role
+
+workflow_step_instance_id FK
+
+approved_amount
+
+decision
+
+decision_comment
+
+decision_at
+```
+
+---
+
+# 61. Partial Approval
+
+ضروري جدًا.
+
+مثال:
+
+```text
+Claim = 8,500
+
+Approved = 7,700
+Rejected = 800
+```
+
+لذلك approval لا يكون boolean.
+
+---
+
+# 62. Item-Level Decision
+
+## expense_item_decision
+
+```text
+expense_item_decision_id PK
+
+expense_item_id FK
+
+reviewer_user_id FK
+
+decision
+
+approved_amount
+
+rejected_amount
+
+reason_code
+
+comment
+
+reviewed_at
+```
+
+---
+
+# 63. I13 — Advance Settlement
+
+بعد العودة:
+
+```text
+Advance
++
+Approved Expenses
+=
+Settlement
+```
+
+## travel_advance_settlement
+
+```text
+travel_advance_settlement_id PK
+
+travel_advance_request_id FK
+
+expense_claim_id FK nullable
+
+advance_paid
+
+approved_expense_amount
+
+employee_refund_due
+
+company_reimbursement_due
+
+settlement_status
+
+settlement_due_date
+
+settled_at nullable
+```
+
+---
+
+# 64. Example A
+
+```text
+Advance = 10,000
+Approved Expenses = 8,500
+
+Employee owes company = 1,500
+```
+
+---
+
+# 65. Example B
+
+```text
+Advance = 10,000
+Approved Expenses = 12,500
+
+Company owes employee = 2,500
+```
+
+---
+
+# 66. Recovery
+
+إذا employee لم يعد balance:
+
+```text
+Advance Settlement
+↓
+Approved Recovery Instruction
+↓
+Payroll / Finance
+```
+
+---
+
+# 67. Recovery Instruction
+
+## expense_recovery_instruction
+
+```text
+expense_recovery_instruction_id PK
+
+employee_id FK
+
+source_type
+source_entity_id
+
+amount
+
+currency_id FK
+
+recovery_method
+
+effective_period_id FK nullable
+
+approval_status
+
+sent_to_payroll_at nullable
+
+processed_reference nullable
+```
+
+---
+
+# 68. Recovery Methods
+
+```text
+Cash Refund
+Bank Transfer
+Payroll Deduction
+Final Settlement
+Finance Receivable
+```
+
+---
+
+# 69. Important Payroll Rule
+
+Payroll لا يرى:
+
+```text
+Hotel receipt
+Taxi details
+Trip narrative
+```
+
+بل يستقبل فقط:
+
+```text
+Approved Recovery Instruction
+```
+
+أو Approved taxable component عند الحاجة.
+
+---
+
+# 70. Reimbursement
+
+## expense_reimbursement
+
+```text
+expense_reimbursement_id PK
+
+expense_claim_id FK
+employee_id FK
+
+approved_amount
+
+advance_offset_amount
+
+net_reimbursement_amount
+
+currency_id FK
+
+payment_method
+
+payment_status
+
+finance_payment_reference nullable
+
+payment_date nullable
+```
+
+---
+
+# 71. Payment Status
+
+```text
+Pending
+Submitted to Finance
+Approved for Payment
+Paid
+Failed
+Returned
+Cancelled
+```
+
+---
+
+# 72. Corporate Card
+
+لو الشركة تستخدم Corporate Cards لاحقًا:
+
+## corporate_card_transaction
+
+```text
+corporate_card_transaction_id PK
+
+employee_id FK
+card_account_id FK
+
+transaction_date
+
+merchant
+
+amount
+currency_id FK
+
+expense_item_id FK nullable
+
+reconciliation_status
+```
+
+---
+
+# 73. Card Transaction ≠ Expense Approval
+
+Transaction وارد من البنك.
+
+Employee يجب أن:
+
+```text
+Classify
+Attach receipt
+Add business reason
+Allocate project
+```
+
+ثم Finance approves.
+
+---
+
+# 74. I14 — Currency Management
+
+International travel يحتاج currencies.
+
+## trip_exchange_rate
+
+```text
+trip_exchange_rate_id PK
+
+business_trip_id FK nullable
+expense_claim_id FK nullable
+
+from_currency_id FK
+to_currency_id FK
+
+rate
+
+rate_source
+
+rate_date
+
+manual_override_flag
+
+approved_by nullable
+```
+
+---
+
+# 75. FX Rule
+
+السياسة يمكن أن تستخدم:
+
+```text
+Transaction Date Rate
+Travel Advance Rate
+Corporate Card Rate
+Central Bank Rate
+Finance Approved Rate
+```
+
+configurable.
+
+---
+
+# 76. I15 — Project Cost Allocation
+
+كل travel cost قد يحتاج:
+
+```text
+Project
+Customer
+Cost Center
+Business Unit
+```
+
+---
+
+# 77. Travel Cost Ledger
+
+يمكن بناء:
+
+## travel_cost_allocation
+
+```text
+travel_cost_allocation_id PK
+
+source_type
+source_entity_id
+
+employee_id FK
+
+business_trip_id FK nullable
+
+project_id FK nullable
+customer_id FK nullable
+cost_center_id FK nullable
+
+cost_type
+
+amount
+
+currency_id FK
+
+posting_status
+
+finance_reference nullable
+```
+
+---
+
+# 78. Cost Types
+
+```text
+Flight
+Hotel
+Transportation
+Per Diem
+Advance Expense
+Reimbursement
+Visa
+Travel Insurance
+Other
+```
+
+---
+
+# 79. Estimated Trip Cost vs Actual Trip Cost
+
+Dashboard:
+
+```text
+Trip        Estimate      Actual      Variance
+------------------------------------------------
+TR-1001      12,000       11,400       -600
+TR-1002       8,000       10,500     +2,500
+```
+
+---
+
+# 80. Billable Expenses
+
+في شركات المشروعات قد يكون العميل يتحمل بعض التكلفة.
+
+## customer_billable_expense
+
+```text
+customer_billable_expense_id PK
+
+expense_item_id FK
+
+customer_id FK
+project_id FK
+
+billable_flag
+
+markup_rule_id FK nullable
+
+billable_amount
+
+billing_status
+
+invoice_reference nullable
+```
+
+---
+
+# 81. Billable ≠ Reimbursable
+
+الموظف قد يستحق reimbursement 1,000 جنيه.
+
+لكن الشركة قد تفوتر العميل:
+
+```text
+1,200
+```
+
+هذه عمليتان مختلفتان.
+
+---
+
+# 82. Location Allowance Interaction
+
+هذه Table محورية بسبب متطلبك السابق.
+
+## travel_allowance_interaction_rule
+
+```text
+travel_allowance_interaction_rule_id PK
+
+travel_policy_id FK
+
+allowance_type_id FK
+
+trip_type nullable
+
+destination_zone_id FK nullable
+
+interaction_type
+
+priority
+
+effective_from
+effective_to
+
+active_flag
+```
+
+---
+
+# 83. Interaction Types
+
+```text
+Allow Both
+Travel Replaces Allowance
+Allowance Replaces Travel Per Diem
+Pay Higher
+Pay Lower
+Suspend Allowance During Trip
+Prorate Allowance
+No Interaction
+```
+
+---
+
+# 84. مثال 1 — القاهرة
+
+Employee base:
+
+```text
+Cairo
+```
+
+ذهب موقع داخل Cairo.
+
+Policy:
+
+```text
+Local travel
+→ Transportation claim only
+
+No Per Diem
+No Outside-Cairo Allowance
+```
+
+---
+
+# 85. مثال 2 — Alexandria overnight
+
+```text
+Base = Cairo
+Destination = Alexandria
+Duration = 3 days
+```
+
+يمكن:
+
+```text
+Hotel
++ Per Diem
++ Transport
+```
+
+والـlocation allowance rule:
+
+```text
+Travel Per Diem replaces temporary outside-Cairo allowance
+```
+
+---
+
+# 86. مثال 3 — Long-Term Field Assignment
+
+Employee assigned:
+
+```text
+Aswan
+3 months
+```
+
+هذه ليست Business Trip بالضرورة.
+
+قد تدخل:
+
+```text
+Assignment
++ Location Allowance
++ Housing
++ Rotation Travel
+```
+
+وبالتالي يجب ألا نستخدم Travel Module كحل لكل deployment خارج القاهرة.
+
+---
+
+# 87. Daily Trip
+
+Same day:
+
+```text
+Cairo → Suez → Cairo
+```
+
+قد تستحق:
+
+```text
+Transport
++
+Partial Per Diem
+```
+
+لكن لا:
+
+```text
+Hotel
+```
+
+ويحسب per diem حسب hours rule.
+
+---
+
+# 88. Weekend Travel
+
+Policy Rule:
+
+```text
+Trip overlaps weekend
+```
+
+قد يؤثر على:
+
+```text
+Per Diem
+Attendance
+Compensatory Leave
+Overtime
+```
+
+لكن Cluster I لا يحسب overtime.
+
+يرسل event إلى Cluster B/C عند الحاجة.
+
+---
+
+# 89. Travel Time vs Working Time
+
+مهم الفصل:
+
+```text
+Travel Expense Eligibility
+```
+
+عن:
+
+```text
+Working Hours / Overtime Eligibility
+```
+
+مثلاً 4 ساعات سفر مساء الجمعة قد تنتج Expense entitlement، لكن OT تحدده Attendance/Payroll rules.
+
+---
+
+# 90. Integration مع Attendance
+
+Cluster I يرسل:
+
+```text
+Approved Business Trip
+Employee
+Start/End
+Location
+```
+
+Cluster B يمكن أن يعرف:
+
+```text
+Business Trip / Out of Office
+```
+
+بدل اعتبار الموظف absent.
+
+---
+
+# 91. Integration مع Leave
+
+لو trip يتداخل مع leave:
+
+```text
+Validation Alert
+```
+
+مثلاً:
+
+```text
+Annual Leave
+10–12 Aug
+
+Trip
+11–13 Aug
+```
+
+النظام لا يسمح silently.
+
+---
+
+# 92. Integration مع Payroll
+
+Cluster I يرسل فقط:
+
+```text
+Approved Recovery
+Taxable Travel Component if applicable
+Approved Payroll-Reimbursable Component if policy requires
+```
+
+وليس raw expenses.
+
+---
+
+# 93. Integration مع Cluster C Allowances
+
+Cluster C asks:
+
+```text
+Was employee on business trip?
+```
+
+حتى يطبق:
+
+```text
+travel_allowance_interaction_rule
+```
+
+---
+
+# 94. Integration مع Project Management
+
+Trip يمكن أن يكون مرتبطًا بـ:
+
+```text
+Project
+Work Package
+Site
+Customer
+Task
+Milestone
+```
+
+وبالتالي يمكن تحليل:
+
+```text
+Travel Cost by Project
+```
+
+---
+
+# 95. Integration مع Finance / ERP
+
+Finance يملك:
+
+```text
+Payment
+GL Posting
+Accounts Payable
+Employee Receivable
+Bank
+Petty Cash
+```
+
+Cluster I يملك:
+
+```text
+Business purpose
+Expense approval
+Policy compliance
+Trip context
+```
+
+---
+
+# 96. Accounting Posting Request
+
+## expense_accounting_instruction
+
+```text
+expense_accounting_instruction_id PK
+
+source_type
+source_entity_id
+
+accounting_event_type
+
+employee_id FK
+
+project_id FK nullable
+cost_center_id FK nullable
+
+amount
+
+currency_id FK
+
+posting_date
+
+accounting_status
+
+erp_reference nullable
+```
+
+---
+
+# 97. Posting Types
+
+```text
+Employee Reimbursement
+Travel Advance
+Advance Settlement
+Employee Recovery
+Corporate Card Expense
+Travel Vendor Expense
+Per Diem
+```
+
+---
+
+# 98. Integration مع Procurement
+
+إذا hotel/flight booked through contracted provider:
+
+```text
+Travel Booking
+↓
+Vendor / PO / Contract
+```
+
+لكن procurement owns supplier contract.
+
+---
+
+# 99. Travel Documents
+
+International trip قد يحتاج:
+
+```text
+Passport
+Visa
+Travel Insurance
+Invitation Letter
+Customer Letter
+```
+
+---
+
+# 100. Trip Document Requirement
+
+## travel_document_requirement
+
+```text
+travel_document_requirement_id PK
+
+travel_policy_id FK
+
+trip_type
+
+destination_country_id FK nullable
+
+document_type_id FK
+
+mandatory_flag
+
+minimum_validity_days nullable
+
+blocking_approval_flag
+blocking_travel_flag
+```
+
+---
+
+# 101. Do Not Duplicate Passport
+
+Passport يبقى:
+
+```text
+Cluster G Employee Document Vault
+```
+
+Cluster I فقط references:
+
+```text
+employee_document_id
+```
+
+---
+
+# 102. Visa Case
+
+## trip_visa_requirement
+
+```text
+trip_visa_requirement_id PK
+
+business_trip_id FK
+
+visa_required_flag
+
+visa_type
+
+application_status
+
+application_date nullable
+
+approval_date nullable
+
+expiry_date nullable
+
+document_id FK nullable
+```
+
+---
+
+# 103. Emergency Travel
+
+نحتاج special workflow:
+
+```text
+Emergency Trip
+↓
+Manager Emergency Approval
+↓
+Travel
+↓
+Post Approval / Documentation
+```
+
+لكن exception يكون logged.
+
+---
+
+# 104. Emergency Rule
+
+## emergency_travel_exception
+
+```text
+emergency_travel_exception_id PK
+
+business_trip_id FK
+
+exception_reason
+
+normal_steps_bypassed
+
+requested_by
+
+approved_by
+
+approved_at
+
+post_review_required
+
+post_review_status
+```
+
+---
+
+# 105. Cancellation
+
+Trip قد يُلغى بعد booking.
+
+## trip_cancellation
+
+```text
+trip_cancellation_id PK
+
+business_trip_id FK
+
+cancelled_at
+
+cancellation_reason
+
+cancelled_by
+
+nonrefundable_cost
+
+recoverable_amount
+
+vendor_penalty
+
+currency_id FK
+```
+
+---
+
+# 106. No-Show
+
+نحتاج فرق:
+
+```text
+Cancelled
+vs
+No Show
+```
+
+لأن financial consequences مختلفة.
+
+---
+
+# 107. Trip Change
+
+لا نعدل approved dates silently.
+
+## trip_change_request
+
+```text
+trip_change_request_id PK
+
+business_trip_id FK
+
+change_type
+
+original_value_json
+proposed_value_json
+
+reason
+
+financial_impact
+
+approval_required
+
+workflow_instance_id FK
+
+status
+```
+
+---
+
+# 108. Change Types
+
+```text
+Date
+Destination
+Duration
+Hotel
+Flight
+Purpose
+Project
+Advance
+Traveler
+```
+
+---
+
+# 109. Personal Extension
+
+مثلاً:
+
+```text
+Business trip ends Thursday
+Employee stays Friday/Saturday personally
+```
+
+النظام يحتاج:
+
+## personal_travel_extension
+
+```text
+personal_travel_extension_id PK
+
+business_trip_id FK
+
+personal_start_datetime
+personal_end_datetime
+
+company_cost_excluded_flag
+
+additional_cost_employee_responsibility
+
+acknowledged_flag
+```
+
+---
+
+# 110. Travel Companion
+
+إذا شركة معينة تسمح حالات محددة:
+
+```text
+companion not business traveler
+```
+
+يفضل keep separate ولا تدفع افتراضيًا.
+
+---
+
+# 111. Expense Submission Deadline
+
+Policy may define:
+
+```text
+Expenses must be submitted within 10 working days from return.
+```
+
+نحسب:
+
+```text
+expense_submission_due_date
+```
+
+---
+
+# 112. Late Expense
+
+لا نحذف الحق تلقائيًا.
+
+Status:
+
+```text
+Late Submission
+→ Additional Approval Required
+```
+
+حسب policy.
+
+---
+
+# 113. Receipt Requirement Rules
+
+مثلاً:
+
+```text
+Expense < 200 EGP
+Receipt optional
+
+Expense ≥ 200
+Receipt required
+```
+
+أو حسب category.
+
+---
+
+# 114. Lost Receipt Declaration
+
+## lost_receipt_declaration
+
+```text
+lost_receipt_declaration_id PK
+
+expense_item_id FK
+
+employee_statement
+
+reason
+
+declaration_date
+
+manager_approval_required
+
+approval_status
+
+document_id FK nullable
+```
+
+---
+
+# 115. Mileage
+
+لو الموظف يستخدم سيارته:
+
+## mileage_claim
+
+```text
+mileage_claim_id PK
+
+expense_item_id FK
+
+origin_location_id FK
+destination_location_id FK
+
+distance_km
+
+vehicle_type
+
+rate_per_km
+
+calculated_amount
+
+route_verification_method
+```
+
+---
+
+# 116. Mileage Rate
+
+## mileage_rate_rule
+
+```text
+mileage_rate_rule_id PK
+
+travel_policy_id FK
+
+vehicle_type
+
+rate_per_km
+
+currency_id FK
+
+effective_from
+effective_to
+```
+
+---
+
+# 117. Fuel vs Mileage
+
+Policy قد تقول:
+
+```text
+Mileage reimbursement
+```
+
+يعني لا يتم claim:
+
+```text
+Fuel + Mileage
+```
+
+معًا.
+
+Rule engine يمنع double reimbursement.
+
+---
+
+# 118. Corporate Paid Cost
+
+إذا الشركة حجزت hotel مباشرة:
+
+```text
+Company Paid = 3,000
+```
+
+يظهر في Trip Actual Cost.
+
+لكن:
+
+```text
+Employee Reimbursement = 0
+```
+
+هذه نقطة مهمة في cost analytics.
+
+---
+
+# 119. Trip Total Cost
+
+نحتاج View:
+
+```text
+trip_total_cost
+---------------
+
+Company Direct Payment
++ Corporate Card
++ Per Diem
++ Employee Reimbursement
++ Vendor Costs
++ Nonrefundable Costs
+- Employee Recovery
+```
+
+---
+
+# 120. Employee Trip Summary
+
+الشاشة:
+
+```text
+Trip: TR-2026-00458
+
+Cairo → Alexandria
+12-Aug → 15-Aug
+Project: FTTH Alexandria
+
+Status: Expense Pending
+
+──────────────────────────
+
+Estimated Cost     9,500
+Company Bookings   4,000
+Advance            5,000
+Per Diem           2,400
+Claimed Expense    3,100
+Approved Expense   2,900
+
+Advance Balance      300
+Employee Refund Due  300
+```
+
+---
+
+# 121. Manager Dashboard
+
+```text
+Trips Pending Approval
+Employees Traveling
+Travel Days
+Estimated Cost
+Actual Cost
+
+Trip Budget Variance
+
+Employees Away Today
+Project Travel Cost
+
+Expense Claims Pending
+Policy Exceptions
+```
+
+---
+
+# 122. Finance Dashboard
+
+```text
+Outstanding Advances
+Overdue Advances
+Expense Claims Payable
+Employee Recoveries
+
+Approved Reimbursements
+Payments Pending
+
+Corporate Card Unreconciled
+
+Travel Cost by:
+Project
+Department
+Customer
+Employee
+Expense Category
+```
+
+---
+
+# 123. Travel Desk Dashboard
+
+```text
+Approved Trips
+Bookings Required
+Flights Pending
+Hotels Pending
+Visa Required
+Travel Documents Expiring
+Upcoming Departures
+Trip Changes
+Cancellations
+```
+
+---
+
+# 124. PMO / Project Dashboard
+
+```text
+Travel Cost per Project
+Travel Cost / Revenue
+Travel Cost / Employee
+Travel Days
+Top Travel Destinations
+
+Project Travel Budget
+Actual vs Budget
+
+Billable vs Non-Billable Travel
+```
+
+---
+
+# 125. Fraud / Control Analytics
+
+Signals وليس guilt decisions:
+
+```text
+Duplicate receipt
+Same receipt across employees
+
+Expense outside trip dates
+
+Repeated round-number expenses
+
+Hotel above policy
+
+Taxi at unusual time
+
+Claim while company paid
+
+Per diem + meal claim conflict
+
+Multiple advances outstanding
+
+Expenses split to avoid limit
+
+Excessive policy overrides
+```
+
+---
+
+# 126. Risk Signal
+
+## expense_risk_signal
+
+```text
+expense_risk_signal_id PK
+
+expense_claim_id FK nullable
+expense_item_id FK nullable
+
+signal_type
+
+risk_score
+
+signal_details
+
+generated_by
+
+review_status
+
+reviewed_by nullable
+```
+
+---
+
+# 127. AI Layer — Useful
+
+AI يمكن أن:
+
+```text
+Extract receipt data
+Classify expense
+Suggest project allocation
+Detect duplicate receipts
+Explain policy violation
+Summarize claim
+Generate trip cost estimate
+Detect unusual spending patterns
+Match receipt to corporate card transaction
+```
+
+---
+
+# 128. لكن AI لا يقرر
+
+AI لا:
+
+```text
+Accuse employee of fraud
+Reject expense automatically solely on anomaly
+Approve high-value expense
+Create payroll deduction
+Change company policy
+```
+
+---
+
+# 129. Physical Tables
+
+الـCore tables تقريبًا:
+
+```text
+travel_policy
+travel_policy_assignment
+travel_policy_rule
+travel_eligibility_rule
+
+travel_zone
+travel_purpose
+
+business_trip
+business_trip_employment_snapshot
+trip_leg
+
+trip_approval_request
+travel_budget_check
+trip_cost_estimate
+
+travel_booking
+hotel_booking_detail
+
+per_diem_rule
+per_diem_meal_rule
+trip_per_diem
+trip_per_diem_day
+
+travel_advance_request
+advance_eligibility_check
+travel_advance_payment
+travel_advance_settlement
+
+expense_claim
+expense_category
+expense_item
+expense_receipt
+expense_item_allocation
+
+expense_policy_validation
+expense_policy_override
+
+expense_claim_approval
+expense_item_decision
+
+expense_reimbursement
+expense_recovery_instruction
+
+corporate_card_transaction
+
+trip_exchange_rate
+
+travel_cost_allocation
+customer_billable_expense
+
+travel_allowance_interaction_rule
+
+travel_document_requirement
+trip_visa_requirement
+
+emergency_travel_exception
+
+trip_cancellation
+trip_change_request
+personal_travel_extension
+
+lost_receipt_declaration
+
+mileage_claim
+mileage_rate_rule
+
+expense_accounting_instruction
+
+expense_risk_signal
+```
+
+حوالي **45–50 Table**.
+
+---
+
+# 130. أهم Business Rules
+
+أثبت هذه القواعد من البداية:
+
+1. Location Allowance لا يساوي Travel Per Diem.
+2. Business Trip لا يساوي Employee Assignment.
+3. Trip approval لا يساوي Expense approval.
+4. Travel Advance ليس Expense.
+5. Advance يتم تسويته بعد approved expenses.
+6. Per Diem entitlement لا يحتاج receipt إلا إذا policy تطلب.
+7. Actual meal expense وPer Diem لا يدفعان معًا إلا حسب policy.
+8. Company-paid expense لا يتم reimbursed للموظف.
+9. Corporate Card transaction لا يعني approved expense.
+10. Expense Claim يمكن أن يحتوي approved/rejected items معًا.
+11. Expense over policy يمكن أن يخضع exception approval.
+12. Expense policy تكون versioned.
+13. Approved trip يحتفظ بالpolicy version المستخدمة.
+14. Travel Cost ≠ Employee Reimbursement.
+15. Project Cost Allocation منفصلة عن payment.
+16. Customer Billable Amount ≠ Employee Reimbursement.
+17. Advance balance قد يؤدي إلى employee receivable أو payroll recovery.
+18. Payroll لا يقرأ raw receipts.
+19. Expense deductions لا تنتقل إلى Payroll بدون approved instruction.
+20. Passport/legal document owner هو Cluster G.
+21. Attendance owner هو Cluster B.
+22. OT calculation ليس ضمن Travel.
+23. Allowance calculation owner هو Cluster C.
+24. Trip dates لا يتم تعديلها بعد approval بدون Change Request.
+25. Emergency bypass يجب أن يكون audited.
+26. Cancellation cost يبقى جزءًا من travel cost.
+27. Personal trip extension لا تحمل الشركة تكاليف إضافية إلا approval.
+28. Receipt AI extraction لا يعني verification.
+29. Duplicate signal لا يعني fraud.
+30. كل Expense له business purpose وcost allocation واضحان.
+
+---
+
+# 131. State Machine — Trip
+
+```text
+Draft
+↓
+Submitted
+↓
+Policy / Budget Check
+↓
+Approval
+↓
+Approved
+↓
+Booking
+↓
+Ready to Travel
+↓
+In Progress
+↓
+Completed
+↓
+Expense Pending
+↓
+Settled
+↓
+Closed
+```
+
+---
+
+# 132. State Machine — Advance
+
+```text
+Requested
+↓
+Eligibility Check
+↓
+Approved
+↓
+Paid
+↓
+Trip Completed
+↓
+Expense Reconciliation
+       │
+   ┌───┴────────┐
+   ▼            ▼
+Employee      Company
+Refund Due    Owes Employee
+   │            │
+   ▼            ▼
+Recovery   Reimbursement
+   └──────┬─────┘
+          ▼
+        Settled
+```
+
+---
+
+# 133. State Machine — Expense
+
+```text
+Draft
+↓
+Submitted
+↓
+Policy Validation
+↓
+Manager Review
+↓
+Project / Cost Review
+↓
+Finance Review
+↓
+Approved / Partially Approved
+↓
+Advance Offset
+↓
+Reimbursement / Recovery
+↓
+Accounting Posting
+↓
+Closed
+```
+
+---
+
+# 134. أهم Separation تصميمي داخل Cluster I
+
+أريد أن نثبت هذا:
+
+```text
+BUSINESS PURPOSE
+       ↓
+TRIP AUTHORIZATION
+       ↓
+TRAVEL ENTITLEMENT
+       ↓
+ACTUAL SPEND
+       ↓
+POLICY VALIDATION
+       ↓
+APPROVED COST
+       ↓
+WHO PAID?
+       ↓
+REIMBURSE / RECOVER / POST
+```
+
+عدم الفصل بين هذه الطبقات هو ما يجعل Expense Systems تتحول إلى "ارفع إيصال وخد فلوس".
+
+---
+
+# 135. والجزء الخاص داخل/خارج القاهرة
+
+الـengine النهائي سيكون قادرًا مثلًا على اتخاذ قرار:
+
+```text
+Employee Base Location:
+Cairo
+
+Destination:
+Suez
+
+Trip:
+2 days
+
+Hotel:
+Company Paid
+
+Meals:
+Customer Paid
+
+Policy:
+Domestic Field Travel
+
+Cluster C:
+Outside Cairo Allowance = 300/day
+
+Cluster I:
+Per Diem = 450/day
+```
+
+ثم Interaction Rule:
+
+```text
+Travel Per Diem replaces Location Allowance
+```
+
+فتكون:
+
+```text
+Location Allowance = 0
+Per Diem:
+900
+- Meal Deduction:
+540
+Net Per Diem:
+360
+```
+
+مع:
+
+```text
+Hotel Cost
+Transportation Cost
+```
+
+منفصلين.
+
+وهذا يمنع **double payment** وفي نفس الوقت يترك النظام مرنًا إذا قررت شركة أخرى أن تدفع الاثنين.
+
+---
+
+# 136. Boundary النهائية
+
+### Cluster I يملك
+
+```text
+Travel Policies
+Business Trips
+Itineraries
+Travel Approvals
+Travel Bookings
+Per Diem
+Travel Advances
+Expense Claims
+Receipts
+Expense Validation
+Travel Settlement
+Reimbursement Business Instruction
+Expense Allocation
+Travel Cost
+```
+
+### ولا يملك
+
+```text
+Employee Master
+Attendance
+Overtime
+Location Allowance Payroll Rules
+Payroll Calculation
+Actual Finance Payment Ledger
+Personnel Documents
+Asset Management
+Project Master
+```
+
+بل يرتبط بهم.
+
+---
+
+بهذا أصبح لدينا **Cluster I** قادرًا على خدمة الموظف المكتبي والـfield workforce والمشروعات والمأموريات داخل وخارج القاهرة والسفر الدولي، بدون أن نخلط Travel بالمزايا أو Payroll Allowances.
+
+**الخطوة التالية المنطقية الآن هي Cluster J — Occupational Health, HSE Incidents Interface, Employee Safety Readiness, Medical Surveillance, PPE Compliance, Work Restrictions, Incident Employee Impact & Return-to-Work ERD**. رغم أننا وضعنا `Medical Fitness + Work Readiness` داخل Cluster G، فإن Cluster J سيكون الـoperational safety layer الذي يدير المخاطر الصحية المرتبطة بالعمل والـincident lifecycle وfitness monitoring، مع عدم تحويل نظام الـHR نفسه إلى HSE Management System كامل.

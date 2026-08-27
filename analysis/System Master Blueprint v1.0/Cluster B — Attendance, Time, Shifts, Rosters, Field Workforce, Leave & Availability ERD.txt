@@ -1,0 +1,2506 @@
+تمام. نثبت الآن **Cluster B — Attendance, Time, Shifts, Rosters, Field Workforce, Leave & Availability ERD**.
+
+الـManual الحالي يثبت الـbusiness responsibility الأساسية فقط: HR Operations مسؤول عن تنسيق جداول العمل، متابعة الحضور، طلبات الإجازات وخطط الـshifts، كما ينص على أن Payroll يجب أن يعتمد على **validated attendance records** وapproved allowances وليس على بيانات خام مباشرة. 
+أما التفاصيل التالية مثل GPS/geofencing، تعدد attendance methods، allowance rules، daily processing، snapshots والـexception engine فهي **تصميم النظام المقترح** لتغطية طبيعة التشغيل الميداني التي حددناها سابقًا.
+
+# Afro_HR_V2 — Cluster B ERD v1.0
+
+الـCluster ينقسم فعليًا إلى 7 Domains مترابطة:
+
+```text
+Work Calendar
+      ↓
+Shift Definitions
+      ↓
+Roster / Schedule
+      ↓
+Attendance Evidence
+      ↓
+Attendance Processing
+      ↓
+Exceptions / OT / Field Rules
+      ↓
+Approved Time & Allowance Inputs
+      ↓
+Payroll
+
+وفي مسار موازٍ:
+
+Leave Request
+      ↓
+Leave Approval
+      ↓
+Employee Availability
+      ↓
+Roster + Attendance + Payroll
+```
+
+---
+
+# 1. القاعدة المعمارية الأساسية
+
+يجب ألا نعتبر:
+
+```text
+Fingerprint punch = Attendance
+```
+
+أو:
+
+```text
+GPS check-in = Attendance
+```
+
+هذه مجرد **Evidence**.
+
+التصميم الصحيح:
+
+```text
+RAW EVIDENCE
+      ↓
+Attendance Engine
+      ↓
+Calculated Attendance Day
+      ↓
+Exceptions
+      ↓
+Approval
+      ↓
+Payroll-Ready Time Result
+```
+
+وبالتالي نحافظ على الـRaw Data ولا نجعل جهاز البصمة هو صاحب القرار.
+
+---
+
+# 2. لماذا هذا مهم؟
+
+موظف قد يكون لديه:
+
+```text
+IN  = Fingerprint
+OUT = Supervisor approval
+```
+
+أو:
+
+```text
+IN  = GPS Mobile
+OUT = GPS Mobile
+```
+
+أو:
+
+```text
+Field Technician
+Attendance based on Supervisor + Site Assignment
+```
+
+أو:
+
+```text
+Remote Employee
+Attendance from Timesheet
+```
+
+إذًا **Attendance Method نفسها يجب أن تكون Configurable**.
+
+---
+
+# 3. Database Schemas
+
+أقترح:
+
+```text
+calendar.*
+
+time.*
+
+field.*
+
+leave.*
+
+availability.*
+
+payroll_input.*
+```
+
+مع الاعتماد على:
+
+```text
+core_hr.*
+workforce.*
+org.*
+```
+
+من النواة السابقة.
+
+---
+
+# 4. Core Cluster B ERD
+
+```text
+Employee
+   │
+   └── Employment
+          │
+          └── Assignment
+                 │
+                 ├── Work Calendar
+                 │
+                 ├── Attendance Policy
+                 │
+                 └── Roster Assignment
+                          │
+                          ▼
+                        Shift
+                          │
+                          ▼
+                 Scheduled Work Day
+                          │
+        ┌─────────────────┼─────────────────┐
+        │                 │                 │
+        ▼                 ▼                 ▼
+   Fingerprint           GPS            Supervisor
+        │                 │                 │
+        └─────────────────┼─────────────────┘
+                          ▼
+                  Attendance Events
+                          │
+                          ▼
+                   Attendance Day
+                          │
+                 ┌────────┼─────────┐
+                 ▼        ▼         ▼
+             Exception    OT    Allowance
+                 │        │         │
+                 └────────┼─────────┘
+                          ▼
+                    Approval/Close
+                          │
+                          ▼
+                    Payroll Input
+```
+
+---
+
+# 5. Domain — Work Calendar
+
+أول شيء يجب معرفته:
+
+> هل الموظف كان من المفترض أن يعمل أصلًا في هذا اليوم؟
+
+لذلك نحتاج:
+
+```text
+calendar.work_calendars
+calendar.calendar_days
+calendar.holiday_calendars
+calendar.holidays
+calendar.week_patterns
+```
+
+---
+
+# 6. `work_calendars`
+
+```text
+calendar_id UUID PK
+
+tenant_id
+company_id
+
+calendar_code
+calendar_name
+
+country_code
+
+week_start_day
+
+default_daily_hours
+
+status
+
+effective_from
+effective_to
+```
+
+مثال:
+
+```text
+Egypt HQ Calendar
+Egypt Field Calendar
+Ramadan Calendar
+Saudi Calendar
+Project Special Calendar
+```
+
+---
+
+# 7. Employee لا يمتلك Calendar مباشرة
+
+الأفضل أن تأتي من:
+
+```text
+Assignment
+   ↓
+Attendance Policy
+   ↓
+Work Calendar
+```
+
+مع إمكانية Employee Override.
+
+الـprecedence:
+
+```text
+Employee Override
+      ↓
+Assignment / Project
+      ↓
+Position / Job
+      ↓
+Company Default
+```
+
+---
+
+# 8. Shift Domain
+
+الجداول:
+
+```text
+time.shifts
+time.shift_segments
+time.shift_breaks
+time.shift_rules
+time.shift_patterns
+```
+
+---
+
+# 9. `time.shifts`
+
+```text
+shift_id UUID PK
+
+tenant_id
+company_id
+
+shift_code
+shift_name
+
+start_time
+end_time
+
+crosses_midnight BOOLEAN
+
+paid_hours
+minimum_work_minutes
+
+grace_in_minutes
+grace_out_minutes
+
+status
+
+effective_from
+effective_to
+```
+
+---
+
+# 10. Cross-midnight Shift
+
+ضروري دعم:
+
+```text
+20:00 → 08:00
+```
+
+بدون افتراض أن:
+
+```text
+end_time > start_time
+```
+
+لذلك:
+
+```text
+crosses_midnight = true
+```
+
+---
+
+# 11. Flexible Shift
+
+ليست كل الوظائف Fixed 09:00–17:00.
+
+نحتاج أنواعًا:
+
+```text
+FIXED
+FLEXIBLE
+ROTATING
+SPLIT
+OVERNIGHT
+ON_CALL
+FIELD
+REMOTE
+TASK_BASED
+```
+
+---
+
+# 12. Shift Pattern
+
+مثال:
+
+```text
+Day 1 → Morning
+Day 2 → Morning
+Day 3 → Night
+Day 4 → Night
+Day 5 → Rest
+Day 6 → Rest
+```
+
+نخزنه:
+
+```text
+time.shift_patterns
+time.shift_pattern_days
+```
+
+بدل Hard Coding.
+
+---
+
+# 13. Roster
+
+الـShift هو تعريف.
+
+أما Roster فهو:
+
+> من سيعمل أي Shift وفي أي يوم؟
+
+الجداول:
+
+```text
+time.rosters
+time.roster_entries
+time.roster_assignments
+```
+
+---
+
+# 14. `rosters`
+
+```text
+roster_id
+
+tenant_id
+company_id
+
+project_id nullable
+site_id nullable
+org_unit_id nullable
+
+period_start
+period_end
+
+status
+
+prepared_by
+approved_by
+approved_at
+```
+
+---
+
+# 15. Roster State
+
+```text
+DRAFT
+ ↓
+SUBMITTED
+ ↓
+APPROVED
+ ↓
+PUBLISHED
+ ↓
+LOCKED
+```
+
+ولا أنصح بتعديل Published Roster بدون Revision.
+
+---
+
+# 16. Roster Entry
+
+```text
+roster_entry_id
+
+roster_id
+
+employee_id
+assignment_id
+
+work_date
+shift_id
+
+site_id
+location_id
+
+scheduled_start
+scheduled_end
+
+status
+```
+
+وبذلك يمكن لنفس الموظف أن يعمل في:
+
+```text
+Monday → Site A
+Tuesday → Site B
+Wednesday → Office
+```
+
+---
+
+# 17. Attendance Policy
+
+هذه من أهم الجداول:
+
+```text
+time.attendance_policies
+```
+
+لا نحدد طريقة الحضور داخل Employee مباشرة.
+
+---
+
+# 18. Attendance Policy
+
+```text
+attendance_policy_id
+
+policy_name
+
+calendar_id
+
+attendance_mode
+
+lateness_rule_id
+
+overtime_rule_id
+
+absence_rule_id
+
+break_rule_id
+
+minimum_work_rule_id
+
+location_rule_id
+
+effective_from
+effective_to
+```
+
+---
+
+# 19. Attendance Policy Assignment
+
+```text
+time.attendance_policy_assignments
+```
+
+يمكن أن تطبق حسب:
+
+```text
+Company
+Org Unit
+Job
+Position
+Project
+Site
+Employee
+```
+
+مع:
+
+```text
+priority
+effective_from
+effective_to
+```
+
+---
+
+# 20. Attendance Methods
+
+بدل Method واحدة:
+
+```text
+time.attendance_methods
+```
+
+ندعم:
+
+```text
+BIOMETRIC
+MOBILE_GPS
+WEB
+QR
+NFC
+SUPERVISOR
+TIMESHEET
+DEVICE
+CUSTOMER_SYSTEM
+PROJECT_SYSTEM
+MANUAL
+```
+
+---
+
+# 21. Policy يمكن أن تسمح بأكثر من Method
+
+مثال Field Technician:
+
+```text
+Primary:
+GPS
+
+Fallback:
+Supervisor
+
+Emergency:
+Manual HR Adjustment
+```
+
+فتصبح:
+
+```text
+attendance_policy_methods
+```
+
+| Method     | Priority |
+| ---------- | -------: |
+| GPS        |        1 |
+| Supervisor |        2 |
+| Manual     |        3 |
+
+---
+
+# 22. Raw Attendance Event
+
+هذا هو قلب Evidence Layer:
+
+```text
+time.attendance_events
+```
+
+```text
+attendance_event_id UUID
+
+tenant_id
+employee_id
+employment_id
+assignment_id
+
+event_type
+
+event_timestamp
+
+source_type
+source_id
+
+device_id nullable
+
+latitude nullable
+longitude nullable
+
+accuracy_meters nullable
+
+site_id nullable
+
+photo_document_id nullable
+
+submitted_by nullable
+
+original_payload JSONB
+
+received_at
+
+validation_status
+```
+
+---
+
+# 23. Event Types
+
+```text
+CHECK_IN
+CHECK_OUT
+
+BREAK_START
+BREAK_END
+
+SITE_ARRIVAL
+SITE_DEPARTURE
+
+WORK_START
+WORK_END
+
+SUPERVISOR_PRESENT
+
+MANUAL_IN
+MANUAL_OUT
+```
+
+---
+
+# 24. لا نعدل Raw Attendance
+
+إذا كان Fingerprint قال:
+
+```text
+08:17:34
+```
+
+تبقى:
+
+```text
+08:17:34
+```
+
+حتى لو HR صحح اليوم إلى:
+
+```text
+08:00
+```
+
+التصحيح يحدث في processed layer وليس raw layer.
+
+---
+
+# 25. Device Integration
+
+```text
+time.attendance_devices
+```
+
+```text
+device_id
+device_code
+
+device_type
+
+site_id
+location_id
+
+vendor
+serial_number
+
+source_system
+
+timezone
+
+status
+```
+
+---
+
+# 26. Device Employee Mapping
+
+الأجهزة أحيانًا تستخدم:
+
+```text
+Employee 00145
+```
+
+وليس HR UUID.
+
+لذلك:
+
+```text
+time.device_employee_mappings
+```
+
+```text
+device_id
+employee_id
+external_employee_code
+
+effective_from
+effective_to
+```
+
+---
+
+# 27. GPS & Geofence
+
+الجداول:
+
+```text
+field.geo_zones
+field.geo_zone_points
+field.site_geo_rules
+```
+
+---
+
+# 28. Geo Zone
+
+```text
+geo_zone_id
+
+zone_name
+
+zone_type
+
+latitude
+longitude
+
+radius_meters
+
+site_id nullable
+project_id nullable
+
+status
+```
+
+مثال:
+
+```text
+Huawei Cairo Warehouse
+Radius = 100 m
+```
+
+---
+
+# 29. GPS Validation
+
+Check-in يمر على:
+
+```text
+GPS enabled?
+Location permission?
+Accuracy acceptable?
+Inside allowed zone?
+Employee assigned to site?
+Within scheduled time?
+Device trusted?
+```
+
+ثم:
+
+```text
+VALID
+WARNING
+INVALID
+REQUIRES_REVIEW
+```
+
+---
+
+# 30. لا أرفض GPS Evidence مباشرة
+
+لو الشخص خارج Geofence بـ20 متر بسبب GPS accuracy، لا نمسح الحدث.
+
+نعمل:
+
+```text
+Event = Captured
+
+Validation =
+GEOFENCE_MISMATCH
+```
+
+ثم Exception Engine يقرر.
+
+---
+
+# 31. Field Workforce Visit
+
+بالنسبة للفني الذي يزور أكثر من موقع:
+
+```text
+field.field_visits
+```
+
+```text
+field_visit_id
+
+employee_id
+assignment_id
+
+project_id
+
+site_id
+
+planned_start
+planned_end
+
+actual_arrival
+actual_departure
+
+visit_status
+
+work_order_id nullable
+task_id nullable
+```
+
+وهذا يفصل:
+
+```text
+Attendance at work
+```
+
+عن:
+
+```text
+Which site/task was executed
+```
+
+---
+
+# 32. Attendance Day
+
+بعد معالجة الـRaw Events ننشئ:
+
+```text
+time.attendance_days
+```
+
+هذا هو **processed daily record**.
+
+---
+
+# 33. `attendance_days`
+
+```text
+attendance_day_id
+
+tenant_id
+employee_id
+employment_id
+assignment_id
+
+work_date
+
+calendar_id
+shift_id
+roster_entry_id
+
+scheduled_start
+scheduled_end
+
+actual_first_in
+actual_last_out
+
+worked_minutes
+paid_minutes
+
+break_minutes
+
+late_minutes
+early_leave_minutes
+
+overtime_minutes
+
+attendance_status
+
+processing_status
+
+approval_status
+
+calculated_at
+```
+
+---
+
+# 34. Attendance Status
+
+```text
+PRESENT
+ABSENT
+PAID_LEAVE
+UNPAID_LEAVE
+REST_DAY
+HOLIDAY
+REMOTE
+FIELD_WORK
+PARTIAL_DAY
+MISSING_PUNCH
+SUSPENDED
+BUSINESS_TRIP
+```
+
+---
+
+# 35. Processing Engine
+
+لكل يوم:
+
+```text
+Get Employee
+    ↓
+Get Active Employment
+    ↓
+Get Assignment
+    ↓
+Resolve Calendar
+    ↓
+Resolve Roster/Shift
+    ↓
+Load Approved Leave
+    ↓
+Load Attendance Events
+    ↓
+Validate Sources
+    ↓
+Pair IN/OUT Events
+    ↓
+Calculate Work Time
+    ↓
+Calculate Late/Early
+    ↓
+Calculate OT Candidate
+    ↓
+Run Exceptions
+    ↓
+Run Allowance Eligibility
+    ↓
+Generate Attendance Day
+```
+
+---
+
+# 36. Missing Punch Example
+
+Scheduled:
+
+```text
+09:00 → 17:00
+```
+
+Evidence:
+
+```text
+IN 08:55
+OUT missing
+```
+
+النتيجة لا تكون:
+
+```text
+Absent
+```
+
+بل:
+
+```text
+PRESENT_WITH_EXCEPTION
+```
+
+Exception:
+
+```text
+MISSING_CHECK_OUT
+```
+
+---
+
+# 37. Attendance Exceptions
+
+```text
+time.attendance_exceptions
+```
+
+```text
+exception_id
+
+attendance_day_id
+employee_id
+
+exception_type
+
+severity
+
+detected_at
+
+status
+
+resolution_type
+
+resolved_by
+resolved_at
+
+comments
+```
+
+---
+
+# 38. Exception Types
+
+```text
+LATE
+EARLY_LEAVE
+
+MISSING_IN
+MISSING_OUT
+
+INVALID_LOCATION
+
+UNSCHEDULED_WORK
+
+DUPLICATE_PUNCH
+
+EXCESSIVE_HOURS
+
+SHIFT_MISMATCH
+
+UNAUTHORIZED_SITE
+
+ATTENDANCE_DURING_LEAVE
+
+OVERTIME_WITHOUT_APPROVAL
+
+DEVICE_MAPPING_ERROR
+```
+
+---
+
+# 39. Exception Workflow
+
+```text
+Detected
+   ↓
+OPEN
+   ↓
+Employee / Supervisor Explanation
+   ↓
+Manager Review
+   ↓
+HR Review if required
+   ↓
+APPROVED_CORRECTION
+or
+REJECTED
+```
+
+---
+
+# 40. Manual Correction
+
+لا نعدل attendance_day بدون Trace.
+
+نعمل:
+
+```text
+time.attendance_adjustments
+```
+
+```text
+adjustment_id
+attendance_day_id
+
+adjustment_type
+
+old_value
+new_value
+
+reason_code
+
+requested_by
+approved_by
+
+status
+```
+
+ثم يعاد الحساب.
+
+---
+
+# 41. Overtime
+
+نقسمها إلى:
+
+```text
+OT Request
+OT Evidence
+OT Calculation
+OT Approval
+OT Payable Result
+```
+
+ولا نجعل:
+
+```text
+worked beyond shift = automatically payable OT
+```
+
+---
+
+# 42. Overtime Tables
+
+```text
+time.overtime_requests
+time.overtime_approvals
+time.overtime_results
+```
+
+---
+
+# 43. Overtime Request
+
+```text
+overtime_request_id
+
+employee_id
+assignment_id
+
+work_date
+
+requested_minutes
+
+reason
+
+project_id
+
+requested_by
+
+status
+```
+
+---
+
+# 44. OT Rule Engine
+
+مثال Rule:
+
+```text
+Actual overtime = 180 min
+Approved request = 120 min
+
+Payable OT = 120 min
+```
+
+أو Policy أخرى:
+
+```text
+Actual = 180
+Approved = YES
+Payable = 180
+```
+
+كلها Configurable.
+
+---
+
+# 45. OT Rules
+
+```text
+time.overtime_rules
+```
+
+يمكن أن تحتوي:
+
+```text
+minimum_minutes
+maximum_daily_minutes
+
+rounding_increment
+
+weekday_multiplier
+weekend_multiplier
+holiday_multiplier
+
+requires_preapproval
+
+minimum_work_before_ot
+
+eligible_employee_category
+```
+
+---
+
+# 46. Shift Allowance ≠ Field Allowance
+
+نفصل أنواع البدلات.
+
+مثال:
+
+```text
+SHIFT_ALLOWANCE
+NIGHT_ALLOWANCE
+
+FIELD_ALLOWANCE
+LOCATION_ALLOWANCE
+
+TRAVEL_ALLOWANCE
+PROJECT_ALLOWANCE
+
+MEAL_ALLOWANCE
+TRANSPORT_ALLOWANCE
+```
+
+ولا نضعها كلها في attendance engine.
+
+---
+
+# 47. Allowance Eligibility Engine
+
+Attendance يوفر **facts**.
+
+Compensation Rules تحدد **money**.
+
+الصحيح:
+
+```text
+Attendance
+↓
+Eligible Fact:
+Employee worked outside Cairo
+8.2 hours
+at Suez Site
+
+↓
+Allowance Rule
+
+↓
+Payable Allowance
+250 EGP
+```
+
+---
+
+# 48. Location Classification
+
+بدل:
+
+```text
+if city != Cairo
+```
+
+نعمل:
+
+```text
+field.location_categories
+```
+
+مثال:
+
+```text
+CAIRO
+GREATER_CAIRO
+OUTSIDE_CAIRO
+REMOTE_AREA
+HIGH_RISK_AREA
+CUSTOMER_SITE
+FIELD_SITE
+```
+
+---
+
+# 49. Site / Location Allowance Rules
+
+```text
+compensation.allowance_rules
+```
+
+```text
+allowance_rule_id
+
+allowance_type_id
+
+company_id
+
+employee_category_id nullable
+job_id nullable
+project_id nullable
+
+location_category_id nullable
+location_id nullable
+geo_zone_id nullable
+
+minimum_work_minutes nullable
+
+minimum_distance_km nullable
+
+amount
+currency
+
+calculation_basis
+
+requires_attendance
+requires_approval
+
+effective_from
+effective_to
+```
+
+---
+
+# 50. Calculation Basis
+
+```text
+FIXED_PER_DAY
+
+FIXED_PER_SHIFT
+
+FIXED_PER_VISIT
+
+HOURLY
+
+PER_KM
+
+PERCENT_OF_BASIC
+
+TIERED
+
+FORMULA
+```
+
+---
+
+# 51. مثال داخل القاهرة
+
+```text
+Rule:
+Location Category = CAIRO
+Employee Type = Field
+Minimum Work = 6 hrs
+
+Allowance = 100 EGP/day
+```
+
+مثال خارج القاهرة:
+
+```text
+Location Category = OUTSIDE_CAIRO
+Minimum Work = 6 hrs
+
+Allowance = 250 EGP/day
+```
+
+---
+
+# 52. ويمكن عمل مناطق مختلفة
+
+```text
+Cairo          100
+Giza           100
+Suez           250
+Alexandria     300
+Upper Egypt    400
+Remote Area    500
+```
+
+دون تعديل Backend.
+
+---
+
+# 53. لكن هناك Gap يجب حسمه
+
+هل البدل يعتمد على:
+
+```text
+Assigned Work Location
+```
+
+أم:
+
+```text
+Actual Attendance Location
+```
+
+أم:
+
+```text
+Approved Business Trip
+```
+
+؟
+
+التصميم يجب أن يدعم الثلاثة.
+
+أقترح Rule Field:
+
+```text
+location_evidence_source
+```
+
+قيم:
+
+```text
+ASSIGNMENT
+ROSTER
+GPS
+FIELD_VISIT
+BUSINESS_TRIP
+MANAGER_APPROVAL
+```
+
+---
+
+# 54. Prevent Double Allowance
+
+إذا ذهب موظف إلى Suez:
+
+```text
+Field Allowance = 250
+Travel Allowance = 300
+Project Allowance = 150
+```
+
+قد توجد Policy تمنع الجمع.
+
+لذلك نحتاج:
+
+```text
+allowance_exclusion_groups
+```
+
+مثال:
+
+```text
+TRAVEL_ALLOWANCE
+FIELD_ALLOWANCE
+```
+
+في:
+
+```text
+Mutually Exclusive Group A
+```
+
+---
+
+# 55. Leave Domain
+
+الآن المسار الموازي.
+
+الجداول:
+
+```text
+leave.leave_types
+
+leave.leave_policies
+
+leave.leave_policy_assignments
+
+leave.leave_entitlements
+
+leave.leave_ledger
+
+leave.leave_requests
+
+leave.leave_request_days
+
+leave.leave_approvals
+```
+
+---
+
+# 56. Leave Type
+
+```text
+ANNUAL
+SICK
+UNPAID
+MATERNITY
+PATERNITY
+EMERGENCY
+STUDY
+COMPASSIONATE
+BUSINESS_MISSION
+TIME_OFF
+```
+
+تكون Configurable حسب الشركة والدولة.
+
+---
+
+# 57. Leave Policy
+
+```text
+leave_policy_id
+
+leave_type_id
+
+company_id
+
+entitlement_method
+
+annual_entitlement
+
+accrual_method
+
+carry_forward_rule
+
+maximum_balance
+
+minimum_request_days
+
+maximum_request_days
+
+requires_attachment
+
+paid_percentage
+
+effective_from
+effective_to
+```
+
+---
+
+# 58. Leave Balance
+
+كما ثبتنا سابقًا:
+
+لا نستخدم:
+
+```text
+annual_leave_balance = 14
+```
+
+كمصدر حقيقة.
+
+نستخدم:
+
+```text
+leave.leave_ledger
+```
+
+---
+
+# 59. Leave Ledger
+
+```text
+leave_ledger_id
+
+employee_id
+leave_type_id
+
+transaction_date
+
+transaction_type
+
+quantity
+
+reference_type
+reference_id
+
+effective_period
+
+created_at
+```
+
+مثال:
+
+```text
++21 ENTITLEMENT
+-3 LEAVE_TAKEN
++5 CARRY_FORWARD
+-1 MANUAL_ADJUSTMENT
+```
+
+Balance:
+
+```text
+SUM(ledger)
+```
+
+---
+
+# 60. Leave Request
+
+```text
+leave.leave_requests
+```
+
+```text
+leave_request_id
+
+employee_id
+employment_id
+assignment_id
+
+leave_type_id
+
+start_date
+end_date
+
+requested_days
+
+reason
+
+status
+
+submitted_at
+```
+
+---
+
+# 61. Partial Leave
+
+يجب دعم:
+
+```text
+Full Day
+Half Day
+Hourly Leave
+```
+
+لذلك الأفضل وجود:
+
+```text
+leave_request_days
+```
+
+```text
+date
+duration_type
+requested_minutes
+```
+
+---
+
+# 62. Leave Approval
+
+Workflow يعتمد على:
+
+```text
+Manager
+Project Manager
+HR
+```
+
+حسب Policy.
+
+لا نضع manager columns داخل Leave Table.
+
+نستخدم Shared Workflow Engine.
+
+---
+
+# 63. Leave Validation
+
+قبل submission:
+
+```text
+Employment active?
+Employee eligible?
+Balance sufficient?
+Dates valid?
+Overlap with another leave?
+Blackout dates?
+Project restriction?
+Minimum notice?
+Attachment required?
+```
+
+---
+
+# 64. Leave + Attendance
+
+عند اعتماد الإجازة:
+
+```text
+leave.approved
+```
+
+Attendance يستهلك الحدث.
+
+مثال:
+
+```text
+Scheduled = YES
+Punch = none
+Leave = approved
+
+Attendance status =
+PAID_LEAVE
+```
+
+وليس:
+
+```text
+ABSENT
+```
+
+---
+
+# 65. Leave + Roster
+
+لو Leave Approved قبل نشر Roster:
+
+```text
+Employee = unavailable
+```
+
+Roster engine لا يجدوله.
+
+لو Approved بعد roster publication:
+
+```text
+Roster Exception
+```
+
+ويحتاج replacement.
+
+---
+
+# 66. Employee Availability
+
+نحتاج طبقة موحدة:
+
+```text
+availability.employee_availability
+```
+
+حتى Project Managers لا يضطرون للبحث في:
+
+* Leave.
+* Training.
+* HSE.
+* Offboarding.
+* Suspension.
+* Travel.
+
+---
+
+# 67. Availability Record
+
+```text
+availability_id
+
+employee_id
+
+start_datetime
+end_datetime
+
+availability_status
+
+reason_type
+reference_id
+
+scope
+
+created_at
+```
+
+---
+
+# 68. Availability Status
+
+```text
+AVAILABLE
+
+ON_LEAVE
+
+TRAINING
+
+SICK
+
+SUSPENDED
+
+BUSINESS_TRIP
+
+OFFBOARDING
+
+NOT_DEPLOYABLE
+
+ASSIGNED_ELSEWHERE
+```
+
+---
+
+# 69. الفرق بين Available وDeployable
+
+موظف قد يكون:
+
+```text
+Available = YES
+```
+
+ولكن:
+
+```text
+Deployable to Huawei Tower = NO
+```
+
+لأن Working at Heights expired.
+
+لذلك Availability يجب أن تتعامل مع:
+
+```text
+Time Availability
+```
+
+و:
+
+```text
+Operational Eligibility
+```
+
+بشكل منفصل.
+
+---
+
+# 70. Payroll Boundary
+
+وهذه أهم نقطة في Cluster B.
+
+**Payroll لا يقرأ:**
+
+```text
+attendance_events
+GPS coordinates
+fingerprint logs
+roster punches
+```
+
+مباشرة.
+
+بل Time domain يصدر:
+
+```text
+Validated Payable Time Results
+```
+
+---
+
+# 71. Payroll-Ready Time Result
+
+```text
+time.payroll_time_results
+```
+
+```text
+result_id
+
+employee_id
+
+payroll_period_id
+
+work_date
+
+regular_minutes
+
+overtime_minutes
+
+unpaid_minutes
+
+absence_minutes
+
+late_deduction_minutes
+
+night_shift_minutes
+
+holiday_minutes
+
+status
+
+source_attendance_day_id
+
+approved_at
+```
+
+---
+
+# 72. Allowance Result
+
+بالمثل:
+
+```text
+time.allowance_eligibility_results
+```
+
+أو Compensation Domain:
+
+```text
+compensation.allowance_results
+```
+
+```text
+employee_id
+
+work_date
+
+allowance_type
+
+quantity
+rate
+amount
+
+project_id
+location_id
+
+rule_id
+
+source_attendance_day_id
+
+status
+```
+
+---
+
+# 73. Payroll Snapshot
+
+عند Payroll Cutoff:
+
+```text
+Approved Time Results
+        +
+Approved Allowance Results
+        +
+Approved Leave Impact
+        ↓
+Payroll Input Snapshot
+```
+
+داخل:
+
+```text
+payroll.payroll_inputs
+```
+
+بعد ذلك لا نربط Payroll التاريخي مباشرة بـcurrent attendance.
+
+---
+
+# 74. لماذا Snapshot؟
+
+مثال:
+
+Payroll يوليو تم صرفه.
+
+في أغسطس HR اكتشف أن:
+
+```text
+15 July OUT punch
+```
+
+كان خاطئًا.
+
+لا نعيد كتابة July payroll.
+
+الصحيح:
+
+```text
+Attendance corrected
+        ↓
+Retroactive Adjustment
+        ↓
+August Payroll Adjustment
+```
+
+---
+
+# 75. Retroactive Processing
+
+نحتاج:
+
+```text
+time.retro_adjustments
+```
+
+أو Shared:
+
+```text
+payroll.retro_inputs
+```
+
+يحتوي:
+
+```text
+original_period
+adjustment_period
+
+employee_id
+
+difference_type
+difference_value
+
+reason
+
+source_reference
+```
+
+---
+
+# 76. Attendance Period Close
+
+لا يكفي Daily Approval.
+
+نحتاج:
+
+```text
+time.attendance_periods
+```
+
+مثال:
+
+```text
+July 2026
+
+OPEN
+ ↓
+PROCESSING
+ ↓
+MANAGER_REVIEW
+ ↓
+HR_REVIEW
+ ↓
+CLOSED
+ ↓
+EXPORTED_TO_PAYROLL
+```
+
+---
+
+# 77. وبعد Close
+
+لا يستطيع Supervisor تعديل يوليو مباشرة.
+
+يحتاج:
+
+```text
+Reopen Request
+```
+
+أو:
+
+```text
+Retro Adjustment
+```
+
+بصلاحية أعلى.
+
+---
+
+# 78. Project Cost Allocation
+
+لأن الموظف قد يعمل أكثر من مشروع، Time Result يمكن أن يحمل:
+
+```text
+project_id
+cost_center_id
+```
+
+مثال:
+
+```text
+Regular Work:
+Project A → 6 hrs
+
+Project B → 2 hrs
+```
+
+Payroll يستطيع توزيع التكلفة لاحقًا.
+
+---
+
+# 79. Daily Timesheet
+
+لبعض الموظفين Attendance ليست كافية.
+
+نحتاج:
+
+```text
+time.timesheets
+time.timesheet_entries
+```
+
+مثال Project Manager:
+
+```text
+8 hours attendance
+
+3 hrs Huawei
+3 hrs Nokia
+2 hrs Internal
+```
+
+Attendance يثبت:
+
+```text
+Was working
+```
+
+Timesheet يثبت:
+
+```text
+Where the work cost goes
+```
+
+---
+
+# 80. لا نخلط Attendance وTimesheet
+
+هذه نقطة مهمة.
+
+```text
+Attendance = Presence / Work time
+
+Timesheet = Cost / Activity allocation
+```
+
+قد يتساويا أحيانًا، لكنهما ليسا نفس الكيان.
+
+---
+
+# 81. Supervisor Attendance
+
+لـBlue Collar teams يمكن أن يدير المشرف Team Attendance.
+
+نحتاج:
+
+```text
+time.team_attendance_submissions
+time.team_attendance_members
+```
+
+المشرف يختار:
+
+```text
+Present
+Absent
+Late
+Leave
+Site
+```
+
+لكن كل submission يحتفظ:
+
+```text
+submitted_by
+timestamp
+location
+approval
+```
+
+---
+
+# 82. Anti-Fraud Controls
+
+خصوصًا GPS/Supervisor attendance:
+
+```text
+Device binding
+GPS accuracy
+Mock-location detection reference
+Duplicate device detection
+Impossible travel detection
+Same device multiple employees
+Photo optional
+Supervisor approval
+Geofence
+Timestamp integrity
+```
+
+لكن هذه Controls ينبغي أن تكون Configurable، لأن تطبيقها على كل موظف سيعقد الاستخدام.
+
+---
+
+# 83. Offline Mobile Attendance
+
+مهم جدًا للـfield workforce.
+
+Mobile app يجب أن يستطيع تسجيل:
+
+```text
+event_local_timestamp
+device_timestamp
+sync_timestamp
+GPS
+device_id
+```
+
+حتى عند عدم وجود Internet.
+
+ثم عند Sync:
+
+```text
+server_received_at
+```
+
+ولا نخلط:
+
+```text
+event time
+```
+
+مع:
+
+```text
+upload time
+```
+
+---
+
+# 84. Timezone
+
+لا نخزن Local Time فقط.
+
+كل event:
+
+```text
+TIMESTAMPTZ
+```
+
+ونحتفظ أيضًا بـ:
+
+```text
+site_timezone
+```
+
+حسب الحاجة.
+
+مهم جدًا لو SaaS يعمل في عدة دول.
+
+---
+
+# 85. Approval Matrix
+
+تقريبًا:
+
+| Transaction           | Typical Approval              |
+| --------------------- | ----------------------------- |
+| Roster                | Manager                       |
+| Attendance Correction | Supervisor → HR               |
+| OT                    | Manager / Project Manager     |
+| Leave                 | Manager → HR depending policy |
+| Manual Attendance     | Manager + HR                  |
+| Exceptional Allowance | Manager + Payroll/HR          |
+| Period Reopen         | HR Admin / Payroll Control    |
+
+وتبقى كلها Configurable عبر Shared Workflow Engine.
+
+---
+
+# 86. Data Ownership
+
+| Entity                     | Owner                      |
+| -------------------------- | -------------------------- |
+| Work Calendar              | HR Configuration           |
+| Shift                      | Time Domain                |
+| Roster                     | HR Operations / Operations |
+| Attendance Event           | Time Domain                |
+| Attendance Day             | Time Domain                |
+| Attendance Exception       | Time Domain                |
+| OT Request                 | Time Domain                |
+| Field Visit                | Workforce/Field            |
+| Geo Zone                   | Field/Platform             |
+| Leave Policy               | Leave Domain               |
+| Leave Balance              | Leave Ledger               |
+| Availability               | Availability Domain        |
+| Allowance Rule             | Compensation               |
+| Allowance Eligibility Fact | Time/Compensation          |
+| Payroll Input              | Payroll                    |
+| Project                    | External Project System    |
+
+---
+
+# 87. أهم Events
+
+```text
+roster.published
+
+shift.assigned
+
+attendance.event.received
+attendance.day.calculated
+
+attendance.exception.created
+attendance.exception.resolved
+
+overtime.requested
+overtime.approved
+
+leave.requested
+leave.approved
+leave.cancelled
+
+availability.changed
+
+allowance.eligible
+allowance.approved
+
+attendance.period.closed
+
+payroll.time_input.ready
+```
+
+---
+
+# 88. Event Flow to Payroll
+
+```text
+attendance.event.received
+        ↓
+attendance.day.calculated
+        ↓
+exception resolution
+        ↓
+attendance.day.approved
+        ↓
+attendance.period.closed
+        ↓
+payroll.time_input.ready
+        ↓
+Payroll Snapshot
+```
+
+---
+
+# 89. Employee Example
+
+نفترض:
+
+```text
+Employee:
+Technician 00451
+
+Roster:
+09:00 → 17:00
+
+Location:
+Suez
+
+Policy:
+Outside Cairo Allowance = 250/day
+Minimum Work = 6 hrs
+```
+
+GPS:
+
+```text
+IN  08:54
+OUT 18:20
+```
+
+Processing:
+
+```text
+Regular Work = 8 hrs
+
+Candidate OT = 1 hr 20 min
+```
+
+Approved OT:
+
+```text
+1 hr
+```
+
+Allowance:
+
+```text
+Outside Cairo = Eligible
+```
+
+Payroll-ready output:
+
+```text
+Regular Hours: 8
+
+OT: 1
+
+Field/Location Allowance:
+250 EGP
+
+Project:
+Suez Fiberization
+```
+
+وهذا هو فقط ما يحتاجه Payroll.
+
+لا يحتاج إلى GPS coordinates.
+
+---
+
+# 90. Cluster B Logical ERD
+
+```text
+                    EMPLOYEE
+                       │
+                  EMPLOYMENT
+                       │
+                  ASSIGNMENT
+                       │
+          ┌────────────┼────────────┐
+          │            │            │
+      CALENDAR       ROSTER      POLICY
+                       │
+                      SHIFT
+                       │
+                       ▼
+              ATTENDANCE EVENT
+                       │
+              ┌────────┼─────────┐
+              │        │         │
+          Fingerprint GPS    Supervisor
+              │        │         │
+              └────────┼─────────┘
+                       ▼
+                ATTENDANCE DAY
+                       │
+            ┌──────────┼──────────┐
+            │          │          │
+        EXCEPTION      OT      FIELD FACT
+            │          │          │
+            └──────────┼──────────┘
+                       ▼
+                 APPROVED RESULT
+                       │
+                       ▼
+                 PAYROLL INPUT
+
+
+LEAVE POLICY
+      │
+      ▼
+LEAVE REQUEST
+      │
+      ▼
+LEAVE LEDGER
+      │
+      ▼
+AVAILABILITY
+      │
+      ├────→ ROSTER
+      └────→ ATTENDANCE
+```
+
+# القرار المعماري الذي أقترح تثبيته
+
+Cluster B يجب أن يعتمد على **4 طبقات بيانات منفصلة**:
+
+```text
+1. Planned Work
+   Calendar + Shift + Roster
+
+2. Evidence
+   Fingerprint + GPS + Supervisor + Timesheet
+
+3. Interpreted HR Result
+   Attendance Day + Leave + Exception + OT
+
+4. Financial Result
+   Payable Time + Allowance Eligibility + Payroll Snapshot
+```
+
+وهذا الفصل مهم جدًا؛ لأنه يمنع أخطاء من نوع:
+
+> GPS punch → راتب.
+
+الصحيح:
+
+> **Evidence → Rule → Validation → Approval → Payroll Input.**
+
+وهذا أيضًا يطابق الـManual من حيث أن HR Operations يتابع schedules/attendance/leave/shifts، بينما Payroll يعمل على معلومات **validated and approved** وليس على evidence خام. 
+
+**الخطوة التالية المنطقية الآن هي Cluster C — Compensation, Payroll, Allowances, Deductions, KPI Bonus, Final Settlement & Project Cost Allocation ERD.** وهنا سنربط `Employee Compensation + Attendance Payroll Inputs + Leave Impact + OT + Location Allowances + KPI + Adjustments + Taxes/Social Insurance + Project Allocation` داخل Payroll Engine واحد، مع Payroll Run locking، retro adjustments، approval layers، payslip، bank batch، Finance posting، وعدم السماح لأي تعديل بعد الصرف بدون adjustment رسمي.

@@ -1,0 +1,1632 @@
+بالضبط. **Module 16** يستحق أن يكون Lifecycle مستقل، لأن الـOffboarding في الـManual الحالي ليس خطوة واحدة؛ هو سلسلة عمليات موزعة بين **Personnel، HR Operations، IT، Finance، Direct Manager** وتشمل إلغاء الصلاحيات، handover، clearance، asset recovery، legal/financial closure، ثم إغلاق وأرشفة ملف الموظف. 
+
+# Module 16 — Offboarding, Resignation, Termination, Clearance, Asset Recovery, Final Settlement & Exit Management
+
+## 16.1 الهدف الرئيسي
+
+هذا الـModule يصبح:
+
+> **System of Process for Employee Separation**
+
+بمعنى أنه يدير كل رحلة الخروج من أول Trigger حتى الوصول إلى:
+
+```text
+Employee Exit Fully Closed
+```
+
+مع إثبات أن:
+
+* كل الجهات أنهت مسؤولياتها
+* كل الأصول عادت
+* كل الصلاحيات أُغلقت
+* كل المبالغ تم احتسابها
+* كل الالتزامات القانونية تمت
+* كل المستندات أُعيدت أو أُغلقت
+* سجل الموظف تم تحديثه
+* لا توجد نقطة مفتوحة قبل Final Closure
+
+---
+
+# 16.2 أنواع الخروج
+
+النظام يجب أن يدعم أنواع متعددة، وليس resignation فقط:
+
+* Resignation
+* Termination
+* Contract Expiry
+* End of Project Assignment
+* Retirement
+* Mutual Separation
+* Redundancy
+* Death
+* Absconding
+* Medical Separation
+* Probation Failure
+* Non-Renewal
+* Project Closure Exit
+
+مع إمكانية إضافة أنواع حسب الشركة والدولة.
+
+الـManual الحالي يذكر صراحة Resignation وContract Expiration وTermination وEnd of Project Assignment كـtriggers للـoffboarding. 
+
+---
+
+# 16.3 Offboarding Initiation
+
+كل خروج يبدأ بـ:
+
+```text
+Offboarding Case
+```
+
+ويحتوي على:
+
+* Employee
+* HR Code
+* Company
+* Project
+* Department
+* Manager
+* Employment Type
+* Exit Type
+* Exit Reason
+* Resignation Date
+* Notice Start Date
+* Last Working Day
+* Requested By
+* Approved By
+* Effective Separation Date
+* Payroll Cutoff Impact
+* Replacement Required?
+* Handover Required?
+* Critical Position?
+* Legal Review Required?
+
+---
+
+# 16.4 Notice Period Management
+
+النظام يحتاج:
+
+```text
+Notice Period Engine
+```
+
+بحيث يحسب:
+
+* Contractual Notice
+* Actual Notice
+* Remaining Notice
+* Waived Notice
+* Notice Shortfall
+* Notice Compensation
+
+مثلاً:
+
+```text
+Required Notice = 30 Days
+Actual Notice = 20 Days
+Shortfall = 10 Days
+```
+
+لكن الحساب المالي النهائي يذهب إلى Module 09 / Final Settlement.
+
+---
+
+# 16.5 Resignation Workflow
+
+مثلاً:
+
+```text
+Employee Submits Resignation
+↓
+Direct Manager Review
+↓
+HR Operations Retention Discussion
+↓
+Resignation Approval
+↓
+Last Working Day Confirmed
+↓
+Offboarding Case Activated
+```
+
+وهذا يتفق مع الـManual، الذي يضع HR Operations مسؤولًا عن استقبال resignation، عمل retention discussion، تنسيق approval، ثم متابعة clearance حتى انتهاء offboarding. 
+
+---
+
+# 16.6 Retention Stage
+
+قبل قبول resignation، يمكن تفعيل:
+
+**Retention Assessment**
+
+ويشمل:
+
+* Reason for Leaving
+* Compensation Issue
+* Manager Issue
+* Career Growth
+* Project Issue
+* Location
+* Workload
+* External Offer
+* Personal Reason
+
+ثم:
+
+```text
+Retention Possible
+Retention Not Recommended
+Retention Attempted
+Employee Confirmed Exit
+```
+
+لكن لا نجعل هذه المرحلة mandatory لكل Exit Type.
+
+---
+
+# 16.7 Termination Workflow
+
+Termination مختلف تمامًا عن resignation.
+
+مصدر القرار قد يأتي من:
+
+* Module 13 disciplinary case
+* Contract expiry
+* Performance decision
+* Probation result
+* Management decision
+* Legal decision
+
+مثلاً:
+
+```text
+Module 13
+Approved Termination Decision
+↓
+Module 16
+Offboarding Case
+```
+
+Module 16 لا يعيد التحقيق؛ هو ينفذ القرار.
+
+---
+
+# 16.8 Separation Approval Engine
+
+حسب Exit Type.
+
+مثلاً:
+
+**Resignation**
+
+Employee → Manager → HR
+
+**Termination**
+
+HR → Legal → Authorized Management
+
+**Non-Renewal**
+
+Manager → HR Operations → Personnel
+
+ويكون configurable.
+
+---
+
+# 16.9 Exit Risk Classification
+
+بعض الموظفين يحتاجون Offboarding أسرع وأكثر تحكمًا.
+
+مثلاً:
+
+```text
+Normal
+Sensitive
+High Risk
+Immediate Access Removal
+```
+
+High Risk قد يشمل موظفًا لديه:
+
+* privileged system access
+* confidential information
+* financial authority
+* customer admin accounts
+* critical project credentials
+
+---
+
+# 16.10 System Access Deactivation
+
+الـManual الحالي ينص على أن كل access يجب أن يتم تعطيله **بحد أقصى في آخر يوم عمل**. 
+
+لذلك Module 16 ينشئ Deactivation Tasks لكل systems.
+
+مثل:
+
+* Corporate Email
+* ERP
+* HR System
+* VPN
+* Customer Portal
+* Project Systems
+* Cloud Accounts
+* BI
+* GitHub
+* CRM
+* Shared Drives
+* Mobile Apps
+* Physical Access
+
+---
+
+# 16.11 Immediate Access Revocation
+
+في بعض Termination Cases:
+
+لا ننتظر Last Working Day.
+
+يمكن:
+
+```text
+Access Revocation Effective:
+Immediate
+```
+
+بينما resignation الطبيعي:
+
+```text
+Effective:
+Last Working Day 17:00
+```
+
+---
+
+# 16.12 Access Closure Checklist
+
+كل Access يحتوي:
+
+```text
+Requested
+Assigned
+Scheduled
+Disabled
+Verified
+Failed
+Exception
+```
+
+ولا نكتفي بأن IT يقول "Done".
+
+نحتاج Verification.
+
+---
+
+# 16.13 Knowledge & Task Handover
+
+كما في الـManual:
+
+* Handover Form
+* Ongoing Responsibilities
+* Continuity Plan
+* Manager Approval 
+
+لكن في النظام نوسعها.
+
+---
+
+# 16.14 Digital Handover Plan
+
+يشمل:
+
+* Open Tasks
+* Projects
+* Customer Issues
+* Pending Approvals
+* Files
+* Documentation
+* Credentials
+* Team Responsibilities
+* Deadlines
+* Risks
+* Replacement Employee
+
+---
+
+# 16.15 Handover Items
+
+كل Item:
+
+```text
+Item
+Owner
+Recipient
+Due Date
+Status
+Evidence
+Manager Verification
+```
+
+مثلاً:
+
+```text
+Huawei Weekly Report
+Transfer To: Ahmed
+Status: Completed
+Evidence: SharePoint Link
+```
+
+---
+
+# 16.16 Knowledge Transfer
+
+خصوصًا للوظائف الحرجة.
+
+يمكن فرض:
+
+* Handover Session
+* Documentation
+* Recorded Session
+* Checklist
+* Replacement Shadowing
+
+ويرتبط Module 12 Succession إذا الوظيفة Critical.
+
+---
+
+# 16.17 Clearance Engine
+
+بدل Clearance Form ثابت، نحتاج:
+
+**Dynamic Clearance Matrix**
+
+حسب:
+
+* Company
+* Role
+* Project
+* Asset Ownership
+* Location
+* Department
+* Customer
+* Employee Type
+
+---
+
+# 16.18 Clearance Departments
+
+مثلاً:
+
+```text
+Direct Manager
+IT
+Finance
+Warehouse
+Administration
+Fleet
+HSE
+Project
+Personnel
+Payroll
+Legal
+Security
+Customer Access
+```
+
+الـManual الحالي يحدد على الأقل IT وOperations/HR & Administration وFinance وDirect Manager. 
+
+---
+
+# 16.19 Clearance Status
+
+كل جهة:
+
+```text
+Not Started
+Pending
+In Progress
+Cleared
+Cleared with Deduction
+Rejected
+Blocked
+Exception Approved
+```
+
+---
+
+# 16.20 Parallel Clearance
+
+مهم جدًا.
+
+لا ننفذ:
+
+```text
+IT
+then Finance
+then Warehouse
+```
+
+بشكل sequential إلا لو فيه dependency.
+
+الأفضل:
+
+```text
+             IT
+           ↗
+Exit → Finance
+           ↘
+             Warehouse
+           ↘
+             Manager
+```
+
+كلهم parallel.
+
+وهذا يقلل Exit Cycle Time.
+
+---
+
+# 16.21 Asset Recovery
+
+Module 16 يجب أن يتصل بأي Asset System موجود.
+
+مثل:
+
+* Laptop
+* Mobile
+* SIM
+* Tablet
+* PPE
+* Uniform
+* Tools
+* Vehicle
+* Access Card
+* Medical Card
+* Customer ID
+* Keys
+* Equipment
+
+---
+
+# 16.22 Asset Status
+
+لكل Asset:
+
+```text
+Assigned
+Return Requested
+Returned
+Inspected
+Accepted
+Damaged
+Lost
+Not Returned
+Deduction Required
+Waived
+```
+
+---
+
+# 16.23 Asset Inspection
+
+لا يكفي:
+
+> Laptop Returned.
+
+بل:
+
+```text
+Returned
+↓
+Condition Inspection
+↓
+Good / Damaged / Missing Accessories
+```
+
+ثم إن لزم:
+
+**Financial Liability**
+
+يرسل إلى Final Settlement.
+
+---
+
+# 16.24 Employee Custody Snapshot
+
+عند Initiation، النظام يأخذ Snapshot:
+
+```text
+Assets Assigned to Employee
+```
+
+حتى لا يستطيع أي طرف بعد ذلك تغيير السجلات وإخفاء أصل كان على عهدة الموظف.
+
+---
+
+# 16.25 Financial Clearance
+
+Finance يتحقق من:
+
+* Advances
+* Petty Cash
+* Loans
+* Employee Liabilities
+* Expenses
+* Company Credit
+* Outstanding Receivables
+* Asset Liabilities
+
+وهذا موجود في الـManual تحت Finance clearance. 
+
+---
+
+# 16.26 Payroll Final Settlement
+
+هنا يجب فصل المسؤوليات جيدًا.
+
+Module 16:
+
+> ينسق العملية.
+
+Module 09:
+
+> يحسب Settlement.
+
+مثلاً يرسل:
+
+```text
+Last Working Day
+Unused Leave
+Notice Shortfall
+Deductions
+Bonuses
+Outstanding Allowances
+Asset Deductions
+```
+
+ثم Module 09 يرجع:
+
+```text
+Final Settlement Calculation
+```
+
+---
+
+# 16.27 Final Settlement Components
+
+قد تشمل:
+
+* Final Salary
+* Unused Leave
+* Approved OT
+* Pending Allowances
+* KPI / Bonus eligibility
+* Notice Pay
+* Notice Deduction
+* Loans
+* Advances
+* Asset Deductions
+* Other Entitlements
+
+الـManual الحالي يذكر Final Salary وUnused Leave Balance وDeductions وOther Entitlements. 
+
+---
+
+# 16.28 Final Settlement Status
+
+```text
+Not Started
+Calculating
+Pending Review
+Pending Approval
+Approved
+Payment Scheduled
+Paid
+Disputed
+Closed
+```
+
+---
+
+# 16.29 Settlement Dispute
+
+لو الموظف يعترض:
+
+لا نعيد فتح كل Offboarding.
+
+ينشأ:
+
+**Settlement Dispute**
+
+ثم حسب طبيعة الاعتراض:
+
+* Payroll Service → Module 14
+* Formal dispute → Module 13
+
+---
+
+# 16.30 Legal Closure
+
+يشمل:
+
+* Contract Closure
+* Labor Law Requirements
+* Legal Documents
+* Social Insurance Closure
+* Regulatory Forms
+
+والـManual يذكر تحديدًا Social Insurance Form (6) ضمن Legal Closure. 
+
+---
+
+# 16.31 Social Insurance Closure
+
+Module 16 يطلق العملية:
+
+```text
+Employee Exit
+↓
+Module 15
+Form 6 Transaction
+↓
+Submission
+↓
+Confirmation
+```
+
+Module 15 يبقى system of record للتأمين.
+
+---
+
+# 16.32 Medical Insurance Closure
+
+نفس الفكرة.
+
+Module 16:
+
+```text
+Exit Trigger
+```
+
+Module 15:
+
+```text
+Cancel Medical Coverage
+Dependents
+Medical Card
+```
+
+---
+
+# 16.33 Exit Interview
+
+الـManual يتضمن Exit Interview ضمن Legal & Financial Closure. 
+
+أنا أفضل جعله Component واضحًا مستقلًا.
+
+يشمل:
+
+* Reason for Leaving
+* Manager Feedback
+* Compensation
+* Career
+* Work Environment
+* Tools
+* Project
+* Culture
+* Recommendation
+* Rehire Interest
+
+---
+
+# 16.34 Exit Reason Taxonomy
+
+بدل Free Text فقط:
+
+```text
+Compensation
+Career Growth
+Manager
+Work Environment
+Relocation
+Project End
+Performance
+Disciplinary
+Personal
+Retirement
+Health
+Other
+```
+
+مع optional detail.
+
+---
+
+# 16.35 Rehire Eligibility
+
+بعد Exit:
+
+```text
+Eligible for Rehire
+Eligible with Review
+Not Eligible
+Restricted
+```
+
+لكن لا يكون auto decision من AI.
+
+يحتاج authorized HR approval.
+
+---
+
+# 16.36 Exit Feedback Analytics
+
+هنا نحصل على معلومات إدارية مهمة.
+
+مثلاً:
+
+```text
+Top Resignation Reasons
+Compensation        31%
+Career Growth       24%
+Manager             17%
+Project Conditions  13%
+Others              15%
+```
+
+---
+
+# 16.37 Regrettable Attrition
+
+يمكن HR تحديد:
+
+```text
+Regrettable Exit
+Non-Regrettable Exit
+```
+
+ثم تحليل:
+
+* critical talents lost
+* high performers lost
+* succession gaps
+
+ويرتبط Module 12.
+
+---
+
+# 16.38 Employee Status Changes
+
+Module 16 لا يعدل employee master مباشرة.
+
+عند الوصول لنقطة معينة:
+
+```text
+Exit Approved
+↓
+Module 15
+Personnel Transaction
+```
+
+ثم:
+
+```text
+Active
+→ Notice Period
+→ Last Working Day
+→ Offboarded
+```
+
+---
+
+# 16.39 Effective Dating
+
+يجب التفريق بين:
+
+```text
+Resignation Submitted Date
+Resignation Approval Date
+Last Working Day
+Employment End Date
+Payroll End Date
+System Access End Date
+Insurance End Date
+```
+
+قد لا تكون كلها متساوية.
+
+---
+
+# 16.40 Last Working Day Control
+
+هو Date محوري.
+
+يؤثر على:
+
+* Attendance
+* Leave
+* Payroll
+* Access
+* Insurance
+* Project Allocation
+* Asset Clearance
+* Final Settlement
+
+---
+
+# 16.41 Clearance Dependencies
+
+مثلاً:
+
+**Final Settlement Approval**
+
+لا يحدث قبل:
+
+```text
+Finance Clearance
+Asset Liability Confirmed
+Leave Balance Confirmed
+```
+
+لكن Payment قد لا يحتاج انتظار Archive.
+
+---
+
+# 16.42 Offboarding Critical Path
+
+النظام يحسب Critical Path.
+
+مثلاً:
+
+```text
+Clearance
+↓
+Asset Liability
+↓
+Final Settlement
+↓
+Payment
+```
+
+إذا Asset Inspection تأخر، يظهر أن Settlement سيتأخر.
+
+---
+
+# 16.43 SLA Engine
+
+كل Exit Type له SLA.
+
+مثلاً:
+
+* System Deactivation — Last Working Day
+* Manager Handover — Before LWD
+* Asset Return — LWD
+* Finance Clearance — 2 WD
+* Final Settlement — X WD
+* Record Closure — X WD
+
+القيم تكون configurable.
+
+---
+
+# 16.44 Escalation Engine
+
+مثلاً:
+
+```text
+Clearance overdue 1 day
+→ Department Owner
+
+3 days
+→ Department Head
+
+5 days
+→ HR Manager
+```
+
+---
+
+# 16.45 Employee Exit Portal
+
+الموظف يرى:
+
+```text
+My Exit Process
+
+Resignation          ✓
+Manager Approval     ✓
+Handover             80%
+Asset Return         Pending
+Finance              Completed
+Final Settlement     Under Review
+Documents            Pending
+```
+
+دون رؤية internal confidential notes.
+
+---
+
+# 16.46 Exit Checklist
+
+Employee Checklist:
+
+```text
+Complete Handover
+Return Laptop
+Return ID Card
+Submit Expense Claims
+Confirm Bank Details
+Attend Exit Interview
+Collect Documents
+```
+
+---
+
+# 16.47 Manager Exit Workspace
+
+Manager يرى:
+
+* Employee Exit Date
+* Handover
+* Replacement
+* Open Tasks
+* Asset confirmation
+* Knowledge transfer
+* Final manager clearance
+
+ولا يرى necessarily payroll calculations.
+
+---
+
+# 16.48 Department Clearance Workspace
+
+كل Department يرى فقط الجزء الخاص به.
+
+IT يرى:
+
+* systems
+* laptop
+* access
+
+Finance يرى:
+
+* financial obligations
+
+Warehouse يرى:
+
+* custody
+
+وهذا يقلل كشف البيانات.
+
+---
+
+# 16.49 Offboarding Case Timeline
+
+مثلاً:
+
+```text
+05 Aug
+Resignation Submitted
+
+06 Aug
+Manager Approved
+
+07 Aug
+HR Approved
+
+20 Aug
+Handover Completed
+
+31 Aug
+Last Working Day
+
+31 Aug
+Access Disabled
+
+01 Sep
+Final Settlement Started
+```
+
+كل Action audit logged.
+
+---
+
+# 16.50 Exceptions
+
+قد توجد حالات مثل:
+
+> Employee left without returning equipment.
+
+النظام لا يجبر fake clearance.
+
+يكون:
+
+```text
+Clearance Exception
+```
+
+مع:
+
+* Reason
+* Outstanding Items
+* Approved By
+* Financial Impact
+* Follow-up Owner
+
+---
+
+# 16.51 Absconding
+
+يحتاج workflow مختلف.
+
+مثلاً:
+
+```text
+Absence Detected
+↓
+Formal Process
+↓
+Legal / ER Decision
+↓
+Approved Separation
+↓
+Restricted Offboarding
+```
+
+Module 16 ينفذ بعد approval المناسب.
+
+---
+
+# 16.52 Death Case
+
+أيضًا Exit Type يحتاج special workflow.
+
+مثلاً:
+
+* Disable access
+* Asset handling
+* Benefits
+* Final settlement
+* Family communication
+* Legal documents
+
+مع privacy وصلاحيات أعلى.
+
+---
+
+# 16.53 Project End Bulk Offboarding
+
+مهم جدًا لشركة تعتمد على المشاريع.
+
+مثلاً:
+
+```text
+Project Completed
+Employees = 180
+```
+
+النظام يدعم:
+
+**Bulk Exit Planning**
+
+لكن لا ينفذ الجميع blindly.
+
+قد يصبح الموظف:
+
+```text
+Transfer to another project
+Renew
+Bench
+Exit
+```
+
+---
+
+# 16.54 Bulk Offboarding Control
+
+يمكن تحديد مجموعة:
+
+```text
+Project X
+Contract End = 30 Sep
+```
+
+ثم النظام يعمل لكل Employee independent case.
+
+حتى نحافظ على audit.
+
+---
+
+# 16.55 Replacement / Vacancy Trigger
+
+إذا employee خرج من Position:
+
+Module 16 يستطيع إرسال:
+
+```text
+Replacement Required
+```
+
+إلى Module 05 Recruitment / Manpower.
+
+---
+
+# 16.56 Succession Trigger
+
+إذا Position Critical:
+
+```text
+Module 12
+Succession Review
+```
+
+قبل Last Working Day.
+
+---
+
+# 16.57 Workforce Availability
+
+Module 16 يحدث Module 08:
+
+```text
+Employee Availability End Date
+```
+
+حتى لا يظهر الموظف كمتاح بعد الخروج.
+
+---
+
+# 16.58 Attendance Integration
+
+Module 07 يحتاج:
+
+```text
+Last Attendance Eligible Date
+```
+
+وبعدها لا يسمح attendance.
+
+---
+
+# 16.59 Payroll Integration
+
+Module 09 يأخذ:
+
+* Payroll Stop Date
+* LWD
+* Leave Balance
+* Deduction inputs
+* Settlement request
+
+---
+
+# 16.60 Personnel Integration
+
+Module 15 يستقبل:
+
+* Exit transaction
+* Contract closure
+* Social insurance closure
+* Medical insurance closure
+* Archive status
+
+---
+
+# 16.61 ER Integration
+
+Module 13 قد يكون Source للـtermination.
+
+لكن Module 16 لا يرى Investigation Details.
+
+يصل فقط:
+
+```text
+Approved Personnel Action:
+Termination
+Effective Date
+Decision Reference
+```
+
+---
+
+# 16.62 Service Desk Integration
+
+Employee questions أثناء Offboarding:
+
+مثل:
+
+> متى ينزل settlement؟
+
+تدخل Module 14.
+
+ليس Module 16 نفسه مكان المحادثات العامة.
+
+---
+
+# 16.63 Asset System Integration
+
+إذا في المستقبل عندنا Asset Management مستقل:
+
+Module 16 يطلب:
+
+```text
+Employee Asset Snapshot
+```
+
+ثم يتابع Return Status.
+
+لا يكرر Asset Master Data.
+
+---
+
+# 16.64 Exit Documents
+
+عند الخروج قد نحتاج:
+
+* Experience Certificate
+* Clearance Certificate
+* Form 6 copy
+* Final Settlement Statement
+* Returned Documents Receipt
+* Exit Letter
+
+Module 16 triggers.
+
+Module 14/15 يولدان ويحفظان الوثائق الرسمية حسب ownership.
+
+---
+
+# 16.65 Original Document Return
+
+الـManual الحالي يطلب:
+
+* Return original documents
+* Receipt acknowledgment 
+
+لذلك يجب تسجيل:
+
+```text
+Document Returned
+Returned To
+Date
+Employee Acknowledgment
+```
+
+---
+
+# 16.66 Exit Closure Gate
+
+هذه أهم قاعدة.
+
+لا يصبح:
+
+```text
+Offboarding Status = Closed
+```
+
+إلا عند استيفاء Closure Rules.
+
+مثل:
+
+```text
+Employment Status Updated
+Critical Access Disabled
+Required Clearance Completed
+Asset Liability Determined
+Personnel Closure Completed
+```
+
+لكن لا أنصح بأن يكون **Settlement Paid** شرطًا دائمًا لإغلاق الحالة التشغيلية إذا كانت سياسة الشركة تسمح بتأخر الدفع بعد LWD؛ الأفضل فصل:
+
+```text
+Operational Offboarding Closed
+Financial Settlement Pending
+```
+
+وهذه نقطة مهمة حتى لا تبقى آلاف الحالات "Open" لأسباب مالية فقط.
+
+---
+
+# 16.67 Dual Closure
+
+لذلك أفضل حالتين:
+
+### Operational Closure
+
+الموظف خرج فعليًا.
+
+### Financial / Legal Closure
+
+كل المستحقات والالتزامات اكتملت.
+
+ثم:
+
+```text
+Fully Closed
+```
+
+---
+
+# 16.68 Exit Status Model
+
+مثلاً:
+
+```text
+Draft
+Pending Approval
+Approved
+Notice Period
+Offboarding In Progress
+Last Working Day Reached
+Operationally Closed
+Settlement Pending
+Legal Closure Pending
+Fully Closed
+Cancelled
+Reversed
+```
+
+---
+
+# 16.69 Exit Reversal
+
+مهم.
+
+لو employee سحب resignation بعد approval:
+
+لا نحذف الحالة.
+
+نعمل:
+
+```text
+Exit Reversed
+```
+
+مع approval وreason.
+
+والنظام يلغي future deactivation tasks.
+
+---
+
+# 16.70 Dashboard — HR Operations
+
+مثلاً:
+
+```text
+Active Offboarding Cases          73
+LWD This Week                     18
+Clearance Overdue                 11
+Assets Outstanding                 7
+Access Closure Pending             2
+Settlement Pending                21
+```
+
+---
+
+# 16.71 Dashboard — HR Manager
+
+يعرض:
+
+* Monthly exits
+* Voluntary attrition
+* Involuntary attrition
+* Average exit cycle
+* Clearance SLA
+* Settlement turnaround
+* Outstanding company assets
+* Top exit reasons
+* Regrettable attrition
+* Attrition by project
+* Attrition by manager
+* Attrition by job family
+
+---
+
+# 16.72 Project Exit Dashboard
+
+مثلاً:
+
+| Project  | Headcount | Exits | Exit Rate | Pending Clearance |
+| -------- | --------: | ----: | --------: | ----------------: |
+| Huawei   |     1,200 |    24 |      2.0% |                 5 |
+| Nokia    |       850 |    11 |      1.3% |                 2 |
+| Ericsson |       620 |    17 |      2.7% |                 4 |
+
+---
+
+# 16.73 Clearance Analytics
+
+مهم جدًا تشغيليًا.
+
+مثلاً:
+
+```text
+Average Clearance Time
+
+Manager       0.8 day
+IT            1.2 days
+Finance       3.7 days
+Warehouse     4.1 days
+Personnel     1.4 days
+```
+
+نعرف bottleneck الحقيقي.
+
+---
+
+# 16.74 Asset Loss Analytics
+
+مثلاً:
+
+```text
+Outstanding Assets by Exit
+
+Laptops       8
+Mobiles       14
+Tools         31
+Access Cards  5
+```
+
+مع value.
+
+---
+
+# 16.75 Attrition Analytics
+
+لكن نفرق بين:
+
+```text
+Voluntary
+Involuntary
+Contract End
+Project End
+```
+
+وإلا ستكون Attrition Rate مضللة جدًا لشركة Project-Based.
+
+---
+
+# 16.76 Rehire Analytics
+
+يمكن لاحقًا قياس:
+
+* Rehire eligible
+* Rehired employees
+* Time to rehire
+* Previous performance
+* Previous exit reason
+
+ويرتبط ATS.
+
+---
+
+# 16.77 Core Entities
+
+أقترح:
+
+```text
+OffboardingCase
+ExitType
+ExitReason
+NoticePeriod
+
+ExitApproval
+ExitTimeline
+
+HandoverPlan
+HandoverItem
+
+ClearanceTemplate
+ClearanceDepartment
+ClearanceTask
+ClearanceResult
+
+EmployeeAssetExitSnapshot
+AssetReturnTransaction
+AssetLiability
+
+SystemAccessExitTask
+
+FinalSettlementRequest
+FinalSettlementReference
+
+ExitInterview
+ExitFeedback
+
+RehireEligibility
+
+ExitException
+ExitEscalation
+
+OperationalClosure
+FinancialClosure
+LegalClosure
+```
+
+---
+
+# 16.78 أهم Business Rules
+
+**BR-16-01**
+كل separation يجب أن يمتلك Offboarding Case.
+
+**BR-16-02**
+لا يجوز hard-delete لحالة خروج بعد approval.
+
+**BR-16-03**
+كل employee access critical يجب إغلاقه وفق الـeffective access termination time.
+
+**BR-16-04**
+كل asset assigned يجب أن يدخل Exit Snapshot.
+
+**BR-16-05**
+عدم عودة asset لا يعني fake clearance؛ يسجل Liability أو Exception.
+
+**BR-16-06**
+Final Settlement Calculation يظل مسؤولية Module 09.
+
+**BR-16-07**
+Personnel legal record يظل مسؤولية Module 15.
+
+**BR-16-08**
+Investigation details لا تُنسخ من Module 13 إلى Module 16.
+
+**BR-16-09**
+كل clearance action يجب أن يحمل Owner وTimestamp.
+
+**BR-16-10**
+كل Exit Reversal يحتاج approval.
+
+**BR-16-11**
+Operational Closure وFinancial Closure حالتان منفصلتان.
+
+**BR-16-12**
+لا يجوز اعتبار الموظف Fully Closed مع critical access active.
+
+**BR-16-13**
+كل exit reason يجب أن يكون standardized مع إمكانية comment إضافي.
+
+**BR-16-14**
+الـManager لا يرى تفاصيل Final Settlement إلا إذا صلاحياته تسمح.
+
+---
+
+# أهم تحسين على الـManual الحالي
+
+الـManual الآن يرسم التسلسل تقريبًا كالتالي:
+
+**Offboarding Initiation → Access Deactivation → Handover → Clearance → Legal & Financial Closure → File Closure**. 
+
+هذا مناسب كـPolicy Flow، لكن عند تحويله إلى System لا أنصح بتنفيذه حرفيًا كـlinear workflow.
+
+التنفيذ الأفضل:
+
+```text
+                    ┌─ Handover
+                    │
+Exit Approved ──────┼─ Clearance
+                    │
+                    ├─ Asset Recovery
+                    │
+                    ├─ Access Scheduling
+                    │
+                    ├─ Personnel Closure
+                    │
+                    └─ Settlement Preparation
+```
+
+أي **parallel workstreams مع dependencies**.
+
+هذا وحده سيقلل زمن الخروج بصورة كبيرة مقارنة بتحويل الرسم الحالي إلى sequential approvals.
+
+---
+
+## ومع Module 16 أصبحت دورة حياة الموظف شبه مكتملة
+
+لدينا الآن:
+
+**Recruit → Hire → Activate → Deploy → Attend → Leave → Pay → Perform → Develop → Promote → Employee Relations → HR Services → Personnel Compliance → Exit**
+
+والـModule التالي الذي أراه منطقيًا هو **Module 17 — HR Analytics, Workforce Planning, People Cost, Headcount Budgeting & Executive People Intelligence**؛ لأننا بعد Modules 01–16 أصبح لدينا أخيرًا مصادر بيانات حقيقية لكل دورة حياة الموظف، وبالتالي يمكن بناء طبقة Analytics وWorkforce Planning فوقها بدل Dashboard تجمع أرقامًا غير مترابطة.

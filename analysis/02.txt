@@ -1,0 +1,1864 @@
+تمام. إجاباتك حسمت تقريبًا كل القرارات الكبيرة، وأصبح عندنا تصور واضح جدًا: نحن لا نبني HR System لشركة واحدة، بل **Multi-Company HR & Workforce SaaS متخصص في شركات مقاولات الاتصالات**، يستوعب حاليًا نحو 5,000 موظف، ويستطيع لاحقًا خدمة شركات أخرى بنفس المنصة مع فصل كامل للبيانات والإعدادات.
+
+وأنا متفق معك أننا لا نبدأ بالكود الآن. نحتاج أولًا **Master Plan** واضحة، وبعدها نمسك كل Module واحدًا واحدًا: نفهم الهدف، الـBusiness Process، الشاشات، البيانات، الصلاحيات، الـWorkflow، الـKPIs، الـAI، والتكاملات، ثم ننتقل للتنفيذ.
+
+المصادر الموجودة عندك ستكون نقطة البداية الرسمية. الـOperations Manual بالفعل يغطي Hiring وOnboarding وOffboarding وPayroll وAllowances وKPI وHR Operations، كما يضع قواعد مهمة مثل عدم تفعيل الموظف أو إدخاله Payroll قبل استكمال متطلبات Onboarding، وربط Payroll بالحضور وتوزيع الموظف على المشروع والـallowances والـKPI.  والـOrg Chart الحالي يوضح فصل المسؤوليات بين Organizational Development وTalent Acquisition وER & Compliance وPayroll وPersonnel وHR Operations، وده سنستخدمه كبداية لبناء الـRoles والصلاحيات وليس كقيد ثابت على النظام. 
+
+# Afro HR V2 — Master System Plan
+
+أنا أقترح أن نقسم المنصة إلى **7 Domains رئيسية** بداخلها مجموعة Modules، بدل ما يكون عندنا قائمة طويلة غير مترابطة.
+
+## Domain A — Core Platform
+
+ده قلب النظام، وأي Module آخر سيعتمد عليه.
+
+يشمل:
+
+**1. Multi-Company / Tenant Management**
+
+النظام يستطيع استضافة:
+
+```text
+Platform
+│
+├── Company A
+│   ├── Business Units
+│   ├── Projects
+│   └── Employees
+│
+├── Company B
+│   ├── Business Units
+│   ├── Projects
+│   └── Employees
+│
+└── Company C
+```
+
+كل Company لها:
+
+Branding
+Logo
+Language
+Currency
+Country
+Timezone
+HR Policies
+Payroll Rules
+Attendance Rules
+Leave Policies
+Workflow Rules
+Roles
+Permissions
+AI Settings
+Integrations
+
+وبالتالي لو بعنا النظام لشركة أخرى، لا نحتاج نسخة Software جديدة.
+
+---
+
+**2. Organization Structure**
+
+يدير:
+
+Company
+
+Business Unit
+
+Sector
+
+Department
+
+Section
+
+Region
+
+Office
+
+Branch
+
+Client
+
+Project
+
+Site
+
+Cost Center
+
+Position
+
+Job Family
+
+Grade
+
+Administrative Manager
+
+Functional Manager
+
+وده مناسب أيضًا للهيكل الحالي الذي يفرق بين Administrative وFunctional Reporting Lines. 
+
+---
+
+**3. Identity & Access Management**
+
+وده جزء كبير جدًا، وليس مجرد صفحة Users.
+
+يدعم:
+
+HR Code Login
+
+Corporate Email Login
+
+Password
+
+Password Reset
+
+MFA لاحقًا
+
+Account Lock
+
+Session Management
+
+Device Management
+
+Role Assignment
+
+Permission Assignment
+
+Data Scope
+
+Audit
+
+### طريقة دخول الموظف
+
+أقترح الآتي:
+
+```text
+First Login
+
+HR Code
++
+Initial Password
+        ↓
+Identity Verification
+        ↓
+Force Password Change
+        ↓
+Confirm Corporate Email
+        ↓
+Employee Account Activated
+```
+
+بعد ذلك يستطيع الموظف الدخول بـ:
+
+HR Code + Password
+
+أو لاحقًا:
+
+Corporate Email + Password.
+
+ولو نسي كلمة المرور:
+
+```text
+Forgot Password
+↓
+Corporate Email Verification
+↓
+OTP / Secure Link
+↓
+New Password
+```
+
+أما الموظف الذي ليس لديه Corporate Email، مثل بعض الفنيين، فسنحتاج مسارًا بديلًا:
+
+Mobile OTP
+
+أو
+
+HR-assisted password reset.
+
+دي إحدى النقاط التي أريد الاحتفاظ بها في التصميم.
+
+---
+
+# Domain B — People & Employee Lifecycle
+
+## 4. Employee Master
+
+ده الـGolden Record للموظف.
+
+لكن لازم نفرق بين:
+
+**Person**
+
+و
+
+**Employment**
+
+لأن نفس الشخص قد يعمل مع شركة ثم يغادر ثم يرجع، أو يعمل في أكثر من legal entity.
+
+مثلاً:
+
+```text
+Person
+Mohamed Ahmed
+
+Employment 1
+Afro Egypt
+2024 → 2025
+
+Employment 2
+Afro Telecom
+2026 →
+```
+
+ده أفضل من تصميم Employee Table بسيط.
+
+---
+
+## 5. Employee Digital File
+
+يشمل:
+
+Personal Data
+Employment Data
+National ID
+Passport
+Contacts
+Bank Data
+Insurance
+Contract
+Salary
+Skills
+Certificates
+HSE
+Assets
+Project History
+Attendance History
+Leave
+Payroll
+KPI
+Training
+Disciplinary History
+Documents
+
+---
+
+## 6. Recruitment & ATS
+
+من:
+
+Manpower Request
+
+إلى:
+
+Job Offer.
+
+ونبني العملية الموجودة بالفعل في الـmanual:
+
+Hiring Request → Sourcing → Requester Review → Assessment → Selection → Offer → Acceptance → Personnel Handover. 
+
+---
+
+## 7. Candidate Pool
+
+Database مستقلة للـCandidates.
+
+مع AI:
+
+CV Parsing
+Matching
+Ranking
+Duplicate Detection
+Skills Extraction.
+
+---
+
+## 8. Onboarding
+
+Digital onboarding بالكامل.
+
+المصدر الحالي عندكم يحدد بالفعل:
+
+Document Collection
+Contracting
+System Registration
+Equipment Preparation
+HSE
+Orientation
+Employment Activation. 
+
+سنحولها إلى Configurable Workflow.
+
+---
+
+## 9. Transfers & Employee Movement
+
+Module مستقل لإدارة:
+
+Transfer
+
+Promotion
+
+Demotion
+
+Salary Change
+
+Department Change
+
+Project Change
+
+Manager Change
+
+Site Change
+
+Position Change
+
+Cost Center Change
+
+Contract Renewal.
+
+وكل Movement يحتفظ بتاريخ:
+
+Before
+
+After
+
+Effective Date
+
+Reason
+
+Approval
+
+Supporting Documents.
+
+---
+
+## 10. Offboarding
+
+Resignation
+
+Termination
+
+Contract Expiry
+
+End of Project
+
+Retirement
+
+Absconding
+
+ويدخل معه:
+
+Knowledge Handover
+
+Asset Clearance
+
+IT Access Removal
+
+Finance Clearance
+
+Final Settlement
+
+Exit Interview
+
+Archiving.
+
+وده مطابق بصورة مباشرة تقريبًا لعملية Offboarding الموجودة في المانيوال. 
+
+---
+
+# Domain C — Workforce & Telecom Projects
+
+وده سيكون من أهم ما يميز المنتج عن HR Systems العامة.
+
+## 11. Client Management
+
+مثلاً:
+
+Telecom Egypt
+
+Vodafone
+
+Orange
+
+Etisalat
+
+Huawei
+
+Nokia
+
+Ericsson.
+
+---
+
+## 12. Project Workforce Management
+
+```text
+Client
+↓
+Project
+↓
+Region
+↓
+Site
+↓
+Team
+↓
+Employee
+```
+
+والموظف ممكن ينتقل بين المشاريع.
+
+---
+
+## 13. Employee Assignment
+
+لا نخزن Current Project فقط.
+
+نخزن:
+
+```text
+Employee
+Project
+Site
+Team
+Role
+Supervisor
+Start Date
+End Date
+Allocation %
+Shift
+Cost Center
+```
+
+---
+
+## 14. Manpower Planning
+
+Required
+
+Available
+
+Assigned
+
+Vacant
+
+Shortage
+
+Surplus.
+
+مثلاً:
+
+```text
+FTTH Project
+
+Required Technicians       120
+Assigned                    97
+Available Pool               8
+Shortage                    15
+Coverage                   81%
+```
+
+---
+
+## 15. Workforce Availability Pool
+
+ميزة مهمة جدًا.
+
+النظام يعرف:
+
+Available Employees
+
+Bench Employees
+
+Employees finishing project soon
+
+Employees with required skills
+
+Employees within geography
+
+Employees with valid HSE certification.
+
+فتقدر تسأل:
+
+> محتاج 10 Splicers جاهزين في القاهرة الأسبوع القادم.
+
+---
+
+# Domain D — Time, Attendance & Productivity
+
+هنا لن نفرض Attendance System واحد.
+
+سنصمم:
+
+# Attendance Policy Engine
+
+كل Employee / Position / Project ممكن يخضع لسياسة مختلفة.
+
+## 16. Attendance Sources
+
+ندعم:
+
+Fingerprint
+
+Face Recognition integration
+
+Mobile GPS
+
+Geofencing
+
+QR Code
+
+NFC
+
+Supervisor Attendance
+
+Web Attendance
+
+Excel Import
+
+API Integration
+
+Client Attendance System
+
+Timesheet
+
+Project Attendance Sheet
+
+Manual Adjustment
+
+Offline Mobile Attendance.
+
+---
+
+### مثال
+
+Office Staff:
+
+```text
+Fingerprint
+09:00 → 17:00
+```
+
+Fiber Technician:
+
+```text
+GPS Check-in
++
+Assigned Site
++
+Supervisor Confirmation
+```
+
+Daily Worker:
+
+```text
+Supervisor Attendance
++
+Daily Timesheet
+```
+
+Project Manager:
+
+```text
+Flexible Attendance
++
+Timesheet
+```
+
+---
+
+## 17. Shift & Roster Management
+
+Fixed Shift
+
+Rotating Shift
+
+Night Shift
+
+Split Shift
+
+Flexible Shift
+
+On-call
+
+24/7 Roster
+
+Project Shift.
+
+---
+
+## 18. Overtime
+
+Rule Engine:
+
+Before Shift
+
+After Shift
+
+Weekend
+
+Holiday
+
+Night
+
+Travel
+
+Emergency
+
+Fixed OT
+
+Hourly OT
+
+Approval Required.
+
+---
+
+## 19. Productivity Tracking
+
+وده مخصوص للمقاولات.
+
+مثلاً:
+
+Fiber Technician:
+
+Meters Installed
+
+Boxes Installed
+
+Splices
+
+Sites Completed.
+
+Civil Team:
+
+Excavation Meter
+
+Duct Meter
+
+Manholes.
+
+Wireless:
+
+Sites Installed
+
+Acceptance.
+
+وبالتالي لاحقًا نستطيع:
+
+**Payroll per productivity**.
+
+---
+
+# Domain E — Payroll, Compensation & Finance
+
+دي سأصممها كـ:
+
+# Configurable Payroll Engine
+
+وليس Payroll ثابت.
+
+## 20. Payroll Policies
+
+لكل Company يمكن اختيار:
+
+Internal Payroll
+
+External ERP Payroll
+
+Hybrid.
+
+وده بالضبط يتفق مع طلبك.
+
+مثلاً:
+
+```text
+Payroll Mode:
+
+○ Internal
+○ ERP
+● Hybrid
+```
+
+Hybrid يعني:
+
+HR System يحسب Payroll
+
+ثم يرسل Financial Posting إلى Nama.
+
+أو بالعكس:
+
+Nama يحسب بعض البنود
+
+والـHR System يكمل Attendance/KPI/Project Allocation.
+
+---
+
+## 21. Salary Components
+
+Variable configuration:
+
+Basic
+
+Gross
+
+Net
+
+Housing
+
+Transportation
+
+Mobile
+
+Meal
+
+Project
+
+Site
+
+Hazard
+
+Travel
+
+Daily
+
+Overtime
+
+Productivity
+
+Per Task
+
+Per Meter
+
+Commission
+
+KPI
+
+Bonus
+
+Deduction
+
+Penalty
+
+Loan
+
+Advance
+
+Insurance
+
+Tax.
+
+---
+
+## 22. Payroll Rule Engine
+
+مثلاً:
+
+```text
+IF EmployeeType = Daily
+THEN
+Pay = DailyRate × ApprovedDays
+```
+
+أو:
+
+```text
+IF Position = Fiber Technician
+AND Project = FTTH
+THEN
+Pay =
+Basic
++ Overtime
++ Productivity
++ Project Allowance
+- Absence
+```
+
+---
+
+## 23. Payroll Cycles
+
+Monthly
+
+Biweekly
+
+Weekly
+
+Daily Worker Cycle
+
+Special Bonus Cycle
+
+KPI Cycle.
+
+---
+
+## 24. Payroll Simulation
+
+قبل اعتماد Payroll:
+
+> What happens if OT increases 15%?
+
+أو:
+
+> Calculate Payroll without KPI bonus.
+
+ودي مهمة جدًا.
+
+---
+
+## 25. Project Cost Allocation
+
+المصدر الحالي عندكم أصلًا يفرض Project Allocation Review قبل Payroll Processing، ثم Payroll Cost Reports by Project. 
+
+سنحول ده إلى جزء أصيل في التصميم:
+
+```text
+Employee Salary = 30,000
+
+Project A 60%
+18,000
+
+Project B 40%
+12,000
+```
+
+---
+
+# Domain F — Performance, Skills & Employee Services
+
+## 26. KPI Management
+
+Corporate KPI
+
+Department KPI
+
+Project KPI
+
+Team KPI
+
+Position KPI
+
+Employee KPI.
+
+---
+
+## 27. Performance Appraisal
+
+Probation
+
+Quarterly
+
+Mid-Year
+
+Annual
+
+Project Completion
+
+360 Feedback.
+
+---
+
+## 28. Skills & Competency Matrix
+
+مثلاً:
+
+Splicing
+
+OTDR
+
+OSP
+
+FTTH
+
+Civil
+
+Power
+
+Huawei
+
+Nokia
+
+Ericsson
+
+ZTE
+
+HSE
+
+Working at Height.
+
+---
+
+## 29. Training & Certification
+
+Training Request
+
+Training Plan
+
+Course
+
+Attendance
+
+Exam
+
+Certificate
+
+Expiry
+
+Renewal.
+
+---
+
+## 30. HSE Workforce Compliance
+
+بالذات لأن المانيوال الحالي يمنع Deployment للوظائف الحساسة قبل استكمال الفحص الطبي والتدريب والشهادات المطلوبة. 
+
+سنضيف:
+
+Fit
+
+Unfit
+
+Conditionally Fit
+
+Expired Certificate
+
+Training Missing
+
+Deployment Block.
+
+---
+
+## 31. Leave & Permission
+
+Annual
+
+Sick
+
+Emergency
+
+Unpaid
+
+Maternity
+
+Mission
+
+Permission
+
+Compensatory
+
+Project Leave.
+
+---
+
+## 32. Employee Requests & HR Ticketing
+
+Salary issue
+
+Attendance correction
+
+Insurance
+
+Leave
+
+Contract
+
+Letter
+
+Certificate
+
+Complaint
+
+Payroll issue
+
+Asset
+
+Training.
+
+---
+
+## 33. Employee Relations
+
+Complaint
+
+Grievance
+
+Violation
+
+Investigation
+
+Disciplinary Action
+
+Appeal
+
+Resolution.
+
+---
+
+## 34. Assets & Custody
+
+Laptop
+
+Mobile
+
+SIM
+
+Vehicle
+
+PPE
+
+Fusion Splicer
+
+OTDR
+
+Power Meter
+
+Tool Kit
+
+ID
+
+Access Card
+
+Warehouse Custody.
+
+---
+
+# Domain G — Intelligence, Governance & Administration
+
+## 35. Workflow Engine
+
+واحد من أهم أجزاء النظام.
+
+بدل كتابة:
+
+Leave → Manager → HR
+
+داخل الـcode.
+
+نصمم Workflow Engine.
+
+مثلاً:
+
+```text
+Leave > 10 days
+
+Employee
+↓
+Supervisor
+↓
+Project Manager
+↓
+HR
+↓
+HR Manager
+```
+
+شركة أخرى ممكن تغيره من Settings.
+
+---
+
+# 36. Permission Engine
+
+نحتاج 4 مستويات.
+
+### Level 1 — Module
+
+Payroll
+
+Recruitment
+
+Attendance.
+
+### Level 2 — Action
+
+View
+
+Create
+
+Edit
+
+Delete
+
+Approve
+
+Reject
+
+Export.
+
+### Level 3 — Field
+
+Salary
+
+Bank Account
+
+National ID
+
+Disciplinary Data.
+
+### Level 4 — Data Scope
+
+Self
+
+Team
+
+Project
+
+Department
+
+Region
+
+Company
+
+All Companies.
+
+مثلاً:
+
+```text
+Project Manager
+
+Employee.Profile     View
+Employee.Salary      No Access
+Attendance           Project Only
+Leave                Project Only
+KPI                   Project Only
+```
+
+---
+
+# 37. AI HR Intelligence Center
+
+ده لن يكون Chatbot فقط.
+
+سنبني عدة قدرات.
+
+### AI Copilot
+
+يسأل:
+
+> مين الفنيين المتاحين في القاهرة وعندهم OTDR؟
+
+---
+
+### AI Smart Entry
+
+> انقل أحمد محمد من مشروع WE إلى Vodafone من يوم 1 سبتمبر.
+
+النظام يفهم الأمر ويعرض Form للمراجعة قبل التنفيذ.
+
+---
+
+### AI Document Reader
+
+CV
+
+National ID
+
+Contract
+
+Certificates
+
+Medical Documents.
+
+---
+
+### AI Analytics
+
+> ليه الـOT زاد هذا الشهر؟
+
+---
+
+### AI Report Builder
+
+> اعمل HR Monthly Report.
+
+---
+
+### AI Dashboard Builder
+
+> اعمل Dashboard للـCEO عن Workforce Cost.
+
+---
+
+### AI Data Quality
+
+يكتشف:
+
+Missing Documents
+
+Duplicate National ID
+
+Duplicate Bank Account
+
+Invalid Project Assignment
+
+Missing Payroll Data.
+
+---
+
+### AI Anomaly Detection
+
+Payroll abnormality
+
+Attendance fraud
+
+Excessive OT
+
+Ghost employee
+
+Unusual salary changes.
+
+---
+
+### AI Forecasting
+
+Manpower Forecast
+
+Turnover Risk
+
+Payroll Forecast
+
+Hiring Demand
+
+Project Staffing Risk.
+
+---
+
+# 38. Employee Android App
+
+Version 1 Android.
+
+Flutter مناسب جدًا هنا؛ الوثائق الرسمية الحالية توضح أنه يدعم Android وiOS ومنصات أخرى من قاعدة كود واحدة، وبالتالي نقدر نبدأ Android بدون غلق الباب أمام iOS لاحقًا. ([Flutter Docs][1])
+
+التطبيق يحتوي:
+
+Home
+
+My Profile
+
+Attendance
+
+Check-in
+
+Schedule
+
+Leave
+
+Salary
+
+Payslip
+
+KPI
+
+Performance
+
+Documents
+
+Requests
+
+Assets
+
+Training
+
+Notifications
+
+AI Assistant.
+
+---
+
+# التكنولوجيا التي أوصي بها
+
+بعد مراجعة الوضع الحالي في 2026، أرى Architecture مناسبة جدًا لكم كالتالي.
+
+## Frontend Web
+
+**React + TypeScript**
+
+مع:
+
+Vite
+
+React Router
+
+TanStack Query
+
+React Hook Form
+
+Zod
+
+Component Library نحددها لاحقًا.
+
+React حاليًا في سلسلة 19.2، كما أن React نفسه أوقف Create React App كخيار موصى به للمشروعات الجديدة ويدفع إلى frameworks أو build tools حديثة مثل Vite. ([React][2])
+
+أنا أميل هنا إلى:
+
+**React SPA + Vite**
+
+بدل Next.js.
+
+السبب أن النظام Internal/Enterprise وليس موقع SEO أو Content Website.
+
+---
+
+# Backend
+
+اختياري الأول:
+
+# ASP.NET Core 10
+
+وليس Node.js.
+
+لأن عندنا:
+
+Payroll
+
+Permissions
+
+Workflows
+
+Complex Domain Logic
+
+Integrations
+
+Audit
+
+Multi-Tenant
+
+Background Processing.
+
+ASP.NET Core مصمم لتطبيقات web كبيرة ومتعددة المنصات، و.NET 10 إصدار LTS حاليًا، بينما .NET 11 ما زال Preview في أغسطس 2026. ([Microsoft Learn][3])
+
+إذن:
+
+```text
+ASP.NET Core 10
+C#
+REST API
+Entity Framework Core
+```
+
+---
+
+# Architecture Pattern
+
+لا أنصح Microservices من البداية.
+
+لـ5000 Employee:
+
+# Modular Monolith
+
+أفضل.
+
+مثلاً:
+
+```text
+AfroHR
+│
+├── Identity
+├── Organization
+├── Employees
+├── Recruitment
+├── Attendance
+├── Payroll
+├── Performance
+├── Projects
+├── Assets
+├── Workflow
+├── Notifications
+└── AI
+```
+
+لكن كل Module مستقل داخليًا.
+
+وفي المستقبل لو احتجنا:
+
+Payroll Service
+
+AI Service
+
+Notification Service
+
+نفصلها بدون إعادة بناء النظام.
+
+---
+
+# Database
+
+اختياري:
+
+# PostgreSQL
+
+مناسب جدًا للـMulti-Tenant SaaS.
+
+كمان يدعم Row Level Security، أي يمكن تطبيق سياسات تمنع الوصول إلى Rows غير مصرح بها كطبقة إضافية بجانب Application Permissions. ([PostgreSQL][4])
+
+Architecture:
+
+```text
+PostgreSQL
+│
+├── Core
+├── HR
+├── Payroll
+├── Attendance
+├── Projects
+└── Audit
+```
+
+---
+
+# Multi-Tenancy
+
+MVP:
+
+**Shared Database + TenantId**
+
+مثلاً:
+
+```text
+Employee
+
+Id
+TenantId
+HRCode
+Name
+...
+```
+
+كل Query يجب أن يخضع إلى Tenant Filter.
+
+وفي المستقبل يمكن دعم:
+
+Dedicated Database per Enterprise Customer.
+
+---
+
+# Cache
+
+Redis.
+
+لـ:
+
+Sessions
+
+Permissions Cache
+
+OTP
+
+Dashboard cache
+
+Distributed locks.
+
+---
+
+# File Storage
+
+لا نخزن ملفات PDF والصور داخل PostgreSQL.
+
+نستخدم:
+
+S3-compatible Object Storage.
+
+On-premises:
+
+**MinIO**
+
+Cloud:
+
+S3-compatible service.
+
+---
+
+# Background Jobs
+
+مثلاً:
+
+Contract Expiry
+
+Certificate Expiry
+
+Payroll Generation
+
+Notification
+
+Report Generation.
+
+يمكن استخدام:
+
+Hangfire
+
+أو
+
+Quartz.NET.
+
+وأميل إلى Hangfire في المرحلة الأولى.
+
+---
+
+# Search
+
+في MVP:
+
+PostgreSQL Search.
+
+لاحقًا عند الحاجة:
+
+OpenSearch.
+
+---
+
+# Mobile
+
+# Flutter
+
+Android أولًا.
+
+ثم iOS بدون إعادة بناء الـBusiness App من الصفر. Flutter يدعم بالفعل deployment متعدد المنصات من codebase واحدة. ([Flutter Docs][5])
+
+---
+
+# AI Architecture
+
+لن أضع الـLLM داخل Backend مباشرة.
+
+نعمل:
+
+```text
+Frontend / Mobile
+        ↓
+ASP.NET Backend
+        ↓
+AI Gateway
+        ↓
+Model Router
+        ↓
+LLM
+```
+
+والـAI لا يصل للـDatabase مباشرة.
+
+بل:
+
+```text
+AI
+↓
+Authorized Tools
+↓
+Application Services
+↓
+Permission Check
+↓
+Database
+```
+
+وده قرار أمني أساسي.
+
+---
+
+# Deployment Architecture
+
+بما أنك تريد On-Premise + VPS + Containers:
+
+نصمم النظام **Container First**.
+
+## MVP
+
+Docker Compose.
+
+```text
+Nginx
+│
+├── React
+├── ASP.NET API
+├── AI Service
+├── Worker
+│
+├── PostgreSQL
+├── Redis
+└── MinIO
+```
+
+---
+
+# Version 1 Production
+
+نفس Containers يمكن تشغيلها:
+
+On-Prem Server
+
+VPS
+
+Private Cloud.
+
+ولا أنصح Kubernetes من اليوم الأول.
+
+نبدأ:
+
+Docker Compose
+
+ثم إذا كبر الاستخدام:
+
+K3s
+
+أو
+
+Kubernetes.
+
+---
+
+# Reverse Proxy
+
+Nginx.
+
+ثم:
+
+SSL
+
+Rate Limiting
+
+Request Routing.
+
+---
+
+# Environments
+
+يجب من البداية وجود:
+
+```text
+Development
+Testing
+Staging
+Production
+```
+
+مش Developer يعمل مباشرة على Production.
+
+---
+
+# Backup
+
+على الأقل:
+
+PostgreSQL backup
+
+Object storage backup
+
+Configuration backup
+
+Off-site backup.
+
+وفي التصميم التفصيلي سنحدد:
+
+RPO
+
+RTO
+
+Retention.
+
+---
+
+# Monitoring
+
+نضيف:
+
+Application Logs
+
+Audit Logs
+
+Performance Monitoring
+
+Error Tracking
+
+Server Monitoring
+
+Database Monitoring.
+
+---
+
+# MVP مقابل Version 1
+
+دي نقطة مهمة جدًا.
+
+## MVP
+
+هدفه إثبات الـCore Model وليس إنهاء HR كله.
+
+أقترح MVP يحتوي:
+
+**Core Platform**
+
+Multi-company
+
+Organization Structure
+
+Users
+
+Roles
+
+Permissions
+
+Employee Master
+
+Employee Digital File
+
+Project Assignment
+
+Attendance basic + GPS + manual
+
+Leave
+
+Employee Android App
+
+Basic Payroll
+
+Basic KPI
+
+Notifications
+
+Basic Dashboard
+
+Audit Log
+
+Basic AI Chat
+
+AI Smart Entry.
+
+---
+
+# Version 1
+
+نضيف بعدها:
+
+Recruitment ATS
+
+Onboarding
+
+Full Attendance Engine
+
+Shift/Roster
+
+Full Payroll Engine
+
+Allowances
+
+Productivity
+
+Manpower Planning
+
+Training
+
+HSE
+
+Employee Relations
+
+Assets
+
+Offboarding
+
+Workflow Designer
+
+Advanced Dashboards
+
+Report Builder
+
+AI Analytics
+
+Document AI
+
+ERP Integration.
+
+---
+
+# وبعد V1
+
+V2:
+
+Predictive AI
+
+Advanced Workforce Optimization
+
+AI Dashboard Builder
+
+Payroll Simulation
+
+Anomaly Detection
+
+AI Recruitment Matching
+
+Project Productivity
+
+Workforce Forecasting
+
+Multi-country Payroll.
+
+---
+
+# خطة التنفيذ التي أقترحها
+
+العمل سيكون بهذا التسلسل فقط:
+
+```text
+01 Vision & Scope
+        ↓
+02 Personas
+        ↓
+03 Organization Model
+        ↓
+04 Employee Model
+        ↓
+05 Project Workforce Model
+        ↓
+06 Permission Model
+        ↓
+07 Workflow Engine
+        ↓
+08 Module Design
+        ↓
+09 Data Model / ERD
+        ↓
+10 API Architecture
+        ↓
+11 UX / Screen Maps
+        ↓
+12 AI Architecture
+        ↓
+13 Integration Architecture
+        ↓
+14 MVP Definition
+        ↓
+15 Development
+        ↓
+16 Testing
+        ↓
+17 Migration
+        ↓
+18 Deployment
+        ↓
+19 Pilot
+        ↓
+20 Version 1
+```
+
+---
+
+# هل عندي أسئلة أخرى؟
+
+نعم، لكن أصبح عندي **6 أسئلة فقط** قبل أن أقفل الـMaster Architecture ونبدأ Module 1:
+
+1. هل الـ5,000 موظف **إجمالي كل الشركات الموجودة على SaaS الآن** أم 5,000 لكل شركة محتملة؟
+
+2. عند إضافة شركة جديدة للـSaaS، هل تريد **Super Admin عند صاحب المنصة** يستطيع إنشاء الشركات وإدارة الاشتراكات والباقات، أم النظام داخلي حاليًا ونجهز SaaS architecture فقط للمستقبل؟
+
+3. الفنيون الذين لا يمتلكون Corporate Email: هل نعتبر **Mobile Number + OTP** الطريقة الرسمية لاسترجاع الحساب؟
+
+4. هل يوجد عندكم موظف يمكن أن يعمل في **أكثر من Project في نفس الوقت**؟ أنا أفترض نعم، ولذلك سأصمم Allocation %، لكن أريد تأكيدها.
+
+5. هل تريد أن ندخل من البداية مفهوم **Subcontractor Company → Subcontractor Employees** بحيث نقدر ندير عمالة مقاول الباطن أيضًا ولكن بصلاحيات وبيانات أقل؟
+
+6. بالنسبة للـAI: هل نريده في البداية يتعامل **باللغة العربية والإنجليزية معًا**؟ أنا أوصي بذلك بقوة، خصوصًا أن مستخدمًا قد يسأل بالعربي بينما أسماء الـPositions والProjects والحقول بالإنجليزية.
+
+بعد إجابات الست نقاط، أرى أننا نوقف الأسئلة العامة تمامًا ونبدأ التنفيذ التحليلي. وأقترح أول جزء نمسكه يكون **Core Platform + Multi-Company + Organization Structure + Employee Master**، لأن لو الأربع دول اتصمموا صح، Recruitment وPayroll وAttendance وProjects والـAI بعدهم سيبقوا أسهل بكثير.
+
+[1]: https://docs.flutter.dev/reference/supported-platforms?utm_source=chatgpt.com "Supported deployment platforms"
+[2]: https://react.dev/versions?utm_source=chatgpt.com "React Versions"
+[3]: https://learn.microsoft.com/en-us/aspnet/core/overview?view=aspnetcore-10.0&utm_source=chatgpt.com "Overview of ASP.NET Core"
+[4]: https://www.postgresql.org/docs/current/ddl-rowsecurity.html?utm_source=chatgpt.com "PostgreSQL: Documentation: 18: 5.9. Row Security Policies"
+[5]: https://docs.flutter.dev/platform-integration?utm_source=chatgpt.com "Build for and integrate with multiple platforms"

@@ -1,0 +1,3901 @@
+بالضبط. **Cluster S** هو آخر طبقة تشغيلية كبيرة كانت ناقصة قبل أن نبدأ تحويل الـEnterprise Architecture إلى **Buildable MVP Architecture**.
+
+والنقطة المهمة هنا: Cluster S لا يدير موظفي HR أو الـbusiness workflows نفسها؛ بل يدير **حياة المنصة تقنيًا**: أين تعمل، أي نسخة تعمل، كيف نُصدر Release، كيف نرجع للخلف، كيف ننفذ DB Migration، كيف ننشئ Tenant جديد، كيف نستعيد النظام بعد كارثة، وكيف نعرف أن Production به مشكلة قبل أن يبلغنا المستخدم.
+
+وهذا يتماشى أيضًا مع مبدأ الـOperations Manual بأن العمليات والسجلات يجب أن تكون traceable، وأن صلاحيات الأنظمة يجب التحكم فيها طوال دورة حياة الموظف، لكن تفاصيل DevSecOps أدناه هي **تصميم معماري مقترح للنظام** وليست مأخوذة من الـHR Manual نفسه. 
+
+# Cluster S
+
+## Enterprise DevSecOps, Platform Operations & Business Continuity
+
+سأقسمه إلى **16 Domains مترابطة**:
+
+```text
+S01 Environment Management
+S02 Application / Service Registry
+S03 Source & Build Management
+S04 CI/CD Pipeline Management
+S05 Release Management
+S06 Deployment Management
+S07 Feature Flags & Progressive Delivery
+S08 Database Migration Governance
+S09 Infrastructure & Configuration Management
+S10 Secrets / Certificates Deployment
+S11 Tenant Provisioning
+S12 Backup & Restore
+S13 Disaster Recovery & Business Continuity
+S14 High Availability & Capacity Management
+S15 Observability & Operations
+S16 Operational Incident / Change Governance
+```
+
+---
+
+# 1. Cluster S — High-Level ERD
+
+```text
+Platform
+   |
+   +--- Environment
+   |       |
+   |       +--- EnvironmentService
+   |       |        |
+   |       |        +--- ServiceDeployment
+   |       |
+   |       +--- EnvironmentConfiguration
+   |       |
+   |       +--- InfrastructureResource
+   |
+   +--- ApplicationService
+   |        |
+   |        +--- SourceRepository
+   |        |
+   |        +--- BuildArtifact
+   |        |
+   |        +--- ServiceVersion
+   |
+   +--- Pipeline
+   |        |
+   |        +--- PipelineStage
+   |        |
+   |        +--- PipelineRun
+   |
+   +--- Release
+   |        |
+   |        +--- ReleaseArtifact
+   |        +--- ReleaseApproval
+   |        +--- Deployment
+   |
+   +--- FeatureFlag
+   |        |
+   |        +--- FeatureFlagRule
+   |        +--- FeatureFlagTenantOverride
+   |
+   +--- DatabaseInstance
+   |        |
+   |        +--- DatabaseMigration
+   |        +--- MigrationExecution
+   |
+   +--- Secret
+   |        |
+   |        +--- SecretVersion
+   |        +--- SecretDeployment
+   |
+   +--- Tenant
+   |        |
+   |        +--- TenantProvisioningRequest
+   |        +--- TenantEnvironment
+   |        +--- TenantProvisioningStep
+   |
+   +--- BackupPolicy
+   |        |
+   |        +--- BackupExecution
+   |        +--- RestoreRequest
+   |        +--- RestoreExecution
+   |
+   +--- DRPlan
+   |        |
+   |        +--- DRScenario
+   |        +--- DRTest
+   |        +--- DRExecution
+   |
+   +--- MonitoringTarget
+            |
+            +--- Metric
+            +--- LogStream
+            +--- Trace
+            +--- AlertRule
+            +--- Alert
+                    |
+                    +--- OperationalIncident
+```
+
+---
+
+# 2. S01 — Environment Management
+
+نحتاج أولًا فصل واضح بين:
+
+```text
+LOCAL
+DEV
+QA
+SIT
+UAT
+STAGING
+PRODUCTION
+DR
+TRAINING
+SANDBOX
+```
+
+ولا أنصح بعمل Production وUAT فقط.
+
+## `platform_environments`
+
+```text
+platform_environment
+--------------------
+environment_id PK
+tenant_scope_type
+environment_code
+environment_name
+environment_type
+
+region_id FK
+hosting_provider_id FK
+
+network_zone_id FK
+
+is_production
+is_customer_facing
+is_shared
+is_dr_environment
+
+data_classification_level
+
+status
+created_at
+created_by
+activated_at
+deactivated_at
+```
+
+### `tenant_scope_type`
+
+```text
+SHARED_PLATFORM
+DEDICATED_TENANT
+HYBRID
+```
+
+وهذه مهمة جدًا لأننا قد نبدأ:
+
+> Shared SaaS Infrastructure
+
+ثم لاحقًا يأتي عميل ويطلب:
+
+> Dedicated Database / Dedicated Deployment.
+
+---
+
+# 3. S02 — Application / Service Registry
+
+لا نربط Deployment باسم Docker Container يدويًا.
+
+نحتاج Service Catalog.
+
+## `application_services`
+
+```text
+application_service
+-------------------
+service_id PK
+
+service_code
+service_name
+
+service_type
+
+repository_id FK
+
+business_domain
+owner_team_id FK
+
+criticality
+
+deployment_strategy
+
+health_check_url
+api_base_path
+
+containerized_flag
+
+stateful_flag
+
+status
+```
+
+## أمثلة
+
+```text
+hr-core-service
+identity-service
+payroll-service
+attendance-service
+workflow-service
+notification-service
+document-service
+integration-service
+ai-gateway
+reporting-service
+frontend-web
+mobile-api
+worker-service
+scheduler-service
+```
+
+---
+
+# 4. Service Dependency
+
+## `service_dependencies`
+
+```text
+service_dependency
+------------------
+dependency_id PK
+
+service_id FK
+depends_on_service_id FK
+
+dependency_type
+
+is_critical
+min_version
+
+failure_behavior
+```
+
+مثلاً:
+
+```text
+Payroll
+   ↓
+Employee Core
+   ↓
+Organization
+
+Payroll
+   ↓
+Attendance Payroll Inputs
+
+Payroll
+   ↓
+Rules Engine
+```
+
+وهذا يمنع نشر Payroll Version جديدة بدون التأكد من توافق dependencies.
+
+---
+
+# 5. S03 — Source Repository
+
+## `source_repositories`
+
+```text
+source_repository
+-----------------
+repository_id PK
+
+provider
+repository_name
+repository_url_reference
+
+default_branch
+release_branch_pattern
+
+owner_team_id
+
+security_scanning_enabled
+dependency_scanning_enabled
+secret_scanning_enabled
+
+status
+```
+
+Providers:
+
+```text
+GitHub
+GitLab
+Azure DevOps
+Bitbucket
+Internal Git
+```
+
+---
+
+# 6. Build Artifact Management
+
+يجب عدم Deploy من Source مباشرة.
+
+المسار الصحيح:
+
+```text
+Source
+ ↓
+Commit
+ ↓
+Build
+ ↓
+Artifact
+ ↓
+Release
+ ↓
+Deployment
+```
+
+## `build_artifacts`
+
+```text
+build_artifact
+--------------
+artifact_id PK
+
+service_id FK
+pipeline_run_id FK
+
+artifact_type
+
+artifact_name
+artifact_version
+
+commit_sha
+
+registry_location
+
+checksum
+
+sbom_reference
+
+vulnerability_status
+
+signed_flag
+
+built_at
+built_by
+```
+
+Artifact Types:
+
+```text
+Docker Image
+Frontend Bundle
+Mobile Package
+Database Migration Package
+Worker Package
+Helm Package
+Infrastructure Template
+```
+
+---
+
+# 7. Software Bill of Materials — SBOM
+
+مع DevSecOps لا أنصح بتجاهله.
+
+## `software_bill_of_materials`
+
+```text
+sbom
+----
+sbom_id PK
+artifact_id FK
+
+format
+generator
+
+generated_at
+
+dependency_count
+
+critical_vulnerability_count
+high_vulnerability_count
+medium_vulnerability_count
+low_vulnerability_count
+
+security_status
+```
+
+---
+
+# 8. S04 — CI/CD Pipeline Management
+
+## `deployment_pipelines`
+
+```text
+pipeline
+--------
+pipeline_id PK
+pipeline_code
+
+service_id FK
+
+pipeline_type
+
+trigger_type
+
+branch_pattern
+
+enabled_flag
+
+status
+```
+
+Pipeline types:
+
+```text
+BUILD
+TEST
+SECURITY_SCAN
+PACKAGE
+DEPLOY
+DATABASE_MIGRATION
+INFRASTRUCTURE
+FULL_RELEASE
+```
+
+---
+
+# 9. Pipeline Stages
+
+## `pipeline_stages`
+
+```text
+pipeline_stage
+--------------
+pipeline_stage_id PK
+pipeline_id FK
+
+stage_order
+
+stage_code
+stage_name
+
+stage_type
+
+automatic_flag
+approval_required_flag
+
+failure_behavior
+
+timeout_seconds
+```
+
+مثال:
+
+```text
+01 Checkout
+02 Unit Test
+03 Static Analysis
+04 Dependency Scan
+05 Secret Scan
+06 Build
+07 Container Scan
+08 SBOM
+09 Artifact Sign
+10 Push Registry
+11 Deploy DEV
+12 Integration Test
+13 Promote UAT
+14 Approval
+15 Database Precheck
+16 Production Deployment
+17 Smoke Test
+18 Post Deployment Verification
+```
+
+---
+
+# 10. Pipeline Run
+
+## `pipeline_runs`
+
+```text
+pipeline_run
+------------
+pipeline_run_id PK
+
+pipeline_id FK
+
+triggered_by
+trigger_source
+
+commit_sha
+
+started_at
+completed_at
+
+status
+
+failure_stage_id
+failure_reason
+
+release_candidate_version
+```
+
+---
+
+# 11. Security Gate
+
+هذه تربط Cluster S مباشرة بـCluster R.
+
+## `security_gates`
+
+```text
+security_gate
+-------------
+security_gate_id PK
+
+pipeline_stage_id FK
+
+gate_type
+
+threshold
+
+blocking_flag
+
+policy_id FK
+
+status
+```
+
+مثال:
+
+```text
+Critical Vulnerabilities = 0
+
+High Vulnerabilities <= approved threshold
+
+Secret Leak = 0
+
+Code Quality Gate = PASS
+
+License Compliance = PASS
+```
+
+---
+
+# 12. S05 — Release Management
+
+الـDeployment ليس Release.
+
+هذه نقطة معمارية مهمة.
+
+```text
+Release
+    ↓
+Deployment DEV
+    ↓
+Deployment UAT
+    ↓
+Deployment PROD
+```
+
+## `releases`
+
+```text
+release
+-------
+release_id PK
+
+release_number
+
+release_type
+
+version
+
+release_name
+
+release_status
+
+risk_level
+
+requested_by
+
+planned_release_at
+approved_release_at
+actual_release_at
+
+rollback_available_flag
+
+change_request_id FK
+```
+
+Release Types:
+
+```text
+MAJOR
+MINOR
+PATCH
+HOTFIX
+SECURITY
+CONFIGURATION
+EMERGENCY
+```
+
+---
+
+# 13. Release Artifacts
+
+## `release_artifacts`
+
+```text
+release_artifact
+----------------
+release_artifact_id PK
+
+release_id FK
+artifact_id FK
+
+service_id FK
+
+artifact_version
+deployment_order
+
+mandatory_flag
+```
+
+أي Release قد يحتوي:
+
+```text
+frontend
+backend
+worker
+database migrations
+configuration
+AI prompt package
+reporting package
+```
+
+---
+
+# 14. Release Approvals
+
+## `release_approvals`
+
+```text
+release_approval
+----------------
+release_approval_id PK
+
+release_id FK
+
+approval_stage
+
+approver_role_id
+approver_user_id
+
+decision
+
+decision_at
+
+comments
+
+evidence_document_id
+```
+
+مثال Production:
+
+```text
+Technical Lead
+Security
+QA
+Product Owner
+Platform Operations
+
+            ↓
+
+Production Release
+```
+
+للـEmergency Release يمكن Approval Path مختلفة.
+
+---
+
+# 15. S06 — Deployment
+
+## `deployments`
+
+```text
+deployment
+----------
+deployment_id PK
+
+release_id FK
+environment_id FK
+service_id FK
+
+artifact_id FK
+
+deployment_strategy
+
+started_at
+completed_at
+
+deployment_status
+
+deployed_by
+
+previous_version
+target_version
+
+rollback_deployment_id FK
+
+health_check_status
+
+verification_status
+```
+
+---
+
+# 16. Deployment Strategy
+
+لا نضع Strategy واحدة فقط.
+
+```text
+RECREATE
+ROLLING
+BLUE_GREEN
+CANARY
+SHADOW
+FEATURE_FLAG
+TENANT_WAVE
+```
+
+ولـMulti-Tenant SaaS، `TENANT_WAVE` مهمة جدًا.
+
+مثلاً:
+
+```text
+Release V2.4
+
+Wave 1
+Internal Tenant
+
+Wave 2
+Pilot Tenant A
+
+Wave 3
+5 Tenants
+
+Wave 4
+25%
+
+Wave 5
+100%
+```
+
+---
+
+# 17. Deployment Target
+
+## `deployment_targets`
+
+```text
+deployment_target
+-----------------
+deployment_target_id PK
+
+deployment_id FK
+
+target_type
+
+tenant_id FK nullable
+cluster_id FK nullable
+node_id FK nullable
+
+deployment_status
+
+started_at
+completed_at
+
+health_status
+```
+
+---
+
+# 18. Deployment Validation
+
+## `deployment_validations`
+
+```text
+deployment_validation
+---------------------
+validation_id PK
+
+deployment_id FK
+
+validation_type
+
+expected_result
+
+actual_result
+
+status
+
+executed_at
+
+evidence_reference
+```
+
+Types:
+
+```text
+Smoke Test
+API Health
+Database Connectivity
+Authentication Test
+Tenant Isolation Test
+Payroll Calculation Test
+Workflow Test
+Notification Test
+AI Gateway Test
+```
+
+---
+
+# 19. Rollback
+
+Rollback يجب أن يكون Entity حقيقي.
+
+## `rollback_requests`
+
+```text
+rollback_request
+----------------
+rollback_request_id PK
+
+deployment_id FK
+
+reason
+
+severity
+
+requested_by
+approved_by
+
+rollback_version
+
+requested_at
+executed_at
+
+status
+```
+
+---
+
+# 20. S07 — Feature Flag Management
+
+بدل نشر Feature ثم إخفائها بالكود.
+
+## `feature_flags`
+
+```text
+feature_flag
+------------
+feature_flag_id PK
+
+feature_code
+feature_name
+
+description
+
+service_id FK
+
+default_state
+
+flag_type
+
+risk_level
+
+owner_user_id
+
+created_at
+
+retirement_date
+
+status
+```
+
+---
+
+# 21. Feature Flag Rules
+
+## `feature_flag_rules`
+
+```text
+feature_flag_rule
+-----------------
+rule_id PK
+
+feature_flag_id FK
+
+environment_id FK
+
+scope_type
+
+condition_json
+
+enabled_flag
+
+percentage_rollout
+
+priority
+
+valid_from
+valid_to
+```
+
+Scopes:
+
+```text
+GLOBAL
+ENVIRONMENT
+TENANT
+COMPANY
+USER_ROLE
+USER
+REGION
+CUSTOMER_TIER
+```
+
+---
+
+# 22. Tenant Feature Override
+
+## `tenant_feature_flags`
+
+```text
+tenant_feature_flag
+-------------------
+tenant_feature_flag_id PK
+
+tenant_id FK
+feature_flag_id FK
+
+enabled_flag
+
+configuration_json
+
+effective_from
+effective_to
+
+approved_by
+```
+
+وهذا يعطيك مستقبلًا SaaS Packaging مثل:
+
+```text
+Basic
+Professional
+Enterprise
+```
+
+بدون fork لكل عميل.
+
+---
+
+# 23. S08 — Database Migration Governance
+
+دي من أخطر المناطق.
+
+لا يجوز:
+
+```text
+Developer
+→ Production DB
+→ ALTER TABLE manually
+```
+
+لازم:
+
+```text
+Migration Package
+        ↓
+Validation
+        ↓
+Approval
+        ↓
+Backup
+        ↓
+Migration
+        ↓
+Verification
+        ↓
+Complete
+
+or
+
+Rollback
+```
+
+---
+
+# 24. Database Registry
+
+## `database_instances`
+
+```text
+database_instance
+-----------------
+database_instance_id PK
+
+environment_id FK
+
+database_engine
+database_version
+
+database_name
+
+database_role
+
+hosting_type
+
+tenant_strategy
+
+encryption_enabled
+
+status
+```
+
+Tenant strategies:
+
+```text
+SHARED_DATABASE
+SHARED_DATABASE_SEPARATE_SCHEMA
+DATABASE_PER_TENANT
+HYBRID
+```
+
+---
+
+# 25. Database Migration
+
+## `database_migrations`
+
+```text
+database_migration
+------------------
+migration_id PK
+
+service_id FK
+
+migration_version
+migration_name
+
+migration_type
+
+script_hash
+
+forward_script_reference
+rollback_script_reference
+
+breaking_change_flag
+data_loss_risk_flag
+
+estimated_duration_seconds
+
+requires_downtime_flag
+
+status
+```
+
+---
+
+# 26. Migration Dependencies
+
+## `migration_dependencies`
+
+```text
+migration_dependency
+--------------------
+migration_dependency_id PK
+
+migration_id FK
+depends_on_migration_id FK
+```
+
+---
+
+# 27. Migration Execution
+
+## `migration_executions`
+
+```text
+migration_execution
+-------------------
+migration_execution_id PK
+
+migration_id FK
+database_instance_id FK
+release_id FK
+
+started_at
+completed_at
+
+execution_status
+
+rows_affected
+
+backup_execution_id FK
+
+validation_status
+
+executed_by
+```
+
+---
+
+# 28. Schema Version
+
+## `database_schema_versions`
+
+```text
+database_schema_version
+-----------------------
+database_instance_id FK
+schema_version
+
+migration_id FK
+
+applied_at
+
+checksum
+
+PRIMARY KEY
+(
+ database_instance_id,
+ schema_version
+)
+```
+
+وبالتالي تعرف فورًا:
+
+> Production Tenant X على أي Schema Version؟
+
+---
+
+# 29. S09 — Infrastructure Configuration Management
+
+## `infrastructure_resources`
+
+```text
+infrastructure_resource
+-----------------------
+resource_id PK
+
+environment_id FK
+
+resource_type
+
+provider
+
+resource_name
+
+region
+
+zone
+
+configuration_reference
+
+managed_by_iac_flag
+
+criticality
+
+status
+```
+
+Resource Types:
+
+```text
+VM
+Container Cluster
+Database
+Object Storage
+Cache
+Queue
+Load Balancer
+Firewall
+Private Network
+VPN
+CDN
+DNS
+Storage Volume
+AI Compute
+```
+
+---
+
+# 30. Infrastructure as Code
+
+## `infrastructure_definitions`
+
+```text
+infrastructure_definition
+-------------------------
+iac_definition_id PK
+
+repository_id FK
+
+provider_type
+
+template_type
+
+version
+
+commit_sha
+
+environment_id FK
+
+status
+```
+
+Template Type:
+
+```text
+Terraform
+Pulumi
+Bicep
+CloudFormation
+Ansible
+Helm
+Kubernetes Manifest
+```
+
+---
+
+# 31. Infrastructure Change
+
+## `infrastructure_changes`
+
+```text
+infrastructure_change
+---------------------
+infra_change_id PK
+
+environment_id FK
+
+change_type
+
+requested_by
+
+planned_configuration
+
+actual_configuration
+
+risk_level
+
+approval_required
+
+approved_by
+
+executed_at
+
+status
+```
+
+---
+
+# 32. Configuration Management
+
+نفصل Configuration عن Secrets.
+
+## `configuration_items`
+
+```text
+configuration_item
+------------------
+configuration_item_id PK
+
+configuration_key
+
+service_id FK
+
+environment_id FK
+
+tenant_id FK nullable
+
+configuration_value_reference
+
+value_type
+
+sensitive_flag
+
+version
+
+effective_from
+
+status
+```
+
+---
+
+# 33. Configuration Versioning
+
+## `configuration_versions`
+
+```text
+configuration_version
+---------------------
+configuration_version_id PK
+
+configuration_item_id FK
+
+version_number
+
+previous_version_id FK
+
+change_reason
+
+changed_by
+
+changed_at
+```
+
+أي تغيير في Configuration يبقى Auditable.
+
+---
+
+# 34. S10 — Secrets Management
+
+Password أو API Key لا يوضع في:
+
+```text
+Database
+.env file
+GitHub
+application settings file
+```
+
+بل Secret Vault.
+
+---
+
+# 35. Secret Registry
+
+## `secrets`
+
+```text
+secret
+------
+secret_id PK
+
+secret_code
+
+secret_type
+
+vault_provider
+
+vault_reference
+
+owner_team_id
+
+rotation_policy_id FK
+
+classification_level
+
+status
+```
+
+Secret Types:
+
+```text
+PASSWORD
+API_KEY
+OAUTH_SECRET
+DATABASE_CREDENTIAL
+ENCRYPTION_KEY
+SIGNING_KEY
+CERTIFICATE
+SSH_KEY
+WEBHOOK_SECRET
+```
+
+---
+
+# 36. Secret Version
+
+## `secret_versions`
+
+```text
+secret_version
+--------------
+secret_version_id PK
+
+secret_id FK
+
+version_number
+
+created_at
+
+expires_at
+
+rotation_reason
+
+status
+```
+
+لا نخزن value نفسها في HR database.
+
+فقط Reference.
+
+---
+
+# 37. Secret Deployment
+
+## `secret_deployments`
+
+```text
+secret_deployment
+-----------------
+secret_deployment_id PK
+
+secret_version_id FK
+
+environment_id FK
+service_id FK
+
+deployed_at
+
+deployment_status
+
+verification_status
+```
+
+---
+
+# 38. Certificate Management
+
+## `certificates`
+
+```text
+certificate
+-----------
+certificate_id PK
+
+certificate_type
+
+subject_name
+
+issuer
+
+valid_from
+valid_to
+
+vault_reference
+
+environment_id FK
+
+auto_renew_enabled
+
+renewal_status
+
+status
+```
+
+مع Alerts مثلاً:
+
+```text
+90 days
+60 days
+30 days
+15 days
+7 days
+1 day
+```
+
+---
+
+# 39. S11 — Tenant Provisioning
+
+هذه شديدة الأهمية لأن النظام Multi-Company SaaS.
+
+إنشاء Tenant يجب ألا يكون:
+
+> Developer creates database manually.
+
+بل Workflow.
+
+---
+
+# 40. Tenant Provisioning Request
+
+## `tenant_provisioning_requests`
+
+```text
+tenant_provisioning_request
+---------------------------
+provisioning_request_id PK
+
+tenant_id FK
+
+subscription_plan_id FK
+
+requested_by
+
+requested_at
+
+target_region
+
+deployment_model
+
+database_model
+
+status
+```
+
+---
+
+# 41. Provisioning Template
+
+## `tenant_provisioning_templates`
+
+```text
+tenant_provisioning_template
+----------------------------
+template_id PK
+
+template_name
+
+subscription_plan_id FK
+
+configuration_template_id FK
+
+default_feature_set_id FK
+
+default_role_set_id FK
+
+default_workflow_set_id FK
+
+version
+
+status
+```
+
+---
+
+# 42. Provisioning Steps
+
+## `tenant_provisioning_steps`
+
+```text
+tenant_provisioning_step
+------------------------
+provisioning_step_id PK
+
+provisioning_request_id FK
+
+step_order
+
+step_type
+
+status
+
+started_at
+completed_at
+
+failure_reason
+
+retry_count
+```
+
+مثال:
+
+```text
+01 Create Tenant
+02 Create Companies
+03 Allocate Database
+04 Apply Schema
+05 Seed Master Data
+06 Create Super Admin
+07 Configure Languages
+08 Configure Arabic RTL
+09 Configure Notification
+10 Configure Storage
+11 Configure Security Policies
+12 Apply Subscription Features
+13 Register Tenant Domain
+14 Initialize Audit
+15 Initialize AI Policies
+16 Health Check
+17 Activation
+```
+
+---
+
+# 43. Tenant Environment
+
+## `tenant_environments`
+
+```text
+tenant_environment
+------------------
+tenant_environment_id PK
+
+tenant_id FK
+environment_id FK
+
+database_instance_id FK
+
+storage_container_id FK
+
+configuration_profile_id FK
+
+deployment_ring
+
+status
+```
+
+---
+
+# 44. Tenant Provisioning Validation
+
+مثلاً:
+
+```text
+Tenant Admin Login ✓
+Arabic RTL ✓
+Company Created ✓
+Database Isolation ✓
+Roles Created ✓
+Payroll Tables ✓
+Encryption ✓
+Audit Enabled ✓
+Email Service ✓
+Backup Enabled ✓
+Monitoring Enabled ✓
+```
+
+---
+
+# 45. S12 — Backup Management
+
+Backup بدون Restore Test ليس Backup Strategy مكتملة.
+
+---
+
+# 46. Backup Policy
+
+## `backup_policies`
+
+```text
+backup_policy
+-------------
+backup_policy_id PK
+
+policy_name
+
+resource_type
+
+backup_type
+
+frequency
+
+retention_days
+
+archive_retention_days
+
+encryption_required
+
+cross_region_copy_flag
+
+immutable_backup_flag
+
+status
+```
+
+---
+
+# 47. Backup Scope
+
+## `backup_policy_targets`
+
+```text
+backup_policy_target
+--------------------
+backup_policy_target_id PK
+
+backup_policy_id FK
+
+target_type
+
+database_instance_id FK nullable
+resource_id FK nullable
+tenant_id FK nullable
+```
+
+---
+
+# 48. Backup Execution
+
+## `backup_executions`
+
+```text
+backup_execution
+----------------
+backup_execution_id PK
+
+backup_policy_id FK
+target_id FK
+
+started_at
+completed_at
+
+backup_type
+
+backup_size
+
+storage_location_reference
+
+checksum
+
+encrypted_flag
+
+status
+
+verification_status
+```
+
+Backup Types:
+
+```text
+FULL
+INCREMENTAL
+DIFFERENTIAL
+TRANSACTION_LOG
+SNAPSHOT
+CONFIGURATION
+DOCUMENT_STORAGE
+```
+
+---
+
+# 49. Restore Request
+
+## `restore_requests`
+
+```text
+restore_request
+---------------
+restore_request_id PK
+
+backup_execution_id FK
+
+restore_reason
+
+requested_by
+
+target_environment_id FK
+
+target_point_in_time
+
+approval_status
+
+requested_at
+
+status
+```
+
+---
+
+# 50. Restore Execution
+
+## `restore_executions`
+
+```text
+restore_execution
+-----------------
+restore_execution_id PK
+
+restore_request_id FK
+
+started_at
+completed_at
+
+restore_status
+
+validation_status
+
+data_loss_window
+
+executed_by
+```
+
+---
+
+# 51. Recovery Point Objective / Recovery Time Objective
+
+نحتاجها كبيانات وليست Documents فقط.
+
+## `service_continuity_targets`
+
+```text
+service_continuity_target
+-------------------------
+continuity_target_id PK
+
+service_id FK
+
+business_impact_level
+
+target_rpo_minutes
+target_rto_minutes
+
+maximum_tolerable_downtime_minutes
+
+priority_order
+
+approved_by
+```
+
+مثلاً MVP:
+
+```text
+Identity
+RTO = 30 min
+
+Payroll
+RTO = 4 h
+
+Attendance
+RTO = 2 h
+
+Employee Core
+RTO = 1 h
+```
+
+الأرقام النهائية يجب أن تُحدد Business-wise، لا نخزنها كقيم افتراضية عشوائية.
+
+---
+
+# 52. S13 — Disaster Recovery
+
+## `disaster_recovery_plans`
+
+```text
+dr_plan
+-------
+dr_plan_id PK
+
+plan_name
+
+primary_region
+recovery_region
+
+strategy
+
+target_rpo
+target_rto
+
+activation_authority
+
+last_review_date
+next_review_date
+
+status
+```
+
+DR Strategy:
+
+```text
+Backup Restore
+Pilot Light
+Warm Standby
+Hot Standby
+Multi Region Active Passive
+Multi Region Active Active
+```
+
+---
+
+# 53. DR Scenario
+
+## `dr_scenarios`
+
+```text
+dr_scenario
+-----------
+dr_scenario_id PK
+
+dr_plan_id FK
+
+scenario_type
+
+impact_level
+
+detection_method
+
+activation_condition
+
+runbook_id FK
+```
+
+Scenarios:
+
+```text
+Database Failure
+Region Failure
+Ransomware
+Storage Corruption
+Certificate Failure
+Identity Provider Failure
+Cloud Provider Outage
+Accidental Data Deletion
+Tenant Data Corruption
+Production Deployment Failure
+```
+
+---
+
+# 54. DR Test
+
+## `dr_tests`
+
+```text
+dr_test
+-------
+dr_test_id PK
+
+dr_plan_id FK
+
+scenario_id FK
+
+planned_date
+executed_date
+
+actual_rto
+actual_rpo
+
+test_status
+
+issues_found
+
+corrective_action_required
+
+approved_by
+```
+
+لازم على الأقل periodic DR drill.
+
+---
+
+# 55. Business Continuity
+
+هنا Cluster S يلتقي مع التشغيل الإداري.
+
+## `business_continuity_plans`
+
+```text
+business_continuity_plan
+------------------------
+bcp_id PK
+
+business_service
+
+business_owner
+
+criticality
+
+minimum_service_level
+
+maximum_downtime
+
+manual_workaround_available
+
+workaround_procedure_id FK
+
+recovery_priority
+
+status
+```
+
+مثلاً:
+
+```text
+إذا Attendance Offline
+→ supervisors may capture approved offline evidence
+
+إذا Payroll unavailable
+→ payroll run cannot be improvised from uncontrolled spreadsheets
+→ activate approved contingency procedure
+```
+
+---
+
+# 56. S14 — High Availability
+
+## `availability_architectures`
+
+```text
+availability_architecture
+-------------------------
+availability_architecture_id PK
+
+service_id FK
+
+environment_id FK
+
+availability_target_percent
+
+replica_count
+
+load_balancing_enabled
+
+multi_zone_enabled
+
+auto_failover_enabled
+
+health_check_enabled
+
+status
+```
+
+مثلاً:
+
+```text
+API
+3 replicas
+
+Identity
+3 replicas
+
+Worker
+2 replicas
+
+PostgreSQL
+Primary + Replica
+```
+
+---
+
+# 57. Dependency Availability
+
+## `availability_dependencies`
+
+```text
+availability_dependency
+-----------------------
+dependency_id PK
+
+service_id FK
+dependent_resource_id FK
+
+dependency_criticality
+
+fallback_available
+
+fallback_strategy
+```
+
+وهذه تكشف Single Points of Failure.
+
+---
+
+# 58. Capacity Management
+
+لا أريد Autoscaling فقط.
+
+نحتاج Capacity Model.
+
+## `capacity_profiles`
+
+```text
+capacity_profile
+----------------
+capacity_profile_id PK
+
+service_id FK
+environment_id FK
+
+metric_type
+
+baseline_capacity
+
+warning_threshold
+
+critical_threshold
+
+maximum_capacity
+
+auto_scaling_enabled
+
+scale_out_policy
+scale_in_policy
+```
+
+Metrics:
+
+```text
+CPU
+RAM
+API RPS
+Concurrent Users
+Database Connections
+Queue Depth
+Storage
+Document Volume
+AI Requests
+AI Tokens
+Payroll Employees Per Run
+Attendance Events Per Minute
+```
+
+---
+
+# 59. Capacity Forecast
+
+## `capacity_forecasts`
+
+```text
+capacity_forecast
+-----------------
+capacity_forecast_id PK
+
+resource_id FK
+
+forecast_period
+
+current_usage
+
+forecast_usage
+
+forecast_confidence
+
+capacity_breach_date
+
+recommended_action
+```
+
+مهم جدًا مع:
+
+> 5,000 employees per company
+
+ثم:
+
+```text
+10 companies = 50,000
+50 companies = 250,000
+100 companies = 500,000
+```
+
+فنحن لا نصمم MVP بطريقة تمنع النمو.
+
+---
+
+# 60. S15 — Observability
+
+الثلاثة الأساسية:
+
+```text
+Metrics
+Logs
+Traces
+```
+
+وأضيف عليهم:
+
+```text
+Audit Events
+Business Metrics
+Synthetic Monitoring
+Real User Monitoring
+```
+
+---
+
+# 61. Monitoring Target
+
+## `monitoring_targets`
+
+```text
+monitoring_target
+-----------------
+monitoring_target_id PK
+
+target_type
+
+service_id FK nullable
+resource_id FK nullable
+environment_id FK
+
+monitoring_enabled
+
+health_check_interval
+
+criticality
+
+status
+```
+
+---
+
+# 62. Metric Definition
+
+## `metric_definitions`
+
+```text
+metric_definition
+-----------------
+metric_definition_id PK
+
+metric_code
+metric_name
+
+metric_type
+
+unit
+
+aggregation_type
+
+service_id FK
+
+business_metric_flag
+```
+
+Technical:
+
+```text
+CPU
+Memory
+Latency
+Error Rate
+RPS
+Queue Depth
+DB Connections
+```
+
+Business:
+
+```text
+Employee Activations Failed
+Payroll Runs Failed
+Attendance Sync Delay
+Bank Batch Failure
+Workflow SLA Breach
+Tenant Provision Failure
+Notification Failure
+Integration Failure
+```
+
+ودي أكثر قيمة للـbusiness من CPU وحده.
+
+---
+
+# 63. Service Level Indicator
+
+## `service_level_indicators`
+
+```text
+service_level_indicator
+-----------------------
+sli_id PK
+
+service_id FK
+
+sli_type
+
+metric_definition_id FK
+
+calculation_method
+```
+
+---
+
+# 64. Service Level Objective
+
+## `service_level_objectives`
+
+```text
+service_level_objective
+-----------------------
+slo_id PK
+
+sli_id FK
+
+target_value
+
+measurement_window
+
+error_budget
+
+effective_from
+
+effective_to
+```
+
+مثال:
+
+```text
+API Availability
+99.9%
+
+Authentication Success
+99.95%
+
+Payroll Calculation Completion
+99.9%
+
+Attendance Processing
+99.5%
+```
+
+---
+
+# 65. Logs
+
+## `log_streams`
+
+```text
+log_stream
+----------
+log_stream_id PK
+
+service_id FK
+environment_id FK
+
+log_category
+
+retention_days
+
+storage_reference
+
+pii_masking_enabled
+
+status
+```
+
+مهم جدًا:
+
+**لا يجب أن تظهر National ID / Salary / Password / Token في Logs.**
+
+---
+
+# 66. Distributed Trace
+
+## `trace_sessions`
+
+يمكن تخزين metadata فقط في Platform DB، بينما التفاصيل تكون في OpenTelemetry backend.
+
+```text
+trace_session
+-------------
+trace_id PK
+
+service_id FK
+
+operation_name
+
+started_at
+
+duration_ms
+
+status
+
+correlation_id
+
+tenant_id FK
+```
+
+---
+
+# 67. Alert Rules
+
+## `alert_rules`
+
+```text
+alert_rule
+----------
+alert_rule_id PK
+
+metric_definition_id FK
+
+environment_id FK
+
+condition_operator
+
+threshold
+
+duration_seconds
+
+severity
+
+notification_policy_id FK
+
+auto_incident_flag
+
+enabled_flag
+```
+
+---
+
+# 68. Alert
+
+## `alerts`
+
+```text
+alert
+-----
+alert_id PK
+
+alert_rule_id FK
+
+triggered_at
+
+current_value
+
+severity
+
+status
+
+acknowledged_by
+
+resolved_at
+
+incident_id FK
+```
+
+---
+
+# 69. Alert Suppression
+
+لتجنب Alert Storm.
+
+## `alert_suppressions`
+
+```text
+alert_suppression
+-----------------
+suppression_id PK
+
+environment_id FK
+
+service_id FK
+
+reason
+
+start_at
+end_at
+
+deployment_id FK nullable
+
+approved_by
+```
+
+مثلاً أثناء planned maintenance.
+
+---
+
+# 70. S16 — Operational Incident Management
+
+نحن عندنا Security Incident في R.
+
+لكن هنا:
+
+> Platform / Production Incident.
+
+## `operational_incidents`
+
+```text
+operational_incident
+--------------------
+incident_id PK
+
+incident_number
+
+environment_id FK
+service_id FK
+
+severity
+
+incident_type
+
+summary
+
+detected_at
+acknowledged_at
+resolved_at
+
+incident_commander_id
+
+business_impact
+
+tenant_impact_count
+
+status
+```
+
+Severity:
+
+```text
+SEV1
+SEV2
+SEV3
+SEV4
+```
+
+---
+
+# 71. Incident Timeline
+
+## `incident_events`
+
+```text
+incident_event
+--------------
+incident_event_id PK
+
+incident_id FK
+
+event_type
+
+event_at
+
+performed_by
+
+description
+```
+
+مثلاً:
+
+```text
+14:01 Alert generated
+14:03 On-call acknowledged
+14:07 Payroll API unavailable
+14:12 Rollback initiated
+14:19 API recovered
+14:27 Verification completed
+```
+
+---
+
+# 72. Root Cause Analysis
+
+## `post_incident_reviews`
+
+```text
+post_incident_review
+--------------------
+review_id PK
+
+incident_id FK
+
+root_cause
+
+contributing_factors
+
+customer_impact
+
+business_impact
+
+detection_gap
+
+response_gap
+
+preventive_actions
+
+completed_at
+approved_by
+```
+
+---
+
+# 73. Corrective Actions
+
+## `incident_actions`
+
+```text
+incident_action
+---------------
+action_id PK
+
+review_id FK
+
+action_type
+
+description
+
+owner_id
+
+due_date
+
+priority
+
+status
+```
+
+حتى لا يصبح RCA مجرد PDF يختفي.
+
+---
+
+# 74. Change Governance
+
+أي Production Change لازم يكون له Record.
+
+## `production_changes`
+
+```text
+production_change
+-----------------
+change_id PK
+
+change_number
+
+change_type
+
+environment_id FK
+
+description
+
+reason
+
+risk_level
+
+impact_level
+
+planned_start
+planned_end
+
+rollback_plan
+
+test_evidence_reference
+
+requested_by
+
+status
+```
+
+Types:
+
+```text
+STANDARD
+NORMAL
+EMERGENCY
+CONFIGURATION
+DATABASE
+INFRASTRUCTURE
+SECURITY
+```
+
+---
+
+# 75. Change Approval
+
+## `change_approvals`
+
+```text
+change_approval
+---------------
+change_approval_id PK
+
+change_id FK
+
+approver_role_id
+
+decision
+
+decision_by
+
+decision_at
+
+comments
+```
+
+---
+
+# 76. Maintenance Window
+
+## `maintenance_windows`
+
+```text
+maintenance_window
+------------------
+maintenance_window_id PK
+
+environment_id FK
+
+start_at
+end_at
+
+maintenance_type
+
+expected_impact
+
+approved_by
+
+status
+```
+
+---
+
+# 77. On-Call Operations
+
+ممكن لا ندخله في أول MVP لكن يجب أن يكون في Logical Model.
+
+## `on_call_schedules`
+
+```text
+on_call_schedule
+----------------
+schedule_id PK
+
+team_id FK
+
+effective_from
+effective_to
+
+timezone
+
+status
+```
+
+## `on_call_assignments`
+
+```text
+on_call_assignment
+------------------
+assignment_id PK
+
+schedule_id FK
+user_id FK
+
+start_at
+end_at
+
+escalation_level
+```
+
+---
+
+# 78. Runbook Management
+
+## `operational_runbooks`
+
+```text
+operational_runbook
+-------------------
+runbook_id PK
+
+runbook_code
+
+runbook_name
+
+scenario_type
+
+service_id FK
+
+version
+
+procedure_reference
+
+automation_available_flag
+
+approved_by
+
+status
+```
+
+مثلاً:
+
+```text
+Database Failover
+Production Rollback
+Restore Tenant
+Certificate Renewal
+Payroll Queue Recovery
+Tenant Provision Retry
+Secret Rotation
+DR Activation
+```
+
+---
+
+# 79. Cluster S ↔ Cluster R
+
+العلاقة قوية جدًا:
+
+```text
+Cluster R
+Security
+
+        ↓
+
+Cluster S
+
+CI/CD Security Gate
+Secret Management
+Certificate Deployment
+Infrastructure Security
+Runtime Vulnerabilities
+Production Change Approval
+Security Patch Deployment
+Backup Protection
+DR Security
+```
+
+مثلاً:
+
+```text
+R.SecurityVulnerability
+        ↓
+S.Release
+        ↓
+S.Deployment
+        ↓
+R.SecurityVerification
+```
+
+---
+
+# 80. Cluster S ↔ Cluster Q
+
+AI Platform deployment يحتاج نفس الحوكمة.
+
+```text
+Q.ModelVersion
+        ↓
+S.Release
+
+Q.PromptVersion
+        ↓
+S.Deployment
+
+Q.AgentVersion
+        ↓
+S.FeatureFlag
+
+Q.GuardrailVersion
+        ↓
+S.Release
+```
+
+وبالتالي لا يوجد:
+
+> Prompt changed directly in Production.
+
+بل:
+
+```text
+Prompt Draft
+→ Evaluation
+→ Approval
+→ Release
+→ UAT
+→ Production
+```
+
+---
+
+# 81. Cluster S ↔ Cluster L
+
+Cluster L يحتوي System Configuration.
+
+Cluster S يحتوي **نشر Configuration نفسها**.
+
+فرق مهم:
+
+```text
+Cluster L
+"What configuration should the system use?"
+
+Cluster S
+"How is that configuration promoted safely
+from DEV → UAT → PROD?"
+```
+
+---
+
+# 82. Cluster S ↔ Cluster K
+
+Integration deployments.
+
+```text
+K.IntegrationDefinition
+        ↓
+S.ServiceVersion
+
+K.InterfaceMappingVersion
+        ↓
+S.Release
+
+K.IntegrationEndpoint
+        ↓
+S.EnvironmentConfiguration
+```
+
+---
+
+# 83. Cluster S ↔ Tenant
+
+Tenant Provisioning يجب أن يربط:
+
+```text
+Tenant
+ ├── Subscription
+ ├── Environment
+ ├── Database
+ ├── Storage
+ ├── Encryption
+ ├── Default Config
+ ├── Roles
+ ├── Feature Flags
+ ├── AI Policy
+ ├── Backup Policy
+ ├── Monitoring
+ └── Domain
+```
+
+---
+
+# 84. أهم Dependency Chain عند إنشاء Tenant
+
+```text
+Tenant Approved
+        ↓
+Provisioning Request
+        ↓
+Region Selected
+        ↓
+Infrastructure Allocated
+        ↓
+Database Allocated
+        ↓
+Schema Migrated
+        ↓
+Storage Allocated
+        ↓
+Encryption Keys Assigned
+        ↓
+Tenant Master Data Seeded
+        ↓
+Default Roles Created
+        ↓
+Super Admin Created
+        ↓
+Features Activated
+        ↓
+Languages Configured
+        ↓
+Notifications Configured
+        ↓
+Backup Activated
+        ↓
+Monitoring Activated
+        ↓
+Security Baseline Verified
+        ↓
+Tenant Health Check
+        ↓
+Tenant Activated
+```
+
+---
+
+# 85. Production Release Flow
+
+المسار الذي أوصي به:
+
+```text
+Developer Commit
+        ↓
+Pull Request
+        ↓
+Code Review
+        ↓
+Automated Tests
+        ↓
+SAST
+        ↓
+Dependency Scan
+        ↓
+Secret Scan
+        ↓
+Build Artifact
+        ↓
+Container Scan
+        ↓
+Artifact Signing
+        ↓
+DEV Deployment
+        ↓
+Integration Tests
+        ↓
+UAT Deployment
+        ↓
+UAT Approval
+        ↓
+Security Gate
+        ↓
+Release Approval
+        ↓
+Production DB Backup
+        ↓
+Database Migration
+        ↓
+Production Deployment
+        ↓
+Smoke Test
+        ↓
+Business Verification
+        ↓
+Monitoring Observation
+        ↓
+Release Complete
+```
+
+لو Failure:
+
+```text
+Failure
+   ↓
+Stop rollout
+   ↓
+Rollback app
+   ↓
+Rollback migration
+      or
+Forward-fix
+   ↓
+Verification
+```
+
+---
+
+# 86. Database Migration Rule
+
+أقترح قانون معماري صريح:
+
+> **No production database schema change is permitted outside an approved versioned migration package.**
+
+يعني ممنوع:
+
+```text
+SSMS Manual ALTER
+pgAdmin Manual Change
+Production Console Editing
+```
+
+إلا Emergency Controlled Procedure ويتم تسجيله كـ:
+
+```text
+Emergency Change
++
+Migration Record
++
+Audit
++
+Post Change Validation
+```
+
+---
+
+# 87. Secrets Rule
+
+كذلك:
+
+> **No secret value shall be stored in source code, configuration tables, application logs, deployment scripts, or audit logs.**
+
+النظام يحتفظ فقط بـ:
+
+```text
+Secret Reference
+Version
+Expiration
+Rotation
+Usage
+```
+
+---
+
+# 88. Tenant Isolation Deployment Rule
+
+أي Release لازم يعمل:
+
+```text
+Tenant Isolation Validation
+```
+
+خصوصًا بعد أي تغيير في:
+
+```text
+Query Filters
+Caching
+Reporting
+Search
+Files
+AI Retrieval
+Analytics
+Integration
+```
+
+لأن أخطر Bug في SaaS HR ليس downtime.
+
+بل:
+
+> Tenant A يرى بيانات Tenant B.
+
+---
+
+# 89. Backup Rule
+
+أقترح:
+
+```text
+Backup Success ≠ Backup Verified
+```
+
+لازم status منفصل:
+
+```text
+CREATED
+VERIFIED
+RESTORE_TESTED
+FAILED
+CORRUPTED
+EXPIRED
+```
+
+---
+
+# 90. Restore Testing
+
+نضيف:
+
+## `restore_tests`
+
+```text
+restore_test
+------------
+restore_test_id PK
+
+backup_execution_id FK
+
+test_environment_id FK
+
+executed_at
+
+restore_duration
+
+integrity_status
+
+application_validation_status
+
+rpo_result
+
+rto_result
+
+status
+```
+
+---
+
+# 91. Business Continuity Criticality
+
+لكل Service:
+
+```text
+Tier 0 — Mission Critical
+Tier 1 — Critical
+Tier 2 — Important
+Tier 3 — Standard
+```
+
+مثلاً غالبًا:
+
+```text
+Tier 0
+Identity
+Employee Core
+Database
+Tenant Gateway
+
+Tier 1
+Attendance
+Payroll
+Workflow
+Integration
+
+Tier 2
+Recruitment
+Learning
+Service Desk
+
+Tier 3
+Historical Reporting
+Some Analytics
+```
+
+لكن يجب اعتمادها Business-wise.
+
+---
+
+# 92. Technical Health vs Business Health
+
+من الأخطاء أن Dashboard تقول:
+
+```text
+Server = Green
+CPU = Green
+Database = Green
+```
+
+بينما Payroll لا يعمل.
+
+لذلك:
+
+```text
+Platform Health
+   +
+Technical Health
+   +
+Business Transaction Health
+```
+
+مثال:
+
+```text
+Login Success                99.99%
+Employee Creation            100%
+Attendance Processing        99.8%
+Payroll Calculation          FAILED
+Bank Batch Generation        FAILED
+Notifications                98.7%
+Integration Success          99.3%
+```
+
+---
+
+# 93. Deployment Audit
+
+كل Deployment يسجل:
+
+```text
+Who
+What
+Why
+When
+Version
+Commit
+Artifact
+Environment
+Tenant Scope
+Approval
+Database Migration
+Configuration
+Secret Version
+Test Result
+Security Result
+Rollback
+```
+
+---
+
+# 94. DevSecOps Permission Model
+
+ليس كل Admin عنده Production.
+
+أقترح:
+
+```text
+Developer
+CI/CD Service Account
+QA Engineer
+Security Engineer
+Release Manager
+Platform Engineer
+Database Administrator
+SRE / Operations
+Tenant Provisioning Admin
+Backup Operator
+DR Manager
+Auditor
+Emergency Access Approver
+```
+
+مع Separation of Duties.
+
+مثلاً Developer:
+
+```text
+DEV      Write
+UAT      Limited
+PROD     No direct write
+```
+
+Production Deployment:
+
+```text
+Pipeline Service Identity
++
+Approved Release
+```
+
+---
+
+# 95. Break-Glass Production Access
+
+يرتبط بـCluster R.
+
+## `production_emergency_access`
+
+```text
+emergency_access
+----------------
+emergency_access_id PK
+
+user_id FK
+
+environment_id FK
+
+reason
+
+requested_at
+
+approved_by
+
+access_start
+access_expiry
+
+session_id FK
+
+actions_reviewed_flag
+
+status
+```
+
+لا يوجد permanent God Mode.
+
+---
+
+# 96. Logical ERD — Core Relationships
+
+```text
+ApplicationService
+    1 ───────< ServiceVersion
+
+ApplicationService
+    1 ───────< BuildArtifact
+
+Pipeline
+    1 ───────< PipelineStage
+    1 ───────< PipelineRun
+
+Release
+    1 ───────< ReleaseArtifact
+    1 ───────< ReleaseApproval
+    1 ───────< Deployment
+
+Deployment
+    >──────1 Environment
+    >──────1 ApplicationService
+    >──────1 BuildArtifact
+
+Deployment
+    1 ───────< DeploymentValidation
+
+Environment
+    1 ───────< EnvironmentConfiguration
+    1 ───────< InfrastructureResource
+
+FeatureFlag
+    1 ───────< FeatureFlagRule
+
+Tenant
+    1 ───────< TenantFeatureFlag
+
+DatabaseInstance
+    1 ───────< MigrationExecution
+
+DatabaseMigration
+    1 ───────< MigrationExecution
+
+Secret
+    1 ───────< SecretVersion
+                  1 ───────< SecretDeployment
+
+Tenant
+    1 ───────< TenantProvisioningRequest
+                  1 ───────< TenantProvisioningStep
+
+BackupPolicy
+    1 ───────< BackupExecution
+
+BackupExecution
+    1 ───────< RestoreRequest
+                  1 ───────< RestoreExecution
+
+DRPlan
+    1 ───────< DRScenario
+    1 ───────< DRTest
+
+MonitoringTarget
+    1 ───────< AlertRule
+                  1 ───────< Alert
+
+OperationalIncident
+    1 ───────< IncidentEvent
+    1 ───────1 PostIncidentReview
+```
+
+---
+
+# 97. أهم الـUnique Constraints
+
+لازم نضعها من الآن:
+
+```text
+UNIQUE
+(environment_code)
+
+UNIQUE
+(service_code)
+
+UNIQUE
+(service_id, artifact_version)
+
+UNIQUE
+(release_number)
+
+UNIQUE
+(database_instance_id, schema_version)
+
+UNIQUE
+(feature_code)
+
+UNIQUE
+(tenant_id, feature_flag_id)
+
+UNIQUE
+(secret_id, version_number)
+
+UNIQUE
+(tenant_id, environment_id)
+
+UNIQUE
+(migration_version, service_id)
+
+UNIQUE
+(change_number)
+
+UNIQUE
+(incident_number)
+```
+
+---
+
+# 98. أهم الـCheck Constraints
+
+مثلاً:
+
+```text
+percentage_rollout
+BETWEEN 0 AND 100
+```
+
+```text
+completed_at >= started_at
+```
+
+```text
+restore target cannot equal
+production source
+unless explicit approval
+```
+
+```text
+PRODUCTION deployment
+requires approved release
+```
+
+```text
+production migration
+requires backup
+if migration risk policy requires it
+```
+
+---
+
+# 99. ما يدخل MVP فعلًا؟
+
+وهنا لازم نكون عمليين.
+
+**لا أنصح ببناء Cluster S بالكامل في MVP.**
+
+نحتاج فقط الجزء الذي يجعل النظام قابلًا للنشر الآمن والتشغيل.
+
+### MVP-S
+
+```text
+Environment Registry                YES
+DEV / UAT / PROD                    YES
+
+Service Registry                    YES
+
+CI/CD Pipeline                      YES
+
+Build Artifact Versioning           YES
+
+Release Registry                    YES
+
+Release Approval                    BASIC
+
+Deployment History                  YES
+
+Database Migration Registry         YES
+
+Automatic DB Migration              YES
+
+Feature Flags                       YES - Basic
+
+Configuration Management            YES
+
+Secrets via Vault/Cloud Secret      YES
+
+Tenant Provisioning                 YES
+
+Backup Policy                       YES
+
+Automated DB Backup                 YES
+
+Restore Procedure                   YES
+
+Application Logs                    YES
+
+Technical Metrics                   YES
+
+Basic Alerts                        YES
+
+Health Checks                       YES
+
+Production Incident Tracking        BASIC
+
+Rollback                            YES
+
+Audit                               YES
+```
+
+---
+
+# 100. ليس MVP
+
+نؤجله:
+
+```text
+Advanced Canary Deployment
+Multi-Region Active-Active
+Full SRE Error Budget
+Automated DR Orchestration
+Chaos Engineering
+Advanced Capacity Forecasting
+Multi-cloud
+Full CMDB
+Complex On-call Scheduling
+Advanced Release Train
+Automated Tenant Deployment Waves
+Enterprise CAB Management
+Advanced SBOM Management UI
+```
+
+لكن نترك الـschema جاهزًا لها.
+
+---
+
+# 101. الـPhysical Deployment الذي أوصي به للـMVP
+
+بدل Microservices كثيرة من أول يوم:
+
+```text
+                Internet
+                    │
+              Reverse Proxy
+                    │
+        ┌───────────┴───────────┐
+        │                       │
+     Web App                 API App
+                                 │
+               ┌─────────────────┼───────────────┐
+               │                 │               │
+            Worker           Scheduler         AI Gateway
+               │                 │               │
+               └─────────────────┼───────────────┘
+                                 │
+                           PostgreSQL
+                                 │
+                ┌────────────────┼───────────────┐
+                │                │               │
+              Redis          Object Storage   Message Queue
+```
+
+أي:
+
+> **Modular Monolith + Workers + AI Gateway**
+
+وليس 40 Microservice من البداية.
+
+---
+
+# 102. Environment Topology
+
+## DEV
+
+```text
+DEV App
+DEV DB
+DEV Redis
+DEV Storage
+```
+
+## UAT
+
+```text
+UAT App
+UAT DB
+UAT Redis
+UAT Storage
+```
+
+## PROD
+
+```text
+Load Balancer
+       │
+ ┌─────┴─────┐
+App 1       App 2
+       │
+ PostgreSQL
+ Primary
+    │
+ Replica
+
+Redis
+Storage
+Workers
+Monitoring
+Backup
+```
+
+---
+
+# 103. وأقترح عدم إنشاء DB لكل Module
+
+لدينا عشرات Clusters، لكن هذا **Logical Domain Separation** وليس شرطًا أن يصبح:
+
+```text
+Database A
+Database B
+Database C
+...
+Database S
+```
+
+في MVP الأفضل:
+
+```text
+PostgreSQL
+
+Schemas:
+
+core
+org
+identity
+recruitment
+attendance
+leave
+payroll
+performance
+learning
+talent
+employee_relations
+personnel
+offboarding
+expense
+hse
+integration
+platform
+ai
+security
+devops
+audit
+```
+
+وبالتالي Cluster S يمكن أن يكون Schema:
+
+```text
+ops
+```
+
+أو:
+
+```text
+platform_ops
+```
+
+---
+
+# 104. أهم Architectural Rule
+
+الـDatabase Entity Model عندنا أصبح كبيرًا جدًا.
+
+لذلك يجب ألا نحول كل Entity ناقشناها إلى Table فورًا.
+
+من هنا نحتاج 3 مستويات:
+
+```text
+Enterprise Conceptual Model
+        ↓
+Logical Domain Model
+        ↓
+MVP Physical Database Model
+```
+
+Cluster S الذي صممناه الآن هو:
+
+> **Logical Domain Model**
+
+ثم سنختار منه Tables الـMVP فقط.
+
+---
+
+# 105. بعد Cluster S أين وصل النظام؟
+
+تقريبًا أصبح لدينا:
+
+```text
+Business Domains
+        +
+HR Operations
+        +
+Payroll
+        +
+Talent
+        +
+Employee Lifecycle
+        +
+HSE
+        +
+Expenses
+        +
+Analytics
+        +
+Integration
+        +
+System Administration
+        +
+AI Platform
+        +
+Security Operations
+        +
+DevSecOps / Platform Operations
+```
+
+أي أننا لم نعد نصمم مجرد **HR Software**.
+
+نحن فعليًا نصمم:
+
+# Enterprise People Operating Platform
+
+---
+
+# 106. Cluster Map بعد إضافة S
+
+تقريبًا:
+
+```text
+A   Employee / Position / Assignment Core
+
+B   Attendance / Leave / Workforce Availability
+
+C   Payroll / Compensation / Cost Allocation
+
+D   Performance / KPI
+
+E   Employee Relations / HR Service Desk
+
+F   Learning / Competency / Talent / Career
+
+G   Personnel / Contracts / Benefits / Compliance
+
+H   Offboarding / Separation
+
+I   Expense / Travel
+
+J   Occupational Health / HSE
+
+K   Integration / Migration / Data Quality
+
+L   System Administration / Workflow / Rules
+
+M   Analytics / BI / Workforce Intelligence
+
+N   Documents / Records / Knowledge
+
+O   Events / Messaging / Notifications
+
+P   Enterprise Integration & Automation Runtime
+
+Q   AI Platform / Copilot / Agents / Governance
+
+R   Security / IAM / Zero Trust / SOC
+
+S   DevSecOps / Deployment / Infrastructure /
+    Backup / DR / Observability / Continuity
+```
+
+---
+
+## نقطة مهمة جدًا قبل أن ننتقل لـCluster T
+
+أنا **لا أنصح بإضافة Business Cluster جديد الآن**.
+
+لأننا وصلنا إلى نقطة يصبح فيها الاستمرار في إضافة Clusters نوعًا من over-engineering.
+
+الخطوة الصحيحة الآن ليست:
+
+> Cluster T
+
+بل:
+
+# Phase 2 — Architecture Consolidation & MVP Extraction
+
+وفيها سنفعل بالترتيب:
+
+```text
+Step 1
+Freeze Enterprise Domain Map
+A → S
+
+Step 2
+Identify MVP Business Capabilities
+
+Step 3
+Build MVP Dependency Graph
+
+Step 4
+Select MVP Tables from all ERDs
+
+Step 5
+Build Physical PostgreSQL Schema
+
+Step 6
+Define API Boundaries
+
+Step 7
+Define Backend Modules
+
+Step 8
+Define Frontend Application Map
+
+Step 9
+Define Role-Based Screens
+
+Step 10
+Define Workflow Engine MVP
+
+Step 11
+Define Rules Engine MVP
+
+Step 12
+Define Integration Architecture
+
+Step 13
+Define MVP Infrastructure
+
+Step 14
+Define MVP Release Plan
+
+Step 15
+Create Sprint / Build Backlog
+```
+
+وهنا سنبدأ لأول مرة **نقصّ النظام الكبير ده إلى نسخة يمكن لفريق Development فعلًا أن يبنيها**، بدل أن نظل نزيد Entities إلى ما لا نهاية.

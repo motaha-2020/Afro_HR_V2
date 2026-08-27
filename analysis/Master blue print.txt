@@ -1,0 +1,2111 @@
+بالضبط. الإضافات الخمسة دي **لا أنصح أعتبرها Modules جديدة 21–25**. الأفضل هندسيًا ووظيفيًا أنها تكون **Cross-Module Capabilities / Shared Services**، لأن كل واحدة منها تخدم أكثر من Module، وبعضها أساس تقني للنظام كله.
+
+وبالتالي نثبت الـBusiness Scope عند **20 Business Modules**، ونبني حولها مجموعة **Platform Capabilities + Shared Engines**.
+
+# Afro HR V2 — Master Blueprint
+
+الصورة العليا للنظام تصبح:
+
+```text
+┌──────────────────────────────────────────────────────────────┐
+│                    User Experience Layer                     │
+│ Web │ Mobile/PWA │ Employee Self Service │ Manager Portal   │
+│ HR Portal │ Executive Portal │ Vendor/Provider Portal        │
+└──────────────────────────────────────────────────────────────┘
+
+                           ↓
+
+┌──────────────────────────────────────────────────────────────┐
+│                20 Business HR Modules                        │
+└──────────────────────────────────────────────────────────────┘
+
+                           ↓
+
+┌──────────────────────────────────────────────────────────────┐
+│              Shared Business Capabilities                    │
+│ Benefits │ HSE Readiness │ Travel & Expense │ Documents ... │
+└──────────────────────────────────────────────────────────────┘
+
+                           ↓
+
+┌──────────────────────────────────────────────────────────────┐
+│                 Shared Platform Engines                      │
+│ Workflow │ Policy │ Rules │ DoA │ Notifications │ Audit ... │
+└──────────────────────────────────────────────────────────────┘
+
+                           ↓
+
+┌──────────────────────────────────────────────────────────────┐
+│                    Data & Intelligence                       │
+│ Operational DB │ Analytics │ AI │ Search │ Event Store      │
+└──────────────────────────────────────────────────────────────┘
+
+                           ↓
+
+┌──────────────────────────────────────────────────────────────┐
+│                Integration & Interface Layer                 │
+│ ERP │ Finance │ Banks │ Attendance │ Insurance │ Clients    │
+└──────────────────────────────────────────────────────────────┘
+
+                           ↓
+
+┌──────────────────────────────────────────────────────────────┐
+│               Multi-Tenant SaaS Foundation                  │
+│ Tenant │ Security │ Configuration │ Localization │ Audit    │
+└──────────────────────────────────────────────────────────────┘
+```
+
+---
+
+# A. الـ20 Business Modules
+
+نثبت الـModules الحالية كـBusiness Domains.
+
+## Foundation
+
+```text
+01 — Company, Tenant & Core HR Foundation
+02 — Organization Structure & Job Architecture
+03 — Identity, Users, Roles, Permissions & Security
+04 — Employee Master Data & Employee Lifecycle Core
+```
+
+## Acquisition & Activation
+
+```text
+05 — Recruitment, Manpower Request & ATS
+06 — Onboarding, Pre-Employment Compliance & Employee Activation
+```
+
+## Workforce Operations & Pay
+
+```text
+07 — Attendance, Time, Shifts, Rosters & Field Workforce
+08 — Leave, Absence, Holidays & Employee Availability
+09 — Payroll, Compensation, Earnings & Deductions
+```
+
+## Performance & Talent
+
+```text
+10 — Performance Management
+11 — Learning, Competencies, Training & Certification
+12 — Career, Talent Review, Succession, Promotion & Mobility
+```
+
+## Employee Administration
+
+```text
+13 — Employee Relations, Grievances, Discipline & Investigations
+14 — HR Service Desk, Requests, Letters & ESS
+15 — Personnel, Contracts, Social Insurance & Employment Compliance
+16 — Offboarding, Clearance, Asset Recovery & Final Settlement
+```
+
+## Intelligence, Governance & Organization
+
+```text
+17 — HR Analytics, Workforce Planning & People Cost
+18 — HR Governance, Policies, Controls, Audit, Privacy & Risk
+19 — Employee Engagement, Experience, Culture & Wellbeing
+20 — Strategic OD, Organization Design & Workforce Transformation
+```
+
+---
+
+# B. الإضافات الخمسة تصبح Shared Capabilities
+
+وهنا التغيير المهم.
+
+## Capability 01 — Benefits Administration
+
+ليست Module منفصلة لأن Benefits تظهر في أكثر من lifecycle.
+
+تشمل:
+
+```text
+Benefit Plan Management
+Eligibility Rules
+Enrollment
+Dependents
+Medical Insurance
+Life Insurance
+Accident Insurance
+Family Coverage
+Optional Benefits
+Benefit Cost
+Employee Contributions
+Employer Contributions
+Provider Management
+Claims Interface
+Renewals
+Benefit Cards
+Coverage Status
+```
+
+### ترتبط بـ:
+
+```text
+Module 04 Employee
+Module 06 Onboarding
+Module 09 Payroll
+Module 14 Employee Services
+Module 15 Personnel
+Module 16 Offboarding
+Module 17 People Cost
+Module 18 Compliance
+```
+
+مثال:
+
+موظف جديد يدخل Module 06.
+
+```text
+Employee Activated
+↓
+Eligibility Engine
+↓
+Medical Plan A Eligible
+Life Insurance Eligible
+↓
+Enrollment
+↓
+Provider Interface
+↓
+Payroll Deduction if applicable
+```
+
+---
+
+# C. Benefits Eligibility Engine
+
+مهم جدًا ألا تكون Benefit assignment يدويًا فقط.
+
+Rules مثل:
+
+```text
+IF
+Country = Egypt
+AND Employment Type = Permanent
+AND Grade >= G4
+
+THEN
+Medical Plan = Gold
+```
+
+أو:
+
+```text
+IF Married = Yes
+THEN Dependents Allowed = Spouse + 2 Children
+```
+
+وتدار القواعد من Module 18 Policy Engine.
+
+---
+
+# D. Benefit Provider Management
+
+مثلاً:
+
+```text
+Medical Insurance Provider
+Life Insurance Provider
+Healthcare Network
+TPA
+```
+
+لكل Provider:
+
+```text
+Contract
+Coverage
+Start Date
+End Date
+SLA
+Pricing
+Contact
+Integration
+```
+
+---
+
+# E. Benefits Cost
+
+Module 17 يأخذ:
+
+```text
+Medical Insurance Cost
+Life Insurance
+Employee Contributions
+Employer Contributions
+```
+
+داخل:
+
+```text
+Fully Loaded People Cost
+```
+
+---
+
+# Capability 02 — Occupational Health & HSE Employee Readiness
+
+هذه أيضًا Cross-Module Capability.
+
+خصوصًا لأن Afro عندها:
+
+```text
+Field Engineers
+Technicians
+Riggers
+Drivers
+Site Supervisors
+```
+
+والـManual الحالي بالفعل يحتوي على Medical Examination وHSE courses كشرط للـdeployment. 
+
+---
+
+# F. Occupational Readiness Profile
+
+لكل موظف:
+
+```text
+Medical Fitness
+HSE Induction
+Working at Height
+Electrical Safety
+First Aid
+Fire Fighting
+Risk Assessment
+Customer Certifications
+PPE Readiness
+Role-Specific Certificates
+```
+
+---
+
+# G. Readiness Status
+
+النظام ينتج:
+
+```text
+READY
+
+CONDITIONALLY READY
+
+NOT READY
+
+EXPIRED
+```
+
+---
+
+# H. Deployment Gate
+
+مثلاً:
+
+```text
+Employee
+↓
+Assigned to Tower Project
+↓
+Check:
+Medical Fitness
+Working at Heights
+Customer Certificate
+PPE
+↓
+Fail
+↓
+Deployment Blocked
+```
+
+وهذه Rule حقيقية وليست Alert فقط.
+
+---
+
+# I. HSE Integration Boundaries
+
+مهم ألا نحول HR System إلى HSE Management System كامل.
+
+Afro HR يدير:
+
+```text
+Employee Readiness
+Medical Fitness
+Certifications
+Training
+Deployment Eligibility
+```
+
+بينما النظام المتخصص في HSE — إن وجد — يظل مالكًا لـ:
+
+```text
+Site Incidents
+Safety Inspections
+Risk Assessments
+Toolbox Talks
+Environmental Records
+```
+
+ويمكن الربط بين النظامين.
+
+---
+
+# J. Occupational Incident Interface
+
+لو وقع Incident في HSE:
+
+```text
+HSE System
+↓
+Employee Incident Reference
+↓
+Afro HR
+```
+
+قد يؤثر على:
+
+```text
+Readiness
+Leave
+Medical Follow-up
+Employee Relations
+```
+
+بدون نسخ ملف التحقيق الفني بالكامل إلى HR.
+
+---
+
+# Capability 03 — Travel, Business Trip & Expense Management
+
+هذه لا تحتاج Module مستقلة طالما أنها employee operational service.
+
+تشمل:
+
+```text
+Business Trip Request
+Travel Authorization
+Advance Request
+Accommodation
+Transport
+Per Diem
+Location Allowance
+Expense Claims
+Receipts
+Reconciliation
+Settlement
+Project Allocation
+```
+
+---
+
+# K. Business Trip Workflow
+
+مثال:
+
+```text
+Employee
+↓
+Business Trip Request
+
+Cairo → Aswan
+5 Days
+Project X
+↓
+Manager Approval
+↓
+Budget Check
+↓
+Travel Approval
+↓
+Advance
+↓
+Trip
+↓
+Expense Claim
+↓
+Finance Settlement
+```
+
+---
+
+# L. العلاقة مع البدلات التي وضعناها في Module 07/09
+
+هذه نقطة مهمة.
+
+عندنا نوعان مختلفان:
+
+### Work Location Allowance
+
+مثلاً:
+
+```text
+Employee normally assigned outside Cairo
+```
+
+مصدره:
+
+```text
+Attendance / Work Location
+```
+
+### Business Trip Per Diem
+
+موظف موقعه الأساسي القاهرة وتم إرساله أسوان 5 أيام.
+
+مصدره:
+
+```text
+Approved Business Trip
+```
+
+يجب ألا نخلط الاثنين.
+
+---
+
+# M. Expense Categories
+
+مثلاً:
+
+```text
+Hotel
+Transportation
+Flight
+Train
+Fuel
+Meals
+Communication
+Parking
+Visa
+Other
+```
+
+وكلها configurable.
+
+---
+
+# N. Expense Policy Rules
+
+مثلاً:
+
+```text
+Grade G4:
+Hotel Limit = 1,500 EGP/night
+```
+
+```text
+Grade G7:
+Hotel Limit = 2,500 EGP/night
+```
+
+وتأتي من:
+
+```text
+Module 18 Policy Engine
+```
+
+وليس hard-coded.
+
+---
+
+# O. Payroll / Finance Boundary
+
+Payroll يمكن أن يعالج:
+
+```text
+Taxable Employee Allowance
+Recurring Allowance
+```
+
+أما Expense reimbursement يمكن إرساله لـERP/Finance.
+
+وده يقودنا لقاعدة أساسية:
+
+> HR لا يجب أن يعيد بناء Accounts Payable إذا كان Nama ERP أو النظام المالي يقوم به.
+
+---
+
+# Capability 04 — HR Master Data Migration, Integration & Interface Management
+
+دي ليست HR Business Module أصلًا.
+
+دي **Platform Capability رئيسية جدًا**.
+
+وأسميها:
+
+# Integration & HR Data Exchange Hub
+
+---
+
+# P. مسؤوليتها
+
+إدارة كل الربط بين Afro HR وبين الأنظمة الأخرى.
+
+```text
+Nama ERP
+Finance
+Banks
+Attendance Devices
+Insurance Providers
+Customer Systems
+Microsoft / Google
+Email
+SMS
+WhatsApp if approved
+HSE Systems
+Project Systems
+```
+
+---
+
+# Q. Integration Registry
+
+كل Integration يكون له:
+
+```text
+Integration ID
+Source System
+Target System
+Data Object
+Direction
+Protocol
+Frequency
+Owner
+Authentication
+Status
+Last Run
+Last Successful Run
+Errors
+```
+
+---
+
+# R. Source of Truth Registry
+
+ودي من أهم أجزاء الـMaster Blueprint.
+
+لكل Data Object نحدد:
+
+```text
+System of Record
+```
+
+مثلاً:
+
+| Data                      | Owner                       |
+| ------------------------- | --------------------------- |
+| Employee Master           | Afro HR                     |
+| Position                  | Afro HR                     |
+| Attendance                | Afro HR / Attendance Source |
+| Salary Structure          | Afro HR                     |
+| Payroll Result            | Afro HR                     |
+| GL Account                | ERP                         |
+| Project Financial Code    | ERP                         |
+| Bank Payment Confirmation | Finance/Bank                |
+| HSE Incident              | HSE                         |
+| Medical Provider Claim    | Provider                    |
+
+---
+
+# S. Integration Pattern
+
+النظام يجب أن يدعم:
+
+```text
+REST API
+Webhook
+Scheduled API
+File Import
+SFTP
+Excel
+CSV
+Database Integration
+Message Queue
+```
+
+حسب النظام الخارجي.
+
+---
+
+# T. Master Data Migration
+
+وقت Go-Live نحتاج:
+
+```text
+Extract
+↓
+Clean
+↓
+Map
+↓
+Validate
+↓
+Import
+↓
+Reconcile
+↓
+Approve
+```
+
+---
+
+# U. Migration Templates
+
+مثلاً:
+
+```text
+Employees
+Positions
+Departments
+Salary
+Contracts
+Leave Balances
+Attendance
+Insurance
+Documents
+Historical Payroll
+```
+
+---
+
+# V. Data Validation
+
+قبل Import:
+
+```text
+Duplicate National IDs
+Missing Managers
+Invalid Department
+Invalid Employee Code
+Missing Grade
+Unknown Project
+```
+
+---
+
+# W. Data Reconciliation
+
+مثلاً:
+
+```text
+Source Employees: 3,842
+
+Imported: 3,835
+
+Rejected: 7
+```
+
+ثم سبب كل rejected record.
+
+---
+
+# X. Interface Monitoring Center
+
+Dashboard:
+
+```text
+23 Interfaces
+
+21 Healthy
+1 Warning
+1 Failed
+```
+
+مثلاً:
+
+```text
+Bank Interface     Healthy
+ERP Projects       Healthy
+Attendance Device  Delayed
+Insurance API      Failed
+```
+
+---
+
+# Capability 05 — System Administration & Configuration Center
+
+وده أيضًا لا أعتبره Module 21.
+
+ده:
+
+# Platform Control Center
+
+ومن أهم أجزاء الـSaaS.
+
+---
+
+# Y. Tenant Administration
+
+لكل Customer/Tenant:
+
+```text
+Tenant
+Companies
+Legal Entities
+Countries
+Subscription
+Enabled Modules
+Enabled Features
+Users
+Limits
+Storage
+```
+
+---
+
+# Z. Company Configuration
+
+لكل Company:
+
+```text
+Company Name
+Legal Name
+Logo
+Currency
+Timezone
+Fiscal Year
+Working Week
+Language
+Country
+Labor Rules
+```
+
+---
+
+# AA. Module Enable / Disable
+
+مثلاً Company A تستخدم:
+
+```text
+01–20
+```
+
+شركة B تستخدم فقط:
+
+```text
+01
+02
+03
+04
+05
+06
+07
+08
+09
+14
+15
+16
+```
+
+بدون تغيير source code.
+
+---
+
+# AB. Feature Flags
+
+حتى داخل Module:
+
+```text
+GPS Attendance
+Biometric
+Face Recognition
+QR
+Supervisor Attendance
+```
+
+يمكن تشغيل أو إيقاف كل capability.
+
+---
+
+# AC. Localization
+
+مركزيًا:
+
+```text
+Arabic
+English
+French
+```
+
+مع:
+
+```text
+RTL Arabic
+LTR English
+LTR French
+```
+
+بالإضافة إلى:
+
+```text
+Date Format
+Currency
+Numbers
+Calendar
+Timezone
+```
+
+---
+
+# AD. Numbering Engine
+
+مثلاً:
+
+```text
+Employee Code
+HR Request
+Investigation Case
+Hiring Request
+Payroll Batch
+Travel Request
+```
+
+يحدد من Configuration:
+
+```text
+AFR-HR-EMP-000001
+```
+
+وليس hard-coded.
+
+---
+
+# AE. Calendar Engine
+
+كل Company يمكن أن يكون لها:
+
+```text
+Work Week
+Weekend
+Public Holidays
+Project Calendar
+Shift Calendar
+Ramadan Calendar
+```
+
+---
+
+# AF. Notification Templates
+
+مثل:
+
+```text
+Employee Joined
+Leave Approved
+Payroll Published
+Contract Expiring
+Training Due
+Survey Invitation
+```
+
+يدير Admin:
+
+```text
+Arabic Template
+English Template
+French Template
+```
+
+---
+
+# AG. Configuration Hierarchy
+
+نحتاج قاعدة مهمة:
+
+```text
+Platform Default
+↓
+Tenant
+↓
+Company
+↓
+Project
+↓
+Employee Category
+```
+
+الأدق يغلب الأعلى.
+
+مثال:
+
+```text
+Platform Default:
+Weekend = Saturday/Sunday
+
+Egypt Company:
+Friday/Saturday
+
+Project X:
+Friday only
+```
+
+---
+
+# AH. Shared Engines
+
+الآن نصل للقلب الحقيقي للنظام.
+
+بدل أن كل Module يبني نفس الوظائف، نعمل Shared Engines.
+
+---
+
+# 1 — Workflow Engine
+
+أي عملية مثل:
+
+```text
+Leave
+Hiring
+Travel
+Promotion
+Salary Change
+Offboarding
+```
+
+تستخدم نفس Engine.
+
+يدعم:
+
+```text
+Draft
+Submit
+Review
+Approve
+Reject
+Return
+Cancel
+Escalate
+Delegate
+```
+
+---
+
+# 2 — Policy & Rules Engine
+
+الذي ناقشنا فكرته.
+
+```text
+Policy
+↓
+Rule
+↓
+Effective Date
+↓
+Affected Modules
+```
+
+مثلاً:
+
+```text
+Outside Cairo Allowance = 500 EGP/day
+```
+
+تستخدمه:
+
+```text
+Attendance
+Travel
+Payroll
+Budget
+Analytics
+```
+
+---
+
+# 3 — Delegation of Authority Engine
+
+Module 18 يكون Business Interface له.
+
+يدير:
+
+```text
+Who can approve?
+At what value?
+For which company?
+For which employee grade?
+```
+
+---
+
+# 4 — Permission & Security Engine
+
+أوسع من Role فقط.
+
+نحتاج:
+
+```text
+Role-Based Access
++
+Organization Scope
++
+Project Scope
++
+Field Security
++
+Data Classification
+```
+
+مثال:
+
+Project Manager:
+
+```text
+Employee View
+WHERE employee.project IN manager.projects
+```
+
+---
+
+# 5 — Notification Engine
+
+يدعم:
+
+```text
+In-App
+Email
+SMS
+Push
+```
+
+ومستقبلاً channels أخرى حسب integration.
+
+---
+
+# 6 — Document Engine
+
+ده Shared Capability مهم جدًا وكان موجودًا ضمن طلب الـMaster Blueprint.
+
+يدير:
+
+```text
+Templates
+Generation
+Versioning
+Attachments
+Signatures
+Storage
+Expiration
+```
+
+---
+
+# AI. Document Generation
+
+مثلاً:
+
+```text
+Employment Contract
+Salary Letter
+Experience Certificate
+Warning Letter
+Promotion Letter
+Travel Authorization
+```
+
+من Templates.
+
+---
+
+# AJ. Template Fields
+
+مثلاً:
+
+```text
+{{employee_name}}
+{{job_title}}
+{{salary}}
+{{joining_date}}
+{{company}}
+```
+
+---
+
+# 7 — Approval Engine
+
+يمكن أن يكون جزءًا من Workflow أو service داخلي.
+
+يدعم:
+
+```text
+Sequential Approval
+Parallel Approval
+Conditional Approval
+Quorum
+```
+
+---
+
+# 8 — Audit Engine
+
+كل تغيير:
+
+```text
+Who
+What
+When
+Before
+After
+Reason
+Source
+```
+
+لا يبنى Audit مختلف داخل كل Module.
+
+---
+
+# 9 — Task & SLA Engine
+
+مثلاً:
+
+```text
+Onboarding Task
+Document Follow-Up
+Service Request
+Clearance
+Audit Action
+```
+
+كلها تستخدم:
+
+```text
+Owner
+Due Date
+SLA
+Escalation
+Status
+```
+
+---
+
+# 10 — Search Engine
+
+Global Search:
+
+```text
+Employee
+Position
+Request
+Document
+Policy
+Case
+Project
+```
+
+مع احترام Permissions.
+
+---
+
+# 11 — Attachment / File Service
+
+بدل كل Module يعمل Storage خاص.
+
+يدعم:
+
+```text
+PDF
+Image
+Excel
+Word
+```
+
+مع:
+
+```text
+Virus Scan
+Version
+Access Control
+Retention
+```
+
+---
+
+# 12 — Localization Engine
+
+Centralized translations.
+
+---
+
+# 13 — Event Engine
+
+وده مهم جدًا للتكامل الداخلي.
+
+بدل Module 06 ينادي 7 Modules مباشرة:
+
+```text
+EmployeeActivated
+```
+
+يُصدر Event.
+
+ثم:
+
+```text
+Payroll listens
+Attendance listens
+Benefits listens
+Learning listens
+IT integration listens
+Analytics listens
+```
+
+---
+
+# AK. مثال Event Architecture
+
+```text
+EmployeeActivated
+        │
+        ├── Payroll
+        ├── Attendance
+        ├── Leave
+        ├── Benefits
+        ├── Training
+        ├── Notifications
+        └── Analytics
+```
+
+وده يقلل coupling بين Modules.
+
+---
+
+# AL. أهم Events في المنظومة
+
+مثلاً:
+
+```text
+EmployeeCreated
+EmployeeActivated
+EmployeeTransferred
+EmployeePromoted
+
+AttendanceApproved
+LeaveApproved
+
+PayrollClosed
+
+PerformanceCompleted
+
+TrainingCompleted
+CertificationExpired
+
+ContractExpiring
+
+OffboardingStarted
+EmployeeOffboarded
+
+PolicyChanged
+
+OrganizationChanged
+```
+
+---
+
+# AM. API Layer
+
+النظام يحتاج API-first architecture.
+
+مثلاً:
+
+```text
+/api/v1/employees
+/api/v1/positions
+/api/v1/attendance
+/api/v1/payroll
+/api/v1/leave
+```
+
+---
+
+# AN. API Gateway
+
+كل integrations تمر عبر:
+
+```text
+API Gateway
+```
+
+مسؤول عن:
+
+```text
+Authentication
+Rate Limiting
+Tenant Isolation
+Logging
+Versioning
+```
+
+---
+
+# AO. Webhook Framework
+
+مثلاً external application يشترك في:
+
+```text
+employee.activated
+```
+
+Afro HR يرسل:
+
+```text
+Employee ID
+Company
+Effective Date
+```
+
+---
+
+# AP. Master Data Ownership
+
+لازم نثبت هذه القاعدة رسميًا.
+
+## مثال أولي
+
+| Domain                     | System Owner       |
+| -------------------------- | ------------------ |
+| Tenant                     | Afro HR            |
+| Organization               | Afro HR            |
+| Position                   | Afro HR            |
+| Employee                   | Afro HR            |
+| Job/Grade                  | Afro HR            |
+| Attendance                 | Afro HR            |
+| Leave                      | Afro HR            |
+| Payroll Calculation        | Afro HR            |
+| HR Documents               | Afro HR            |
+| Project Operational Master | ERP/Project System |
+| GL / Accounting            | ERP                |
+| Bank Payment               | Finance/Bank       |
+| HSE Incident               | HSE                |
+| Medical Claim              | Provider           |
+
+هذه الـmatrix سنحتاج عملها بالتفصيل لكل data object.
+
+---
+
+# AQ. Database Domain Architecture
+
+لا أنصح بقاعدة واحدة عشوائية فيها 500 table.
+
+نقسم Logical Domains.
+
+```text
+identity
+tenant
+organization
+employee
+
+recruitment
+onboarding
+
+time
+leave
+payroll
+
+performance
+learning
+talent
+
+employee_relations
+hr_services
+personnel
+offboarding
+
+analytics
+governance
+engagement
+od
+
+benefits
+travel
+occupational_readiness
+
+workflow
+rules
+notifications
+documents
+audit
+
+integration
+configuration
+```
+
+---
+
+# AR. هل نحتاج Microservices؟
+
+في البداية:
+
+**لا أنصح نبدأ بـ20 Microservices.**
+
+ده سيضيف:
+
+```text
+Deployment Complexity
+Networking
+Distributed Transactions
+Observability Complexity
+DevOps Cost
+```
+
+بدون عائد مناسب في البداية.
+
+أفضل:
+
+# Modular Monolith
+
+لكن بحدود Domains واضحة.
+
+```text
+One deployable application
+
+BUT
+
+Clear module boundaries
+Clear APIs
+Clear domain ownership
+Event architecture
+```
+
+---
+
+# AS. وبعد النمو؟
+
+يمكن لاحقًا فصل أجزاء مثل:
+
+```text
+Payroll
+Notifications
+Documents
+Analytics
+Integrations
+AI
+```
+
+إلى Services مستقلة إذا ظهرت حاجة فعلية.
+
+---
+
+# AT. SaaS Multi-Company Architecture
+
+عندنا مستوى:
+
+```text
+Platform
+↓
+Tenant
+↓
+Company
+↓
+Legal Entity
+↓
+Business Unit
+↓
+Project
+```
+
+---
+
+# AU. Tenant Isolation
+
+كل record حساس يحمل:
+
+```text
+tenant_id
+```
+
+وفي كثير من الحالات:
+
+```text
+company_id
+```
+
+ولا تعتمد العزلة على UI.
+
+يجب فرضها في:
+
+```text
+Database Queries
+API
+Permissions
+Jobs
+Reports
+Search
+AI
+```
+
+---
+
+# AV. Super Admin Levels
+
+نحتاج فصل:
+
+### Platform Super Admin
+
+لشركة النظام نفسها.
+
+لا ينبغي تلقائيًا أن يرى HR data الخاصة بالعميل.
+
+### Tenant Super Admin
+
+خاص بكل Tenant.
+
+### Company Admin
+
+خاص بشركة معينة.
+
+---
+
+# AW. Platform Admin Data Privacy
+
+حتى الـSaaS provider لا يجب أن يرى salary records بشكل افتراضي.
+
+نحتاج:
+
+```text
+Support Access
+```
+
+مؤقت + approved + audited.
+
+---
+
+# AX. Shared Employee Identity
+
+إذا نفس الشخص يعمل في أكثر من Company داخل Tenant، نحتاج قرار architecture:
+
+```text
+Person
+↓
+Employment
+```
+
+بدل:
+
+```text
+Employee = Person
+```
+
+وده أفضل.
+
+مثلاً:
+
+```text
+Person: Mohamed Ahmed
+
+Employment 1:
+Afro Egypt
+
+Employment 2:
+Afro Saudi
+```
+
+---
+
+# AY. Core Entity Model
+
+واحدة من أهم القرارات:
+
+```text
+Person
+↓
+Employment
+↓
+Assignment
+↓
+Position
+↓
+Organization
+```
+
+Employee ممكن يكون له أكثر من:
+
+```text
+Assignment
+Project
+Cost Center
+Manager
+```
+
+---
+
+# AZ. Effective Dating
+
+يجب أن يكون Pattern مركزيًا.
+
+مثلاً Employee Grade:
+
+```text
+G5
+01-Jan → 30-Jun
+
+G6
+01-Jul →
+```
+
+بدل overwrite.
+
+يستخدم في:
+
+```text
+Organization
+Salary
+Position
+Manager
+Policy
+Allowance
+Benefits
+```
+
+---
+
+# BA. AI Layer
+
+الـAI لا يجب أن يدخل داخل كل Module عشوائيًا.
+
+نعمل:
+
+# HR AI Platform Layer
+
+---
+
+# BB. AI Capabilities
+
+### HR Copilot
+
+يسأل:
+
+> Who has contracts expiring this month?
+
+### Policy Assistant
+
+> What approval is required for this salary change?
+
+### Analytics Assistant
+
+> Why did overtime increase?
+
+### Manager Assistant
+
+> What actions are overdue for my team?
+
+### Employee Assistant
+
+> How many leave days do I have?
+
+---
+
+# BC. AI Retrieval Layer
+
+الـAI يصل فقط إلى data حسب صلاحية المستخدم:
+
+```text
+User
+↓
+Permission Engine
+↓
+Authorized Data
+↓
+AI
+```
+
+وليس:
+
+```text
+AI
+↓
+Entire Database
+```
+
+---
+
+# BD. AI Actions
+
+مثلاً المدير يقول:
+
+> Create a hiring request for 5 technicians.
+
+الـAI يمكن أن يجهز Draft.
+
+لكن:
+
+```text
+Human reviews
+↓
+Submit
+```
+
+ولا يتجاوز Workflow أو Policy.
+
+---
+
+# BE. AI Guardrail Architecture
+
+قبل أي Action:
+
+```text
+Authentication
+↓
+Permission
+↓
+Policy
+↓
+Workflow
+↓
+AI Action
+↓
+Audit
+```
+
+يعني AI **ليس فوق النظام**.
+
+AI هو User/Agent خاضع لنفس القواعد.
+
+---
+
+# BF. Analytics Architecture
+
+Module 17 لا يجب أن يضغط على Operational DB بتقارير ضخمة.
+
+نعمل:
+
+```text
+Operational Database
+↓
+Analytics Pipeline
+↓
+Analytics Store / Warehouse
+↓
+Semantic Layer
+↓
+Dashboards
+↓
+AI
+```
+
+---
+
+# BG. Semantic Layer
+
+تعريف مركزي لـ:
+
+```text
+Headcount
+Turnover
+People Cost
+Absence
+FTE
+```
+
+حتى لا يكون Turnover في Dashboard A مختلف عن Dashboard B.
+
+---
+
+# BH. Notification Architecture
+
+كل Event يمكن أن يولد Notification.
+
+مثلاً:
+
+```text
+ContractExpiring
+↓
+Rule
+↓
+60 Days
+Personnel
+Manager
+
+30 Days
+Personnel Manager
+
+7 Days
+P&C Manager
+```
+
+---
+
+# BI. Scheduled Jobs
+
+Central scheduler لـ:
+
+```text
+Contract Expiry
+Certificate Expiry
+Payroll
+Leave Accrual
+Survey
+Policy Review
+Data Sync
+```
+
+---
+
+# BJ. Master Workflow
+
+يمكن تصور Employee Lifecycle كله:
+
+```text
+Manpower Plan
+↓
+Position
+↓
+Hiring Request
+↓
+Recruitment
+↓
+Offer
+↓
+Onboarding
+↓
+Activation
+↓
+Assignment
+↓
+Attendance
+↓
+Payroll
+↓
+Performance
+↓
+Learning
+↓
+Career
+↓
+Engagement
+↓
+Personnel Administration
+↓
+Offboarding
+```
+
+ومحيط به:
+
+```text
+Policies
+Governance
+Benefits
+HSE Readiness
+Analytics
+AI
+Documents
+Integrations
+```
+
+---
+
+# BK. من يملك ماذا؟
+
+دي قاعدة أعتبرها أساسية جدًا:
+
+## Business Module owns the transaction.
+
+مثال:
+
+```text
+Module 08 owns Leave Request
+```
+
+لكن:
+
+```text
+Workflow Engine
+does not own Leave.
+
+Policy Engine
+does not own Leave.
+
+Notification Engine
+does not own Leave.
+```
+
+هي فقط Services يستخدمها Module 08.
+
+---
+
+# BL. Policy Change Example داخل الـBlueprint
+
+نرجع لسؤالك السابق.
+
+سياسة بدل خارج القاهرة تغيرت.
+
+```text
+Module 18
+Policy V2
+↓
+Rules Engine
+↓
+Effective 01-Sep
+```
+
+Affected systems:
+
+```text
+Module 07
+Location validation
+
+Travel Capability
+Trip eligibility
+
+Module 09
+Allowance calculation
+
+Module 17
+People cost forecast
+```
+
+بدون تعديل source code إذا الـRule type موجود.
+
+---
+
+# BM. Configuration vs Customization
+
+نحتاج قاعدة صارمة:
+
+### Configuration
+
+مسموح:
+
+```text
+Leave Days
+Allowances
+Approval Levels
+Grades
+Currencies
+Work Weeks
+Thresholds
+```
+
+### Custom Development
+
+فقط إذا العميل يريد **Business Capability جديدة فعلًا**.
+
+وده مهم جدًا لنجاح SaaS.
+
+---
+
+# BN. Plugin / Extension Architecture مستقبلًا
+
+يمكن لاحقًا إضافة:
+
+```text
+Customer-specific integrations
+Custom reports
+Custom calculation providers
+```
+
+بدون fork للـcore product.
+
+---
+
+# BO. النظام النهائي يصبح 3 مستويات
+
+## Level 1 — Business Domains
+
+```text
+20 Modules
+```
+
+## Level 2 — Shared Business Capabilities
+
+```text
+Benefits
+Occupational Health / HSE Readiness
+Travel & Expense
+```
+
+## Level 3 — Platform Capabilities
+
+```text
+Integration Hub
+Configuration Center
+
+Workflow
+Rules
+Permissions
+Documents
+Notifications
+Audit
+Events
+APIs
+Analytics
+AI
+```
+
+وده عندي أفضل كثيرًا من تحويل كل وظيفة إلى Module مستقل.
+
+---
+
+# BP. الشكل النهائي للـMaster Blueprint
+
+```text
+                    AFRO HR V2
+                         │
+        ┌────────────────┴────────────────┐
+        │                                 │
+ Employee / Manager / HR             External Systems
+ Experience Layer                         │
+        │                                 │
+        └──────────────┬──────────────────┘
+                       │
+                 API Gateway
+                       │
+        ┌──────────────┴──────────────┐
+        │                             │
+   20 HR Modules              Shared Capabilities
+                                    │
+                            Benefits
+                            HSE Readiness
+                            Travel & Expense
+        │                             │
+        └──────────────┬──────────────┘
+                       │
+                 Shared Engines
+                       │
+       ┌───────────────┼─────────────────┐
+       │               │                 │
+    Workflow         Policy           Security
+    Approvals        Rules            Permissions
+    SLA              DoA              Privacy
+       │               │                 │
+       ├──────── Documents ──────────────┤
+       ├──────── Notifications ──────────┤
+       ├──────── Audit ──────────────────┤
+       └──────── Events ─────────────────┘
+                       │
+                 Domain Data
+                       │
+          Operational + Analytics
+                       │
+                 AI Platform
+                       │
+               Integration Hub
+                       │
+       ERP / Bank / Devices / Insurance /
+          Customer / HSE / Finance
+```
+
+## القرار الذي أثبته من هنا
+
+**نقف عند 20 Business Modules.**
+
+ولا نضيف:
+
+```text
+Module 21 Benefits
+Module 22 HSE
+Module 23 Travel
+Module 24 Integrations
+Module 25 Administration
+```
+
+لأن ذلك سيشوّه الـDomain Architecture.
+
+بدلًا من ذلك:
+
+> **20 Business Modules + Shared Business Capabilities + Shared Platform Engines + Integration Layer + AI/Data Layer + SaaS Foundation.**
+
+وده يجعل النظام أكثر مرونة خصوصًا لما نبيع الـSaaS لشركات مختلفة: شركة قد تشغل **Benefits + Travel**، وشركة أخرى لا تحتاجهما، بدون المساس بالـHR Core.
+
+والخطوة التالية التي أنصح بها الآن ليست إضافة أي وظائف أخرى، بل بناء **System Master Map** تفصيلي يكون فيه كل Module من 01 إلى 20 في صف، وأمام كل Module: **Owner → Master Data → Transactions → Inputs → Outputs → Policies → Events Produced → Events Consumed → Integrations → Shared Engines → Dependencies**. هذه ستكون الوثيقة التي نستطيع بعدها تحويل النظام فعليًا إلى **Database Architecture + API Architecture + Frontend Sitemap + Backend Services + Development Roadmap**.

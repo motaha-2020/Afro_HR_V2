@@ -1,0 +1,1640 @@
+نعم، وهذا الفصل بين **Module 14** و **Module 15** ضروري معماريًا، وإلا سنقع بسرعة في تداخل بين “إدارة الطلب” و“إدارة السجل الرسمي للموظف”.
+
+الـManual الحالي يدعم هذا الاتجاه بوضوح: Personnel مسؤول عن جمع والتحقق من مستندات الموظف، إنشاء الملف الوظيفي، العقود، التأمينات، payroll bank letter، التسجيل في ERP، ومتابعة السجلات والتجديدات؛ بينما HR Operations يتابع نقص المستندات والتأمينات وتجديد العقود طوال دورة حياة الموظف.  كما أن الهيكل التنظيمي الحالي يفصل Personnel كقسم مستقل تحت People & Culture. 
+
+# Module 15 — Employee Documents, Contracts, Personnel Administration, Social Insurance, Medical Insurance & Compliance Management
+
+## 15.1 الدور الرئيسي
+
+هذا الـModule يصبح:
+
+> **Official Personnel System of Record**
+
+أي أن أي حقيقة رسمية مرتبطة بعلاقة الموظف بالشركة يجب أن يكون مرجعها هنا.
+
+مثل:
+
+* Employment Contract
+* Contract Versions
+* Contract Status
+* National ID
+* Passport
+* Social Insurance
+* Medical Insurance
+* Bank Documentation
+* Employment Documents
+* Certificates
+* Legal Employment Status
+* Personnel File
+* Document Expiry
+* Renewals
+* Employee Legal Compliance
+
+ولا نعتمد على Email أو Excel كمرجع نهائي.
+
+---
+
+# 15.2 الفرق بين Module 14 و Module 15
+
+الفرق يجب أن يبقى واضحًا جدًا.
+
+### Module 14
+
+يدير:
+
+**Request**
+
+مثال:
+
+> أريد تحديث البطاقة الشخصية.
+
+### Module 15
+
+يدير:
+
+**Official Record**
+
+مثال:
+
+```text
+National ID
+Number: **************
+Issue Date: ...
+Expiry Date: ...
+Verified: Yes
+Version: 3
+```
+
+Workflow:
+
+```text
+Employee
+↓
+Module 14
+Update National ID Request
+↓
+Personnel Validation
+↓
+Module 15
+Official Employee Record Updated
+```
+
+وبالتالي:
+
+> Module 14 = Transaction / Service Layer
+> Module 15 = Master Record / Compliance Layer
+
+---
+
+# 15.3 Employee Personnel File
+
+لكل Employee:
+
+## Digital Personnel File
+
+ويحتوي على Sections مثل:
+
+* Personal Documents
+* Employment Documents
+* Contract Documents
+* Social Insurance
+* Medical Insurance
+* Bank Documents
+* Qualifications
+* Certifications
+* Military Status
+* Syndicate Documents
+* Legal Documents
+* Employee Acknowledgments
+* Company Forms
+* Historical Records
+
+---
+
+# 15.4 Document Types
+
+كل Document Type يكون configurable.
+
+مثلاً:
+
+### Personal
+
+* National ID
+* Birth Certificate
+* Passport
+* Personal Photos
+
+### Education
+
+* University Degree
+* Diploma
+* Technical Certificate
+
+### Employment
+
+* Employment Contract
+* Job Offer
+* Job Description
+* Employee Handbook Acknowledgment
+* NDA
+
+### Government
+
+* Social Insurance Form 1
+* Social Insurance Form 6
+* Kaab Amal
+* Criminal Record
+* Military Certificate
+
+### Medical
+
+* Form 111
+* Medical Insurance Card
+* Medical Examination
+* Fitness Certificate
+
+### Professional
+
+* Engineers Syndicate Card
+* Skill Assessment Certificate
+* Professional Practice License
+
+وهذه الأنواع موجودة بشكل مباشر في onboarding checklist داخل الـManual. 
+
+---
+
+# 15.5 Document Requirements Matrix
+
+وهذه واحدة من أهم النقاط.
+
+ليس كل الموظفين يحتاجون نفس المستندات.
+
+نحتاج:
+
+**Document Requirement Rules Engine**
+
+حسب:
+
+* Company
+* Country
+* Employee Type
+* Position
+* Grade
+* Job Family
+* Project
+* Client
+* Work Location
+* Safety Classification
+* Employment Type
+
+مثلاً:
+
+```text
+Technician
+↓
+Skill Assessment Certificate
+Professional Practice License
+Medical Exam
+HSE Certificates
+```
+
+بينما Office Employee قد لا يحتاج بعضها.
+
+---
+
+# 15.6 Mandatory / Optional / Conditional
+
+كل Document Requirement يكون:
+
+```text
+Mandatory
+Optional
+Conditional
+Not Applicable
+```
+
+مثلاً:
+
+**Engineers Syndicate Card**
+
+شرطه:
+
+```text
+Job Profession = Engineer
+AND
+Country = Egypt
+```
+
+---
+
+# 15.7 Document Status
+
+كل مستند يمر بحالة:
+
+```text
+Missing
+Requested
+Uploaded
+Pending Verification
+Verified
+Rejected
+Expiring Soon
+Expired
+Replaced
+Suspended
+Archived
+```
+
+---
+
+# 15.8 Verification
+
+المستند لا يصبح Official بمجرد Upload.
+
+Workflow:
+
+```text
+Employee Upload
+↓
+Personnel Review
+↓
+Verify authenticity / completeness
+↓
+Approve
+↓
+Official Record
+```
+
+مع:
+
+* Verified By
+* Verification Date
+* Comments
+* Verification Method
+
+---
+
+# 15.9 Document Versioning
+
+ممنوع overwrite.
+
+مثلاً:
+
+```text
+National ID
+
+V1
+Expired 2024
+
+V2
+Expired 2026
+
+V3
+Current
+```
+
+كل Version يحتفظ بـ:
+
+* File
+* Metadata
+* Validity
+* Approver
+* Upload date
+* Status
+
+---
+
+# 15.10 Expiry Engine
+
+النظام يراقب:
+
+* National ID
+* Passport
+* Contract
+* Insurance
+* Professional License
+* Medical Card
+* HSE Certification
+* Customer Certification
+
+مثلاً:
+
+```text
+Expiry Date: 15-Nov-2026
+
+90 days → Notice
+60 days → Reminder
+30 days → High Priority
+7 days → Critical
+Expired → Non-Compliant
+```
+
+كلها configurable.
+
+---
+
+# 15.11 Compliance Status
+
+لكل Employee:
+
+```text
+Fully Compliant
+Conditionally Compliant
+At Risk
+Non-Compliant
+Blocked
+```
+
+مثلاً:
+
+```text
+Employee: Technician
+Required Docs: 12
+Valid: 10
+Expiring: 1
+Missing: 1
+
+Compliance = At Risk
+```
+
+---
+
+# 15.12 Employment Blocking Rules
+
+وهذه مهمة جدًا.
+
+الـManual الحالي ينص صراحة على عدم تفعيل employee في systems أو assignment أو payroll قبل استكمال mandatory onboarding requirements. 
+
+لذلك النظام يجب أن يدعم:
+
+```text
+Hard Block
+Soft Block
+Warning Only
+```
+
+مثلاً:
+
+### Hard Block
+
+* Contract missing
+* Required HSE clearance missing
+
+### Soft Block
+
+* Document expires within 30 days
+
+---
+
+# 15.13 Contract Management
+
+العقد نفسه يحتاج sub-module مستقل داخل Module 15.
+
+كل Contract يحتوي:
+
+* Contract Number
+* Contract Type
+* Company
+* Employee
+* Start Date
+* End Date
+* Probation
+* Job
+* Grade
+* Salary Reference
+* Work Location
+* Project
+* Working Hours
+* Employment Type
+* Legal Entity
+* Status
+
+---
+
+# 15.14 Contract Types
+
+مثلاً:
+
+* Permanent
+* Fixed Term
+* Temporary
+* Project-Based
+* Daily
+* Part-Time
+* Outsourced
+* Internship
+* Consultant
+
+لكن القواعد تبقى configurable حسب الشركة والدولة.
+
+---
+
+# 15.15 Contract Lifecycle
+
+```text
+Draft
+Prepared
+Pending Review
+Pending Signature
+Active
+Renewal Due
+Renewal Under Review
+Renewed
+Expired
+Terminated
+Cancelled
+Archived
+```
+
+---
+
+# 15.16 Contract Renewal
+
+النظام يعمل automatically:
+
+```text
+Contract Expiry = 31-Dec
+
+90 Days Before
+↓
+Renewal Case
+↓
+Direct Manager
+↓
+HR Operations
+↓
+Personnel
+↓
+Approval
+↓
+New Contract Version
+```
+
+---
+
+# 15.17 Renewal Decision
+
+الـManager يستطيع:
+
+```text
+Renew
+Do Not Renew
+Extend Temporarily
+Transfer
+Change Employment Type
+```
+
+لكن execution النهائي يكون controlled.
+
+---
+
+# 15.18 Contract Changes
+
+أي amendment مثل:
+
+* Salary
+* Position
+* Department
+* Location
+* Project
+* Working Hours
+* Employment Type
+
+لا يعدل العقد القديم.
+
+بل:
+
+```text
+Contract Amendment
+```
+
+مع history.
+
+---
+
+# 15.19 Electronic Contract Signing
+
+يمكن دعم:
+
+* Digital signature
+* OTP acknowledgement
+* Uploaded signed copy
+* Wet signature tracking
+
+والنظام يسجل:
+
+* Signed By Employee
+* Signed By Company
+* Signature Date
+* Method
+
+---
+
+# 15.20 Contract Template Engine
+
+مثل Module 14 Letter Engine.
+
+Template variables:
+
+```text
+{{EmployeeName}}
+{{NationalID}}
+{{JobTitle}}
+{{Grade}}
+{{BasicSalary}}
+{{GrossSalary}}
+{{Project}}
+{{StartDate}}
+{{EndDate}}
+```
+
+---
+
+# 15.21 Personnel Transactions
+
+Module 15 يجب أن يدير official Personnel Changes.
+
+مثل:
+
+* Hire
+* Transfer
+* Promotion
+* Demotion
+* Salary Change
+* Project Transfer
+* Location Transfer
+* Reporting Manager Change
+* Employment Type Change
+* Contract Renewal
+* Suspension
+* Return from Leave
+* Resignation
+* Termination
+
+لكن بعض القرارات originate من Modules أخرى.
+
+مثلاً Promotion:
+
+```text
+Module 12
+Promotion Approved
+↓
+Module 15
+Personnel Transaction Executed
+```
+
+---
+
+# 15.22 Effective Dating
+
+مهم جدًا.
+
+كل Transaction يحتوي:
+
+```text
+Decision Date
+Approval Date
+Effective Date
+System Entry Date
+Payroll Effective Date
+```
+
+مثلاً:
+
+Promotion approved 10 Aug.
+
+Effective 1 Sep.
+
+لا يجب أن تختلط التواريخ.
+
+---
+
+# 15.23 Historical Employee Records
+
+أي تغيير في:
+
+* Job
+* Department
+* Project
+* Manager
+* Location
+* Grade
+* Contract
+
+يحتفظ به كـHistory.
+
+مثلاً:
+
+```text
+01-Jan-2025
+Project A
+
+01-Jul-2025
+Project B
+
+01-Aug-2026
+Project C
+```
+
+---
+
+# 15.24 Social Insurance Management
+
+الـManual يذكر:
+
+* Social Insurance Form 1
+* effective from joining date
+* submit within 1 week
+* Social Insurance activation follow-up
+* Form 6 during exit. 
+
+لذلك نحتاج:
+
+**Social Insurance Subsystem**
+
+---
+
+# 15.25 Social Insurance Employee Record
+
+Fields مثل:
+
+```text
+Social Insurance Number
+Registration Status
+Registration Date
+Insurable Salary
+Office
+Form 1 Status
+Form 6 Status
+Last Update
+```
+
+---
+
+# 15.26 Social Insurance Lifecycle
+
+```text
+Not Registered
+Pending Registration
+Submitted
+Active
+Suspended
+Closure Pending
+Closed
+```
+
+---
+
+# 15.27 Form 1 Workflow
+
+عند Hire:
+
+```text
+Employee Activated
+↓
+Form 1 Required
+↓
+Personnel Preparation
+↓
+Submission
+↓
+Confirmation
+↓
+Social Insurance Active
+```
+
+---
+
+# 15.28 Form 6 Workflow
+
+عند Offboarding:
+
+```text
+Exit Approved
+↓
+Form 6
+↓
+Submission
+↓
+Closure
+```
+
+ويرتبط مباشرة بـModule 16 لاحقًا لو فصلنا Offboarding Final Closure.
+
+---
+
+# 15.29 Social Insurance SLA
+
+النظام لا يعتمد على manual follow-up.
+
+مثلاً:
+
+```text
+Registration Due Date
+Submitted Date
+Confirmation Date
+Days Delayed
+```
+
+مع alerts.
+
+---
+
+# 15.30 Medical Insurance Management
+
+الـManual يذكر التسجيل في Medical Insurance effective from joining date والإصدار خلال أسبوع، إضافة إلى متابعة medical insurance طوال دورة الموظف. 
+
+لذلك:
+
+**Medical Insurance Subsystem**
+
+---
+
+# 15.31 Medical Insurance Record
+
+يشمل:
+
+* Provider
+* Policy Number
+* Employee Medical ID
+* Class
+* Coverage Start
+* Coverage End
+* Status
+* Card Status
+* Provider Member ID
+
+---
+
+# 15.32 Medical Insurance Dependents
+
+إذا الشركة تسمح:
+
+* Spouse
+* Children
+* Parent
+
+مع:
+
+* Relationship
+* Eligibility
+* Coverage
+* Effective Date
+* Expiry
+* Cost Share
+
+---
+
+# 15.33 Medical Insurance Lifecycle
+
+```text
+Not Eligible
+Eligible
+Pending Enrollment
+Submitted
+Active
+Card Pending
+Active With Card
+Suspended
+Cancelled
+Expired
+```
+
+---
+
+# 15.34 Medical Card Management
+
+Tracking:
+
+```text
+Requested
+Issued
+Delivered to HR
+Delivered to Employee
+Lost
+Replacement Requested
+Cancelled
+```
+
+---
+
+# 15.35 Insurance Requests
+
+Module 14 يستقبل:
+
+> Add dependent.
+
+ثم:
+
+```text
+Module 14 Request
+↓
+Module 15 Medical Insurance Transaction
+↓
+Provider Update
+↓
+Coverage Active
+```
+
+---
+
+# 15.36 Bank Documentation
+
+لا أحب وضع Bank Account فقط داخل Payroll.
+
+نحتاج official Bank Record في Personnel.
+
+Fields:
+
+* Bank
+* Branch
+* Account Number
+* IBAN
+* Account Holder
+* Verification
+* Effective Date
+
+ثم Module 09 يستخدم approved record.
+
+---
+
+# 15.37 Bank Account History
+
+مثلًا:
+
+```text
+Old Bank
+Valid until 31-Aug
+
+New Bank
+Effective 1-Sep
+```
+
+مهم لمنع payroll mistakes.
+
+---
+
+# 15.38 Government & Legal Documents
+
+حسب البلد.
+
+مثلاً في مصر:
+
+* National ID
+* Social Insurance
+* Form 1
+* Form 6
+* Kaab Amal
+* Military Certificate
+* Criminal Record
+* Medical Form
+
+لكن architecturally:
+
+**Country-Specific Compliance Pack**
+
+حتى يبقى SaaS صالحًا لاحقًا لدول أخرى.
+
+---
+
+# 15.39 Country Rules Engine
+
+مثلاً:
+
+```text
+Country: Egypt
+↓
+Egypt Personnel Compliance Pack
+```
+
+ودولة أخرى يكون لها:
+
+```text
+Different Government Forms
+Different Contract Rules
+Different Insurance Requirements
+```
+
+---
+
+# 15.40 Employee Acknowledgments
+
+كل Policies التي يجب أن يوافق عليها الموظف.
+
+مثل:
+
+* Employee Handbook
+* Code of Conduct
+* Data Privacy
+* IT Policy
+* HSE Policy
+* NDA
+* Asset Policy
+
+Status:
+
+```text
+Not Issued
+Issued
+Viewed
+Acknowledged
+Declined
+Expired
+```
+
+---
+
+# 15.41 Policy Version Control
+
+لو Policy changed:
+
+لا نقول الموظف وافق على Policy بشكل عام.
+
+نسجل:
+
+```text
+Code of Conduct
+Version 3.1
+Acknowledged 10-Aug-2026
+```
+
+ثم Version 4 يحتاج acknowledgement جديد.
+
+---
+
+# 15.42 Personnel Checklist
+
+لكل موظف:
+
+```text
+Contract            ✓
+National ID         ✓
+Birth Certificate   ✓
+Insurance           ✓
+Medical             ⚠
+Professional Lic.   ✕
+```
+
+Personnel يستطيع معرفة النواقص فورًا.
+
+---
+
+# 15.43 Compliance Score
+
+ممكن نحسب:
+
+```text
+Compliance Score
+```
+
+لكن لا أنصح باستخدام Percentage وحده.
+
+أفضل:
+
+```text
+Critical Missing
+Non-Critical Missing
+Expiring
+Complete
+```
+
+لأن فقدان Contract لا يساوي فقدان صورة شخصية.
+
+---
+
+# 15.44 Criticality Matrix
+
+كل Document Type يأخذ:
+
+```text
+Critical
+High
+Medium
+Low
+```
+
+مثلاً:
+
+Contract = Critical
+
+National ID = Critical
+
+Personal Photo = Low
+
+---
+
+# 15.45 Customer-Specific Compliance
+
+مهمة جدًا لشركة مشاريع واتصالات.
+
+بعض العملاء قد يفرضون:
+
+* Safety Certificate
+* Medical Exam
+* Site Access
+* Customer Certification
+
+لذلك employee قد يكون:
+
+```text
+Company Compliant
+BUT
+Not Compliant for Customer X
+```
+
+---
+
+# 15.46 Project Deployment Compliance
+
+قبل Assignment:
+
+```text
+Employee
+↓
+Project Requirements
+↓
+Compliance Check
+```
+
+مثلاً:
+
+```text
+Huawei Project
+Required:
+HSE Course
+Medical
+Customer ID
+Specific Training
+```
+
+---
+
+# 15.47 Deployment Gate
+
+لو Required Docs ناقصة:
+
+```text
+Deployment Blocked
+```
+
+هذا يربط Module 15 مع:
+
+* Module 06
+* Module 07
+* Module 11
+
+---
+
+# 15.48 Personnel Task Engine
+
+ليس كل شيء يحتاج Ticket من Employee.
+
+النظام ينشئ internal Tasks تلقائيًا.
+
+مثلاً:
+
+```text
+Contract expires in 60 days
+↓
+Personnel Task
+```
+
+أو:
+
+```text
+National ID expired
+↓
+Request Employee Update
+```
+
+---
+
+# 15.49 Compliance Calendar
+
+Personnel Dashboard يحتاج Calendar:
+
+```text
+Today
+12 Expiring Contracts
+7 Expiring IDs
+3 Insurance Actions
+4 Medical Renewals
+```
+
+---
+
+# 15.50 Compliance Alerts
+
+Alerts مثل:
+
+* Contract expires in 30 days
+* Insurance enrollment overdue
+* Medical card not issued
+* ID expired
+* Professional license expired
+* Missing mandatory document
+
+---
+
+# 15.51 Escalation
+
+مثلاً:
+
+```text
+30 Days → Personnel Specialist
+15 Days → Personnel Head
+7 Days → HR Manager
+Expired → Manager + HR Operations
+```
+
+Configurable.
+
+---
+
+# 15.52 Bulk Processing
+
+ضرورية بسبب آلاف الموظفين.
+
+Personnel يستطيع:
+
+* Import documents
+* Renew contracts bulk
+* Submit insurance batch
+* Update status batch
+* Generate forms
+* Export compliance reports
+
+---
+
+# 15.53 Mass Contract Renewal
+
+مثلاً 300 technician contracts.
+
+بدل تعديلهم واحدًا واحدًا:
+
+```text
+Select Employees
+↓
+Renewal Rule
+↓
+Generate Contracts
+↓
+Approval
+↓
+Bulk Signature Workflow
+```
+
+---
+
+# 15.54 Bulk Insurance File
+
+النظام يستطيع تجهيز:
+
+```text
+Insurance Enrollment Batch
+```
+
+للـprovider.
+
+ثم import confirmation.
+
+---
+
+# 15.55 Personnel Dashboard
+
+مثلاً:
+
+```text
+Active Employees          4,850
+
+Missing Critical Docs        47
+Contracts Expiring 30d       83
+IDs Expiring 60d            61
+Insurance Pending            22
+Medical Pending              18
+Non-Compliant Employees      34
+```
+
+---
+
+# 15.56 Personnel Head Dashboard
+
+يعرض:
+
+* Compliance %
+* Overdue actions
+* Contract expiry forecast
+* Insurance SLA
+* Employee files completeness
+* Workload by specialist
+* Aging
+* Monthly transactions
+
+---
+
+# 15.57 Compliance by Project
+
+مثلاً:
+
+| Project  | Employees | Fully Compliant | At Risk | Blocked |
+| -------- | --------: | --------------: | ------: | ------: |
+| Huawei   |     1,200 |           1,140 |      48 |      12 |
+| Nokia    |       850 |             832 |      14 |       4 |
+| Ericsson |       620 |             600 |      17 |       3 |
+
+مفيد جدًا للعمليات.
+
+---
+
+# 15.58 Compliance by Document
+
+مثلاً:
+
+```text
+National ID         98%
+Contract            100%
+Medical Insurance   94%
+Professional Lic.   91%
+HSE Certificates    96%
+```
+
+---
+
+# 15.59 Data Access
+
+Module 15 يحتوي معلومات حساسة.
+
+### Employee
+
+يرى documents الخاصة به فقط.
+
+### Manager
+
+لا يرى كل Personal Documents.
+
+قد يرى فقط:
+
+```text
+Compliance Status
+```
+
+مثلاً:
+
+> Employee compliant for deployment: YES
+
+دون رؤية National ID file.
+
+### Personnel
+
+Full Personnel scope.
+
+### Payroll
+
+يقرأ فقط fields المطلوبة.
+
+### HR Operations
+
+يرى Compliance Status والمتابعة المطلوبة.
+
+---
+
+# 15.60 Sensitive Documents
+
+مثل:
+
+* National ID
+* Passport
+* Bank
+* Criminal Record
+
+تحتاج:
+
+* Encryption
+* Restricted Access
+* Download Control
+* Audit Log
+
+---
+
+# 15.61 Download Audit
+
+كل Download يتسجل:
+
+```text
+Document
+Downloaded By
+Date
+Reason
+IP / Session
+```
+
+للوثائق الحساسة.
+
+---
+
+# 15.62 Data Masking
+
+مثلاً:
+
+Manager يشاهد:
+
+```text
+National ID: ***********1234
+```
+
+وليس الرقم كامل.
+
+---
+
+# 15.63 Retention & Archiving
+
+لا نحذف records عند خروج الموظف.
+
+Employee Status يصبح:
+
+```text
+Inactive / Offboarded
+```
+
+والملف ينتقل:
+
+**Archive**
+
+حسب retention policy.
+
+---
+
+# 15.64 Integration with Module 06
+
+Onboarding هو أول مصدر بيانات.
+
+```text
+Module 06
+↓
+Documents Collected
+↓
+Module 15
+Personnel File Created
+```
+
+ثم Module 06 ينتهي عند activation.
+
+Module 15 يستمر طوال employment lifecycle.
+
+---
+
+# 15.65 Integration with Module 07/08
+
+يستخدم Employee Status وContract Status لتحديد:
+
+* Attendance eligibility
+* Leave entitlement
+
+---
+
+# 15.66 Integration with Module 09
+
+Payroll يأخذ:
+
+* Bank Data
+* Employee Status
+* Employment Type
+* Effective Changes
+* Insurance status if relevant
+
+لكن Module 09 لا يصبح owner لهذه البيانات.
+
+---
+
+# 15.67 Integration with Module 11
+
+Certification records يمكن أن تكون:
+
+**Module 11 = Learning Record**
+
+لكن إذا الشهادة legally mandatory:
+
+Module 15 يأخذ compliance status/reference.
+
+لا نكرر الملف بدون داعٍ.
+
+---
+
+# 15.68 Integration with Module 12
+
+Promotion أو Transfer approved:
+
+```text
+Module 12
+↓
+Approved Career Decision
+↓
+Module 15
+Personnel Transaction
+↓
+Employee Master Updated
+```
+
+---
+
+# 15.69 Integration with Module 13
+
+لو Disciplinary Decision يؤدي إلى:
+
+* Suspension
+* Demotion
+* Termination
+
+Module 13 يصدر Approved Decision.
+
+Module 15 ينفذ:
+
+**Personnel Transaction**
+
+ولا يخزن investigation details.
+
+---
+
+# 15.70 Integration with Module 14
+
+كما اتفقنا:
+
+```text
+Employee Service Request
+↓
+Module 14
+↓
+Module 15 Transaction
+↓
+Response
+↓
+Module 14 Closure
+```
+
+---
+
+# 15.71 Core Entities
+
+أقترح على الأقل:
+
+```text
+EmployeePersonnelFile
+
+DocumentType
+DocumentRequirement
+EmployeeDocument
+DocumentVersion
+DocumentVerification
+
+EmploymentContract
+ContractVersion
+ContractAmendment
+ContractRenewal
+
+PersonnelTransaction
+PersonnelTransactionType
+
+SocialInsuranceRecord
+SocialInsuranceTransaction
+
+MedicalInsurancePolicy
+EmployeeMedicalEnrollment
+DependentEnrollment
+
+BankAccount
+BankAccountVersion
+
+EmployeeAcknowledgment
+PolicyVersion
+
+ComplianceRequirement
+EmployeeComplianceStatus
+ComplianceException
+
+ExpiryRule
+ComplianceAlert
+PersonnelTask
+
+CountryCompliancePack
+ProjectCompliancePack
+CustomerComplianceRequirement
+```
+
+---
+
+# 15.72 Business Rules الأساسية
+
+**BR-15-01**
+كل Employee يجب أن يمتلك Personnel File واحدًا لكل Legal Entity.
+
+**BR-15-02**
+لا يتم overwrite لأي verified document.
+
+**BR-15-03**
+كل change ينتج version جديد.
+
+**BR-15-04**
+كل contract يجب أن يكون effective-dated.
+
+**BR-15-05**
+لا يمكن أن يوجد عقدان Active متعارضان لنفس legal relationship إلا إذا policy تسمح.
+
+**BR-15-06**
+لا يتم deployment إذا mandatory deployment compliance ناقص.
+
+**BR-15-07**
+لا يتم تحديث bank data في payroll من request غير verified.
+
+**BR-15-08**
+كل Personnel Transaction يحتاج source/approval reference.
+
+**BR-15-09**
+كل expired mandatory document ينتج compliance event.
+
+**BR-15-10**
+System Admin لا يملك تلقائيًا صلاحية قراءة sensitive documents.
+
+**BR-15-11**
+Offboarding لا يحذف Personnel File.
+
+**BR-15-12**
+كل document download حساس يجب أن يكون auditable.
+
+---
+
+# نقطة مهمة جدًا في التصميم
+
+أقترح ألا نجعل **Medical Insurance وSocial Insurance** مجرد fields داخل Employee Profile.
+
+كل واحد منهما يحتاج **Transaction History** مستقل.
+
+لأن السؤال ليس فقط:
+
+> هل الموظف insured؟
+
+لكن أيضًا:
+
+> متى تم الإرسال؟
+> متى تم التفعيل؟
+> ما provider؟
+> هل يوجد delay؟
+> هل حصل تعديل؟
+> هل تم الإلغاء؟
+> ما آخر status؟
+
+وهذه التفاصيل هي التي تجعل النظام usable في audit وليس مجرد HR database.
+
+---
+
+# كذلك هناك خطأ يجب أن نتجنبه
+
+لا نضع جميع الوثائق داخل Module 15 بلا ownership logic.
+
+مثلاً:
+
+**Training Certificate**
+
+قد يكون مصدره Module 11.
+
+الصحيح:
+
+```text
+Module 11 = Source Record
+Module 15 = Compliance Reference
+```
+
+وليس copy مستقلتين يمكن أن تختلفا.
+
+نفس المبدأ مع salary وattendance وER.
+
+---
+
+## الشكل النهائي حتى Module 15
+
+الآن لدينا خط معماري قوي جدًا:
+
+```text
+Employee Action / Need
+        ↓
+Module 14
+HR Service Desk
+        ↓
+Official Personnel Transaction
+        ↓
+Module 15
+Personnel System of Record
+```
+
+وفي الخلفية:
+
+```text
+Module 06 → Initial Personnel File
+Module 09 → Payroll Consumer
+Module 11 → Certification Source
+Module 12 → Career Decisions
+Module 13 → ER Decisions
+Module 14 → Service Requests
+Module 15 → Legal / Personnel Record
+```
+
+والـModule الذي أراه منطقيًا جدًا بعده هو **Module 16 — Offboarding, Resignation, Termination, Clearance, Asset Recovery, Final Settlement & Exit Management**؛ لأن الـManual الحالي لديه Offboarding واضح بالفعل، لكن تنفيذه موزع بين Personnel وHR Operations وIT وFinance وDirect Manager، وبالتالي يستحق أن يتحول إلى lifecycle مستقل ومتكامل بدل أن يظل مجرد workflow فرعي. 

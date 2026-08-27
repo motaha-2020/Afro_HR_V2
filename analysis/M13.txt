@@ -1,0 +1,2390 @@
+تمام. **Module 13** هنا لازم يتحول من مجرد Workflow صغير داخل HR Operations إلى **Confidential Employee Relations Case Management System** كامل؛ لأن الـManual الحالي بالفعل يحدد أن HR Operations يستقبل incident report، يراجع المخالفة، يخطر الموظف، يرتب التحقيق، يجمع الإفادات والأدلة، ينسق مع Legal Affairs بشأن التوصية التأديبية، ثم يبلغ القرار ويحدث ملف الموظف. كما يحدد أن التحقيق يبدأ خلال **7 أيام تقويمية من تاريخ الإبلاغ الرسمي**. 
+
+والهيكل التنظيمي الحالي يحتوي أصلًا على **Employee Relations and Compliance Leader** و**Employee Relations and Compliance Specialist**، لذلك الأفضل ألا يبقى هذا الملف مجرد وظيفة جانبية لـHR Operations؛ بل نجعل **ER & Compliance** هو الـProcess Owner الرئيسي للوحدة، بينما HR Operations وManagers وLegal وHSE وغيرهم يشاركون حسب نوع القضية. 
+
+# Module 13 — Employee Relations, Grievances, Disciplinary Actions, Investigations & Case Management
+
+## 13.1 الهدف الرئيسي
+
+الوحدة تدير أي Employee Relations Case من لحظة البلاغ أو الشكوى حتى الإغلاق:
+
+```text
+Incident / Complaint / Grievance
+            ↓
+Case Registration
+            ↓
+Initial Assessment
+            ↓
+Conflict / Jurisdiction Check
+            ↓
+Investigation
+            ↓
+Evidence & Statements
+            ↓
+Findings
+            ↓
+Legal / Policy Review
+            ↓
+Decision
+            ↓
+Corrective / Disciplinary Action
+            ↓
+Employee Notification
+            ↓
+Appeal — if applicable
+            ↓
+Implementation
+            ↓
+Closure
+            ↓
+Retention & Audit
+```
+
+---
+
+# 13.2 أول قاعدة تصميمية
+
+لا نسمي كل شيء:
+
+> Disciplinary Case
+
+لأن Employee Relations أوسع بكثير.
+
+نحتاج **Case Types** مختلفة.
+
+مثل:
+
+### Employee Grievance
+
+الموظف يشتكي من:
+
+* Manager treatment
+* Work environment
+* Scheduling
+* Leave handling
+* Payroll issue
+* Promotion concern
+* Internal process
+
+---
+
+### Misconduct
+
+مثل:
+
+* Policy violation
+* Misbehavior
+* Attendance misconduct
+* Unauthorized absence
+* Insubordination
+* Misuse of company resources
+
+---
+
+### HSE Violation
+
+مثل:
+
+* PPE violation
+* Unsafe behavior
+* Failure to follow site rules
+
+---
+
+### Workplace Conflict
+
+Employee vs Employee.
+
+---
+
+### Managerial Complaint
+
+---
+
+### Harassment / Bullying Case
+
+بحسب سياسات الشركة والقانون المطبق.
+
+---
+
+### Fraud / Financial Misconduct
+
+---
+
+### Asset Misuse
+
+---
+
+### Data / Information Security Violation
+
+---
+
+### Customer Complaint Against Employee
+
+مهم في شركات المشاريع.
+
+---
+
+### Ethics / Compliance Case
+
+---
+
+### Whistleblowing Referral
+
+إذا أضفنا Whistleblowing Module أو Channel لاحقًا.
+
+---
+
+# 13.3 فصل Grievance عن Disciplinary
+
+مهم جدًا.
+
+### Grievance
+
+الموظف يقول:
+
+> لدي مشكلة أو اعتراض.
+
+بينما:
+
+### Disciplinary Case
+
+الشركة تقول:
+
+> هناك allegation أن الموظف خالف Policy.
+
+وممكن grievance تتحول إلى investigation.
+
+مثلاً:
+
+```text
+Employee Grievance
+↓
+Initial Review
+↓
+Potential Manager Misconduct Identified
+↓
+Investigation Case Created
+```
+
+بدون حذف القضية الأصلية.
+
+---
+
+# 13.4 Case Master Record
+
+كل Case يحصل على:
+
+* Case ID
+* Case Type
+* Case Category
+* Subcategory
+* Company
+* Business Unit
+* Department
+* Project
+* Location
+* Date Reported
+* Incident Date
+* Reported By
+* Subject Employee
+* Other Involved Persons
+* Assigned Investigator
+* Case Owner
+* Priority
+* Confidentiality Level
+* Severity
+* Status
+* SLA
+* Legal Involvement
+* HSE Involvement
+* Payroll Impact
+* Final Outcome
+* Closure Date
+
+---
+
+# 13.5 Case Number
+
+مثلاً:
+
+```text
+ER-2026-000154
+```
+
+أو:
+
+```text
+AFRO-EGY-ER-2026-000154
+```
+
+Auto-generated وغير قابل للتغيير.
+
+---
+
+# 13.6 Case Status
+
+أقترح:
+
+```text
+Draft
+↓
+Submitted
+↓
+Triage
+↓
+Under Initial Review
+↓
+Investigation Required
+↓
+Under Investigation
+↓
+Awaiting Evidence
+↓
+Awaiting Employee Response
+↓
+Awaiting Legal Review
+↓
+Decision Pending
+↓
+Decision Approved
+↓
+Employee Notified
+↓
+Appeal Period
+↓
+Under Appeal
+↓
+Implementation Pending
+↓
+Closed
+```
+
+بالإضافة إلى:
+
+* Cancelled
+* Duplicate
+* Referred
+* On Hold
+
+---
+
+# 13.7 Intake Channels
+
+لازم ندعم أكثر من مصدر.
+
+### HR Operations
+
+### ER & Compliance
+
+### Manager
+
+### Employee Self-Service
+
+### Email
+
+### Hotline / Whistleblowing
+
+### HSE
+
+### Security
+
+### Legal
+
+### Customer Complaint
+
+### System-generated Trigger
+
+مثلاً attendance violation.
+
+---
+
+# 13.8 Employee Self-Service Grievance
+
+الموظف يستطيع تسجيل شكوى تحتوي:
+
+* Category
+* Description
+* Date
+* Location
+* Persons involved
+* Supporting documents
+* Desired resolution
+
+مع خيار:
+
+> Confidential
+
+لكن ليس بالضرورة Anonymous إلا إذا الشركة قررت توفير قناة منفصلة لذلك.
+
+---
+
+# 13.9 Anonymous Reporting
+
+لو الشركة تريد Whistleblowing Channel:
+
+يكون منفصل منطقيًا عن Employee Portal.
+
+النظام يمكن يدعم:
+
+```text
+Anonymous Case Token
+```
+
+بدل Employee ID.
+
+بحيث يمكن للشخص متابعة Case Status بدون كشف هويته.
+
+---
+
+# 13.10 Triage Engine
+
+عند وصول البلاغ:
+
+النظام لا يبدأ تحقيقًا كاملًا فورًا.
+
+أولًا:
+
+## Initial Triage
+
+يحدد:
+
+* هل البلاغ داخل اختصاص ER؟
+* هل يحتاج Legal؟
+* هل يحتاج HSE؟
+* هل يحتاج Security؟
+* هل هناك immediate risk؟
+* هل يحتاج temporary action؟
+* هل هو duplicate case؟
+* هل يوجد conflict of interest؟
+
+---
+
+# 13.11 Severity Matrix
+
+مثلاً:
+
+### Low
+
+مشكلة إدارية بسيطة.
+
+### Medium
+
+Policy violation.
+
+### High
+
+Serious misconduct.
+
+### Critical
+
+Potential:
+
+* Safety risk
+* Fraud
+* Serious compliance issue
+* Major customer impact
+* Significant financial exposure
+
+لكن Definitions تكون configurable حسب Policy.
+
+---
+
+# 13.12 Priority vs Severity
+
+لازم نفصلهم.
+
+مثلاً:
+
+Case قد يكون:
+
+> Severity = Medium
+
+لكن:
+
+> Priority = Urgent
+
+بسبب Client escalation.
+
+---
+
+# 13.13 Conflict of Interest Check
+
+قبل تعيين Investigator:
+
+النظام يسأل:
+
+> هل Investigator مرتبط إداريًا أو شخصيًا بأطراف القضية؟
+
+مثلاً:
+
+الشكوى ضد Direct Manager.
+
+فلا يجوز أن يكون هو Approver أو Investigator.
+
+---
+
+# 13.14 Investigator Assignment
+
+يمكن تعيين:
+
+* ER Specialist
+* ER Leader
+* HR Operations
+* Legal
+* Investigation Committee
+
+بحسب:
+
+* Severity
+* Location
+* Case Type
+* Grade
+* Seniority
+
+---
+
+# 13.15 Restricted Senior Cases
+
+مثلاً Case ضد:
+
+* Department Head
+* Director
+* P&C employee
+* Executive
+
+يمكن أن يكون له Routing مختلف:
+
+```text
+Restricted Case
+↓
+P&C Manager
+↓
+Legal / Executive Committee
+```
+
+---
+
+# 13.16 Investigation Plan
+
+لكل Investigation:
+
+* Allegations
+* Policies potentially violated
+* Investigation scope
+* Witnesses
+* Evidence required
+* Investigator
+* Legal reviewer
+* Target completion date
+* Interview plan
+
+---
+
+# 13.17 Allegation Structure
+
+مهم جدًا ألا نحفظ Case كله كنص كبير.
+
+كل Case قد يحتوي على عدة Allegations:
+
+مثلاً:
+
+```text
+Allegation 01:
+Unauthorized absence
+
+Allegation 02:
+Falsification of attendance record
+
+Allegation 03:
+Failure to follow manager instruction
+```
+
+وكل allegation لها Finding مستقل.
+
+---
+
+# 13.18 Allegation Status
+
+```text
+Open
+Under Review
+Substantiated
+Partially Substantiated
+Unsubstantiated
+Insufficient Evidence
+Out of Scope
+```
+
+---
+
+# 13.19 Evidence Management
+
+الـManual الحالي ينص بالفعل على جمع statements وsupporting evidence. 
+
+النظام يجب أن يدعم:
+
+* Documents
+* Emails
+* Photos
+* Videos
+* Attendance records
+* GPS records
+* System logs
+* Access logs
+* HSE reports
+* Customer communications
+* Witness statements
+* Manager statement
+* Employee statement
+
+---
+
+# 13.20 Evidence Metadata
+
+كل Evidence يحتوي:
+
+* Evidence ID
+* Type
+* Source
+* Submitted By
+* Collection Date
+* Incident Date
+* Related Allegation
+* File
+* Confidentiality
+* Verification Status
+* Notes
+
+---
+
+# 13.21 Evidence Integrity
+
+أي Evidence بعد upload:
+
+لا يتم overwrite.
+
+لو استبدل Document:
+
+```text
+Version 1
+Version 2
+```
+
+مع حفظ التاريخ.
+
+---
+
+# 13.22 Chain of Custody
+
+للقضايا الحساسة:
+
+```text
+Evidence Received
+↓
+Received By
+↓
+Date / Time
+↓
+Accessed By
+↓
+Transferred To
+↓
+Current Custodian
+```
+
+خصوصًا:
+
+* Devices
+* Physical documents
+* Security evidence
+
+---
+
+# 13.23 Employee Notification
+
+الـManual الحالي يضع:
+
+> Notify the employee
+
+كخطوة صريحة قبل التحقيق. 
+
+النظام يدير:
+
+* Notification Date
+* Notice Type
+* Allegation Summary
+* Meeting Date
+* Employee acknowledgment
+* Delivery method
+
+---
+
+# 13.24 Investigation Meeting
+
+يتم إنشاء:
+
+## Investigation Session
+
+ويحتوي:
+
+* Case
+* Date
+* Time
+* Location / Online
+* Interviewee
+* Investigator
+* Legal representative
+* HR representative
+* Attendees
+* Minutes
+* Documents
+* Employee comments
+
+---
+
+# 13.25 Investigation Statements
+
+أنواع:
+
+### Subject Employee Statement
+
+### Witness Statement
+
+### Manager Statement
+
+### Reporter Statement
+
+### Specialist Statement
+
+مثلاً HSE أو Finance.
+
+---
+
+# 13.26 Statement Approval
+
+بعد تسجيل Statement:
+
+يمكن:
+
+```text
+Draft
+↓
+Reviewed
+↓
+Acknowledged / Signed
+```
+
+بحسب طريقة العمل بالشركة.
+
+---
+
+# 13.27 Case Timeline
+
+كل Case يعرض chronological timeline:
+
+```text
+03 Aug
+Incident reported
+
+04 Aug
+Case assigned
+
+05 Aug
+Employee notified
+
+06 Aug
+Witness interviewed
+
+07 Aug
+Evidence received
+
+09 Aug
+Legal review
+
+11 Aug
+Decision approved
+```
+
+وده مهم جدًا Audit-wise.
+
+---
+
+# 13.28 SLA Engine
+
+الـManual يعطي حاليًا Rule مهم:
+
+> Investigation initiated within 7 calendar days from official reporting date. 
+
+إذن نضع:
+
+```text
+Investigation Initiation SLA
+= 7 Calendar Days
+```
+
+لكن completion SLA:
+
+> يعتمد على complexity
+
+لأن هذا هو الموجود في الـManual.
+
+يمكن Admin لاحقًا تعريف:
+
+* Low Case SLA
+* Medium
+* High
+* Critical
+
+إذا اعتمدت الشركة Policy أكثر تفصيلًا.
+
+---
+
+# 13.29 SLA Pause
+
+لو Case ينتظر:
+
+* External authority
+* Employee medical condition
+* Third-party evidence
+* Legal decision
+
+يمكن:
+
+```text
+SLA Paused
+```
+
+لكن يجب تسجيل:
+
+* Reason
+* Start
+* End
+* Approved By
+
+حتى لا يتم التلاعب بالـSLA.
+
+---
+
+# 13.30 Escalation
+
+مثلاً:
+
+```text
+5 Days without Investigation Start
+→ ER Leader
+
+6 Days
+→ P&C Manager
+
+7 Days Breach
+→ Critical Escalation
+```
+
+Configurable.
+
+---
+
+# 13.31 Investigation Findings
+
+بعد انتهاء التحقيق:
+
+لكل Allegation:
+
+* Evidence Summary
+* Employee Response
+* Witness Findings
+* Policy Reference
+* Finding
+* Investigator Recommendation
+
+---
+
+# 13.32 Standard of Finding
+
+النظام لا يقرر معيارًا قانونيًا بنفسه.
+
+Admin يحدد policy wording المعتمد.
+
+مثل:
+
+```text
+Substantiated
+Not Substantiated
+Insufficient Evidence
+```
+
+ويكون Legal / Policy owner مسؤولًا عن التعريف.
+
+---
+
+# 13.33 Disciplinary Matrix
+
+دي واحدة من أهم أجزاء Module 13.
+
+ننشئ:
+
+## Disciplinary Rules Library
+
+مثلاً:
+
+| Violation                  | First Occurrence  | Repeat     |
+| -------------------------- | ----------------- | ---------- |
+| Minor Attendance Violation | Warning           | Escalation |
+| Safety Violation           | حسب severity      | حسب policy |
+| Misuse of Asset            | حسب investigation | حسب policy |
+
+لكن **لا أنصح أن نضع العقوبات نفسها Hardcoded في البرنامج**.
+
+تكون:
+
+> Configurable Policy Rules.
+
+---
+
+# 13.34 Violation Definition
+
+كل Violation يحتوي:
+
+* Violation Code
+* Name
+* Category
+* Description
+* Severity
+* Relevant Policy
+* Effective Date
+* Applicable Population
+* Repeat Window
+* Possible Actions
+* Legal Review Required
+* Approval Level
+
+---
+
+# 13.35 Policy Versioning
+
+مهم جدًا.
+
+لو Policy تغيرت في 2027:
+
+Case حدث في 2026 يجب أن يستخدم:
+
+> Policy Version applicable at incident date
+
+وليس أحدث Version تلقائيًا.
+
+---
+
+# 13.36 Repeat Offense Engine
+
+مثلاً:
+
+Employee ارتكب نفس violation من 6 أشهر.
+
+النظام يستطيع إظهار:
+
+```text
+Previous Similar Case
+```
+
+لكن فقط للمستخدم الذي لديه صلاحية.
+
+---
+
+# 13.37 Disciplinary History
+
+يجب الفصل بين:
+
+### Case History
+
+و:
+
+### Active Disciplinary Record
+
+لأن بعض الإجراءات قد يكون لها:
+
+* Start Date
+* Expiry
+* Active / Expired
+
+حسب Policy.
+
+---
+
+# 13.38 Possible Case Outcomes
+
+ليس كل Investigation ينتج Punishment.
+
+النتيجة يمكن أن تكون:
+
+* No Action
+* Coaching
+* Counseling
+* Policy Reminder
+* Training Required
+* Verbal Warning
+* Written Warning
+* Final Warning
+* Financial Adjustment where legally/policy authorized
+* Suspension where applicable
+* Transfer Recommendation
+* Termination Recommendation
+* Other Corrective Action
+
+لكن ما هو مسموح فعليًا يجب أن يأتي من **Policy + Legal Rules**، وليس Logic افتراضي من النظام.
+
+---
+
+# 13.39 Corrective Action vs Punitive Action
+
+ميزة مهمة.
+
+مثلاً HSE incident:
+
+قد ينتج:
+
+```text
+Corrective Action:
+Mandatory Safety Retraining
+```
+
+بالإضافة إلى disciplinary outcome إذا لزم.
+
+وهنا Module 11 يستقبل:
+
+> Mandatory Training Action.
+
+---
+
+# 13.40 Legal Review
+
+بعض Cases تحتاج:
+
+```text
+Legal Review Required = Yes
+```
+
+Legal يرى:
+
+* Allegations
+* Evidence
+* Findings
+* Policy
+* Proposed Action
+
+ويضيف:
+
+* Legal Opinion
+* Recommendation
+* Required changes
+
+---
+
+# 13.41 Legal لا يكون Case Owner تلقائيًا
+
+الأفضل:
+
+```text
+ER
+= Process Owner
+
+Legal
+= Legal Advisor / Reviewer
+```
+
+إلا إذا نوع القضية نفسه Legal Case.
+
+وده يحافظ على فصل المسؤوليات.
+
+---
+
+# 13.42 Decision Approval Matrix
+
+مثلاً:
+
+### Low Severity
+
+ER Leader.
+
+### Medium
+
+P&C Manager.
+
+### High
+
+P&C Manager + Legal.
+
+### Critical
+
+Executive Approval.
+
+لكن هذا مجرد Design Pattern، والـactual matrix تكون configurable.
+
+---
+
+# 13.43 Decision Record
+
+يحفظ:
+
+* Final Finding
+* Recommended Action
+* Approved Action
+* Approver
+* Legal Opinion
+* Effective Date
+* Employee Notification Date
+* Implementation Owner
+
+---
+
+# 13.44 Employee Notification of Decision
+
+النظام يولد:
+
+> Decision Letter
+
+من Template.
+
+ويحفظ:
+
+* Issued Date
+* Delivery Method
+* Employee Acknowledgment
+* Refusal to Acknowledge إن حدث
+
+---
+
+# 13.45 Appeal Management
+
+أضيفه كوحدة أساسية.
+
+Employee يستطيع:
+
+```text
+Submit Appeal
+```
+
+مع:
+
+* Appeal reason
+* New evidence
+* Disagreement points
+* Date
+
+---
+
+# 13.46 Appeal Workflow
+
+```text
+Decision Issued
+↓
+Appeal Window
+↓
+Employee Appeal
+↓
+Eligibility Check
+↓
+Independent Reviewer
+↓
+Review
+↓
+Decision
+↓
+Original Decision:
+Confirmed / Modified / Cancelled
+```
+
+---
+
+# 13.47 Appeal Independence
+
+الأفضل أن Reviewer في Appeal لا يكون نفس الشخص الذي أصدر التحقيق الأصلي، قدر الإمكان.
+
+النظام يعمل:
+
+> Conflict Check.
+
+---
+
+# 13.48 Grievance Resolution
+
+Grievance قد لا تحتاج Investigation.
+
+مثلاً:
+
+Employee يشكو من shift scheduling.
+
+Workflow:
+
+```text
+Grievance
+↓
+Review
+↓
+Manager Response
+↓
+HR Resolution
+↓
+Employee Feedback
+↓
+Close
+```
+
+---
+
+# 13.49 Grievance Categories
+
+مثل:
+
+* Payroll
+* Attendance
+* Leave
+* Manager
+* Workplace
+* Workload
+* Schedule
+* Promotion
+* Transfer
+* Benefits
+* Project Assignment
+* Employee Relations
+* Other
+
+---
+
+# 13.50 Direct Routing
+
+لو grievance:
+
+> Payroll discrepancy
+
+يمكن ER يعمل Referral:
+
+```text
+Module 13 Case
+↓
+Payroll Team
+```
+
+لكن Case لا يختفي.
+
+يبقى:
+
+> Referred — Awaiting Payroll Resolution.
+
+---
+
+# 13.51 Service Request vs Formal Grievance
+
+لازم نفصل.
+
+مثلاً:
+
+> أين payslip الخاص بي؟
+
+ده HR Service Request.
+
+لكن:
+
+> تم خصم مبلغ مني وأعترض على القرار.
+
+قد يكون Grievance.
+
+حتى Module 13 لا يتحول إلى Help Desk مزدحم.
+
+---
+
+# 13.52 Interim Measures
+
+في القضايا الحساسة قد تحتاج الإدارة إلى Temporary Action قبل Final Decision.
+
+مثل:
+
+* Temporary reassignment
+* Access restriction
+* Site removal
+* Reporting line change
+* Paid/unpaid suspension only if legally/policy permitted
+
+أي Interim Measure:
+
+* Reason
+* Start
+* End
+* Approval
+* Review Date
+
+ولا يعتبر Final Finding.
+
+---
+
+# 13.53 Security Integration
+
+لو Investigation يحتاج:
+
+* system access logs
+* account disablement
+* device custody
+
+Module 13 يرسل controlled request إلى:
+
+> IT / Security.
+
+لكن Investigator لا يحصل تلقائيًا على Full system access.
+
+---
+
+# 13.54 Attendance Integration
+
+Module 07 قد يرسل:
+
+* Repeated absence
+* Attendance fraud flag
+* GPS anomaly
+* Excessive lateness
+
+لكن:
+
+```text
+Attendance Alert
+≠
+Disciplinary Decision
+```
+
+الأصح:
+
+```text
+Attendance Rule Trigger
+↓
+ER Case Review
+↓
+Due Process
+↓
+Decision
+```
+
+---
+
+# 13.55 Leave Integration
+
+Module 08 قد يرسل:
+
+* Unauthorized absence
+* Leave abuse pattern
+
+لكن نفس الفصل ضروري.
+
+---
+
+# 13.56 Payroll Integration
+
+دي نقطة حساسة جدًا.
+
+الـManual يشترط أن أي deduction أو salary adjustment يكون مدعومًا بموافقة موثقة، كما أن Payroll يجب أن يعتمد فقط على authorized payroll adjustments. 
+
+إذن:
+
+```text
+Module 13
+Approved Financial Action
+↓
+Payroll Adjustment Request
+↓
+Module 09
+Validation
+↓
+Payroll Processing
+```
+
+وليس:
+
+```text
+ER Case
+→ Directly change salary
+```
+
+---
+
+# 13.57 Payroll Action Record
+
+إذا القرار له أثر مالي:
+
+Module 13 يرسل فقط:
+
+* Employee ID
+* Case Reference
+* Approved Action Type
+* Effective Period
+* Approval Reference
+* Authorized Amount / Rule if applicable
+
+ثم Module 09 هو الذي يحسب ويطبق ماليًا.
+
+---
+
+# 13.58 Performance Integration
+
+لا أنصح بقاعدة:
+
+> Disciplinary Case = Automatic KPI deduction
+
+إلا إذا Performance Policy تنص صراحة على ذلك.
+
+الأفضل:
+
+```text
+Module 13
+Confirmed Compliance Outcome
+↓
+Module 10
+Performance Gate / Compliance Indicator
+```
+
+إذا كان Rule موجودًا.
+
+---
+
+# 13.59 Active Investigation لا يؤثر تلقائيًا
+
+مهم جدًا.
+
+```text
+Allegation
+≠
+Guilt
+```
+
+فلا يجب:
+
+* خفض Rating
+* منع Bonus
+* منع Promotion
+
+لمجرد وجود Case مفتوح، إلا إذا هناك Policy محددة تسمح بإجراء مؤقت معين.
+
+---
+
+# 13.60 Promotion Integration
+
+Module 12 يستطيع سؤال Module 13:
+
+```text
+Does Employee Have
+Relevant Active Final Disciplinary Action?
+```
+
+لكن ليس:
+
+> Give me all confidential case details.
+
+يرجع فقط Eligibility Flag حسب الصلاحية والسياسة.
+
+مثال:
+
+```text
+Promotion Compliance Status:
+Eligible / Restricted / Review Required
+```
+
+---
+
+# 13.61 Learning Integration
+
+لو Decision:
+
+> Mandatory Retraining
+
+يتم إنشاء Development Action في Module 11.
+
+مثلاً:
+
+```text
+Case ER-2026-145
+↓
+Safety Retraining Required
+↓
+Module 11
+Training Assignment
+↓
+Completion
+↓
+Module 13 Action Closed
+```
+
+---
+
+# 13.62 Offboarding Integration
+
+إذا Final Approved Outcome يؤدي إلى separation:
+
+```text
+Module 13
+Approved Employment Action
+↓
+Module 06 / Offboarding Process
+```
+
+ثم:
+
+* Access deactivation
+* Clearance
+* Final settlement
+* File closure
+
+وفق الـOffboarding workflow الحالي.
+
+---
+
+# 13.63 Project Integration
+
+في شركات المقاولات:
+
+Case يجب أن يحمل:
+
+* Project
+* Customer
+* Site
+* PM
+* Location
+
+لأن كثيرًا من المخالفات Project-specific.
+
+---
+
+# 13.64 Customer Complaint Workflow
+
+مثلاً:
+
+```text
+Customer Complaint
+↓
+Case Created
+↓
+Project Manager Response
+↓
+Employee Investigation
+↓
+ER Review
+↓
+Customer-facing Response
+```
+
+مع فصل:
+
+> Internal confidential findings
+
+عن:
+
+> External customer response.
+
+---
+
+# 13.65 Multi-Employee Case
+
+Incident واحد قد يشمل:
+
+> 5 Employees.
+
+لا ننشئ 5 Cases منفصلة بالضرورة.
+
+ندعم:
+
+```text
+Parent Case
+├── Employee A
+├── Employee B
+├── Employee C
+```
+
+مع Finding منفصل لكل Employee.
+
+---
+
+# 13.66 Related Cases
+
+مثلاً:
+
+```text
+Case 156
+Related to
+Case 142
+```
+
+للكشف عن:
+
+* Repeated pattern
+* Same manager
+* Same site
+* Same incident
+
+---
+
+# 13.67 Case Merge
+
+إذا نفس incident وصل من 3 channels:
+
+لا نغلقها يدويًا فقط.
+
+نستخدم:
+
+```text
+Primary Case
++
+Linked Duplicate Reports
+```
+
+حتى نحافظ على Traceability.
+
+---
+
+# 13.68 Confidentiality Levels
+
+أقترح:
+
+### Standard ER
+
+### Confidential
+
+### Highly Confidential
+
+### Restricted / Executive
+
+وكل Level له Access Matrix مختلف.
+
+---
+
+# 13.69 Need-to-Know Access
+
+وجود Role:
+
+> HR Manager
+
+لا يعني أنه يرى كل Case.
+
+الصلاحية تعتمد على:
+
+* Case Assignment
+* Company
+* Business Unit
+* Region
+* Confidentiality
+* Case Type
+
+---
+
+# 13.70 Chinese Wall / Sensitive Case Isolation
+
+مثلاً Case ضد أحد أعضاء HR.
+
+يجب منع المستخدم نفسه أو فريقه المباشر من رؤية القضية إذا كان conflict موجودًا.
+
+---
+
+# 13.71 Payroll لا يرى Case Details
+
+Payroll يحصل فقط على:
+
+```text
+Authorized Adjustment
+```
+
+لا يرى:
+
+* Witness statements
+* allegations
+* investigation notes
+
+---
+
+# 13.72 Manager Access
+
+Direct Manager يرى فقط ما يحتاجه.
+
+مثلاً:
+
+* Interview request
+* required action
+* final management instruction
+
+ولا يرى Legal opinion أو confidential witnesses إلا بصلاحية.
+
+---
+
+# 13.73 Employee Access
+
+Employee يرى:
+
+* Own grievances
+* Notifications
+* Meeting schedules
+* Required response
+* Final decision
+* Appeal
+
+لكن لا يرى internal investigation notes أو witness identities تلقائيًا.
+
+---
+
+# 13.74 Data Retention
+
+كل Case Type له:
+
+```text
+Retention Policy
+```
+
+مع:
+
+* Archive Date
+* Disposal Date
+* Legal Hold
+
+ولا نحذف البيانات بمجرد انتهاء الموظف.
+
+---
+
+# 13.75 Legal Hold
+
+لو Case مرتبط بدعوى أو نزاع:
+
+```text
+Legal Hold = Active
+```
+
+يوقف أي automated deletion.
+
+---
+
+# 13.76 Audit Trail
+
+ضروري جدًا.
+
+كل عملية:
+
+```text
+Viewed
+Created
+Downloaded
+Uploaded
+Edited
+Assigned
+Decision Changed
+Status Changed
+```
+
+نسجل:
+
+* User
+* Timestamp
+* Action
+* Before
+* After
+
+خصوصًا download للأدلة الحساسة.
+
+---
+
+# 13.77 Case Access Log
+
+ER Leader يستطيع رؤية:
+
+> Who viewed this case?
+
+ميزة ضرورية للحالات الحساسة.
+
+---
+
+# 13.78 Document Templates
+
+مثل:
+
+* Investigation Notice
+* Meeting Invitation
+* Witness Statement
+* Investigation Minutes
+* Warning Letter
+* Decision Letter
+* Appeal Decision
+* Grievance Closure Letter
+
+مع:
+
+AR / EN / FR.
+
+---
+
+# 13.79 Digital Acknowledgment
+
+Employee يستطيع:
+
+```text
+Acknowledge
+```
+
+باستخدام:
+
+* Password
+* OTP
+* Digital confirmation
+
+ولا يعني acknowledgment:
+
+> Employee agrees.
+
+بل فقط:
+
+> Received.
+
+---
+
+# 13.80 Investigation Committee
+
+للقضايا الكبيرة:
+
+```text
+Committee
+├── Chair
+├── ER
+├── Legal
+├── Functional Representative
+└── Specialist
+```
+
+مع منع Member لديه Conflict.
+
+---
+
+# 13.81 Committee Decision
+
+يمكن تسجيل:
+
+* Unanimous
+* Majority
+* Individual recommendations
+
+إذا Policy الشركة تستخدم ذلك.
+
+---
+
+# 13.82 Corrective Action Tracker
+
+بعد القرار:
+
+لا يغلق Case قبل تنفيذ Actions.
+
+مثلاً:
+
+```text
+Written Warning       Completed
+Training              Pending
+Manager Coaching      Completed
+Payroll Adjustment    Pending
+```
+
+Case status:
+
+> Implementation Pending
+
+---
+
+# 13.83 Action Owner
+
+كل Corrective Action له:
+
+* Owner
+* Due Date
+* Completion Evidence
+* Status
+
+---
+
+# 13.84 Investigation Dashboard
+
+ER يرى:
+
+```text
+Open Cases                 47
+Under Investigation        21
+SLA At Risk                 6
+SLA Breached                2
+Awaiting Legal              5
+Awaiting Employee           4
+Appeals                     3
+```
+
+---
+
+# 13.85 Case Analytics
+
+مثل:
+
+* Cases by Type
+* Department
+* Project
+* Location
+* Manager
+* Severity
+* Outcome
+* Investigation Duration
+* Repeat Cases
+* Grievance Resolution Time
+* Appeal Rate
+* Decision Reversal Rate
+
+---
+
+# 13.86 Trend Analytics
+
+مثلاً:
+
+```text
+Safety Violations ↑ 35%
+in Project A
+```
+
+أو:
+
+```text
+Payroll Grievances concentrated
+in one business unit
+```
+
+وده يمكن يكشف Process Problem وليس Employee Problem.
+
+---
+
+# 13.87 Root Cause Analytics
+
+مثلاً 40 grievance عن:
+
+> overtime payment
+
+قد تكون المشكلة:
+
+> Payroll policy / process
+
+وليس 40 مشكلة منفصلة.
+
+النظام يجب أن يستطيع تصنيف:
+
+```text
+Systemic Issue
+```
+
+---
+
+# 13.88 Manager ER Indicators
+
+يمكن عرض للإدارة:
+
+* Grievances rate
+* Repeat employee relations cases
+* Escalations
+* Team conflicts
+
+لكن بحذر شديد؛ لا أفضّل تحويلها إلى Ranking آلي للمدير بدون Context.
+
+---
+
+# 13.89 Case Heatmap
+
+مثلاً:
+
+| Department | Open | High Severity | SLA Breach |
+| ---------- | ---: | ------------: | ---------: |
+| Operations |   18 |             4 |          1 |
+| Warehouse  |    7 |             1 |          0 |
+| Finance    |    3 |             0 |          0 |
+
+---
+
+# 13.90 ER & Compliance Dashboard
+
+بحكم الهيكل الحالي، **Employee Relations & Compliance** يكون لديه Dashboard مركزي:
+
+```text
+Case Intake
+Investigations
+Grievances
+Disciplinary Actions
+Policy Violations
+Legal Reviews
+Appeals
+SLA
+Repeat Cases
+Compliance Trends
+```
+
+وده يتماشى أكثر مع وجود ER & Compliance function مستقلة في الـOrg Chart الحالي. 
+
+---
+
+# 13.91 HR Operations Dashboard
+
+يشاهد فقط:
+
+* Assigned cases
+* Project grievances
+* employee follow-up
+* pending actions
+
+ولا يحتاج Full company confidential ER repository.
+
+---
+
+# 13.92 Executive Dashboard
+
+لا تعرض أسماء افتراضيًا.
+
+يعرض Aggregated:
+
+```text
+Open Critical Cases
+SLA Compliance
+Case Trends
+High-Risk Areas
+Repeat Violations
+Legal Exposure Categories
+```
+
+مع Drill-down فقط للصلاحيات.
+
+---
+
+# 13.93 Policy Library Integration
+
+كل Violation مرتبط بـ:
+
+```text
+Policy
+Section
+Version
+Effective Date
+```
+
+حتى يستطيع Investigator توثيق:
+
+> Which rule is allegedly violated?
+
+---
+
+# 13.94 Policy Acknowledgment Check
+
+Module يستطيع التحقق:
+
+> هل الموظف كان قد استلم/أقر بهذه Policy؟
+
+من Learning / Policy acknowledgment.
+
+هذا Evidence مفيد، لكنه لا يحسم القضية وحده.
+
+---
+
+# 13.95 AI Functions
+
+AI ممكن يساعد في:
+
+### Case Classification
+
+يقترح:
+
+* Category
+* Severity
+* Relevant policy
+
+---
+
+### Evidence Summarization
+
+يلخص كمية كبيرة من:
+
+* statements
+* documents
+* timeline
+
+---
+
+### Contradiction Detection
+
+مثلاً:
+
+> Statement A says incident at 14:00
+> Access log says 16:20
+
+يعرض discrepancy للمحقق.
+
+---
+
+### Similar Case Search
+
+يبحث عن Cases سابقة مشابهة.
+
+---
+
+### SLA Risk Prediction
+
+يحدد Cases المعرضة للتأخير.
+
+---
+
+### Draft Investigation Summary
+
+لكن مهم جدًا:
+
+**AI لا يقرر هل الموظف مذنب، ولا يحدد العقوبة، ولا يرسل قرارًا تلقائيًا.**
+
+---
+
+# 13.96 AI Recommendation Guardrail
+
+Output يكون:
+
+```text
+Possible Relevant Policy:
+Policy X, Section Y
+
+Reason:
+The allegation mentions...
+```
+
+وليس:
+
+> Employee violated Policy X.
+
+---
+
+# 13.97 No Automated Discipline
+
+Hard Rule في التصميم:
+
+```text
+AI / Rules Engine
+CAN:
+Flag
+Classify
+Recommend
+Summarize
+
+CANNOT:
+Find Employee Guilty
+Issue Disciplinary Action
+Terminate Employee
+Deduct Salary
+```
+
+بدون Human Approval المصرح به.
+
+---
+
+# 13.98 Case Search
+
+ER يستطيع البحث بواسطة:
+
+* Case ID
+* Employee
+* HR Code
+* Project
+* Manager
+* Category
+* Date
+* Violation
+* Outcome
+
+لكن Search results نفسها تحترم Permissions.
+
+---
+
+# 13.99 Duplicate Detection
+
+عند فتح Case:
+
+النظام يمكن أن يقول:
+
+```text
+Possible related case found
+```
+
+بناءً على:
+
+* Employee
+* Date
+* Project
+* Incident
+
+ولا يدمج تلقائيًا.
+
+---
+
+# 13.100 Mobile Capability
+
+لـField HR / HSE:
+
+يمكن:
+
+* Report incident
+* Upload photo
+* Capture statement
+* Add evidence
+
+لكن Offline support يكون مفيدًا جدًا مستقبلًا للمواقع البعيدة.
+
+---
+
+# 13.101 Notifications
+
+### ER
+
+* New Case
+* SLA approaching
+* Evidence received
+
+### Investigator
+
+* Investigation assigned
+* Interview pending
+
+### Legal
+
+* Legal review requested
+
+### Manager
+
+* Input requested
+
+### Employee
+
+* Meeting
+* Response required
+* Decision
+* Appeal deadline
+
+---
+
+# 13.102 Notifications Privacy
+
+Notification نفسها لا تحتوي Details حساسة.
+
+مثلاً:
+
+بدل:
+
+> Fraud investigation opened against you.
+
+تكون:
+
+> You have a confidential Employee Relations notification. Sign in to review.
+
+---
+
+# 13.103 Core Data Model
+
+أقترح:
+
+```text
+ERCase
+ERCaseType
+ERCaseCategory
+ERCaseParty
+
+Allegation
+ViolationDefinition
+PolicyReference
+
+Investigation
+InvestigationPlan
+InvestigatorAssignment
+
+Evidence
+EvidenceVersion
+EvidenceAccessLog
+ChainOfCustody
+
+Statement
+Interview
+InvestigationMeeting
+
+Finding
+LegalReview
+
+DisciplinaryRecommendation
+DisciplinaryDecision
+CorrectiveAction
+
+Grievance
+GrievanceResolution
+
+Appeal
+AppealDecision
+
+CaseSLA
+CaseEscalation
+
+CaseConfidentiality
+CasePermission
+
+CaseNotification
+CaseDocument
+CaseTimeline
+CaseAuditLog
+
+PayrollActionReferral
+LearningActionReferral
+OffboardingReferral
+```
+
+---
+
+# 13.104 أهم العلاقات
+
+```text
+ER Case
+│
+├── Parties
+├── Allegations
+│   ├── Evidence
+│   ├── Statements
+│   └── Findings
+│
+├── Investigation
+├── Legal Review
+├── Decision
+├── Corrective Actions
+├── Appeal
+└── Audit Trail
+```
+
+---
+
+# 13.105 Integration Map
+
+```text
+Module 07
+Attendance / Time
+        │
+        └── Potential Violation
+                 ↓
+Module 08
+Leave / Absence
+        │
+        └── Potential Violation
+                 ↓
+             Module 13
+        ER Case Management
+           /     |      \
+          /      |       \
+Module 11    Module 09   Module 06
+Training     Payroll     Offboarding
+Action       Action      Separation
+
+                 ↓
+             Module 10
+      Compliance Indicator
+
+                 ↓
+             Module 12
+      Eligibility Status Only
+```
+
+---
+
+# 13.106 Separation of Duties
+
+أقترح نضعها كـHard Architecture Rule:
+
+```text
+Reporter
+≠
+Investigator
+
+Investigator
+≠
+Final Approver
+where policy requires separation
+
+Payroll
+≠
+Disciplinary Decision Maker
+
+Manager
+≠
+Sole Investigator
+when manager is involved in allegation
+```
+
+مع Exception Approval لو الهيكل صغير ولا يسمح بذلك.
+
+---
+
+# 13.107 أهم Workflow كامل
+
+```text
+Incident / Grievance Received
+            ↓
+Create Confidential Case
+            ↓
+Triage & Severity
+            ↓
+Conflict Check
+            ↓
+Assign ER Owner
+            ↓
+Investigation Needed?
+       ↙           ↘
+      No            Yes
+      ↓              ↓
+Resolution       Investigation Plan
+                     ↓
+               Employee Notice
+                     ↓
+          Evidence / Interviews
+                     ↓
+                  Findings
+                     ↓
+               Legal Review
+                  if required
+                     ↓
+                Recommendation
+                     ↓
+                 Approval
+                     ↓
+             Employee Decision
+                     ↓
+                 Appeal?
+               ↙        ↘
+             Yes         No
+              ↓           ↓
+          Appeal Review   Implementation
+               \          /
+                ↓        ↓
+              Final Action
+                    ↓
+          Cross-Module Actions
+                    ↓
+              Case Closure
+```
+
+---
+
+# 13.108 ما الذي نأخذه حرفيًا من الـManual الحالي؟
+
+نحافظ على الأساس الموجود:
+
+**HR Operations / Direct Manager / Legal Affairs** مشاركون في Investigation & Disciplinary Process، والـworkflow الحالي يشمل incident report، review، employee notification، investigation meeting، statements/evidence، Legal coordination، approved decision، employee file update، مع بدء التحقيق خلال 7 أيام تقويمية من البلاغ الرسمي. 
+
+كما أن الـManual يفرض صراحة **confidentiality للـdisciplinary documentation، traceability، documented approvals، والامتثال للقانون والسياسات الداخلية**. 
+
+لكن في النظام الجديد أرفع الملكية التنظيمية إلى **ER & Compliance** باعتبار أن هذا Function موجود بالفعل رسميًا في الهيكل، بينما يبقى HR Operations طرفًا تشغيليًا أساسيًا في المشاريع والحسابات. 
+
+## أهم 5 قرارات تصميمية في Module 13
+
+**1. Allegation ليست Decision.** لا عقوبة ولا خصم ولا تأثير أداء تلقائي لمجرد فتح Case.
+
+**2. ER Case System يجب أن يكون أكثر أجزاء Afro HR تقييدًا في الصلاحيات.** Role-based access وحدها لا تكفي؛ نحتاج case-level access وneed-to-know.
+
+**3. كل Financial Action يذهب إلى Payroll كـApproved Referral فقط.** Module 13 لا يعدل المرتب بنفسه.
+
+**4. كل Case يحتفظ بالـPolicy Version والأدلة والقرار والـAudit history.** لا overwrite ولا تعديل صامت.
+
+**5. التحقيق والتأديب والشكوى يجب ألا يكونوا نفس Workflow.** يشتركون في Case Engine واحد، لكن لكل نوع Routing وSLA وDecision Model خاص به.
+
+والـModule المنطقي التالي أقترحه **Module 14 — HR Service Desk, Employee Requests, Letters, Documents & Employee Self-Service**؛ لأننا بعد فصل القضايا الرسمية والحساسة في Module 13، نحتاج ألا تتحول ER إلى مكان لكل طلب يومي. Module 14 يستقبل الطلبات العادية مثل HR letters، salary certificates، data changes، inquiries، benefit requests، document requests، وغيرها، مع SLA وrouting وself-service، بينما أي Complaint حقيقية يمكن تصعيدها controlled إلى Module 13.

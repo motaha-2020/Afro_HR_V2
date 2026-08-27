@@ -1,0 +1,2838 @@
+تمام. **Cluster P** هو طبقة **Enterprise Discovery & Knowledge Access** التي تمنع تكرار البحث داخل كل Module، وتبني نقطة وصول موحدة للبيانات والوثائق والمهارات والهيكل التنظيمي والمحتوى المعرفي، مع احترام الصلاحيات في كل خطوة.
+
+المبدأ الحاكم هنا:
+
+> **Search Index ليس System of Record.**
+> هو نسخة قابلة للبحث من البيانات المصرح بفهرستها، بينما المصدر الحقيقي يظل داخل الـDomain الأصلي.
+
+وده مهم لأن النظام عندنا أصبح يحتوي Employee Core وOrg Structure وRecruitment وLearning وER وHSE وDocuments وAnalytics وغيرها، وكلها تنتج معلومات يحتاج المستخدم أن يصل إليها بسرعة. كما أن الهيكل الحالي نفسه موزع بين Talent Acquisition وPersonnel وPayroll وER & Compliance وHR Operations وغيرها، وبالتالي البحث يجب أن يعكس صلاحيات كل وظيفة لا أن يفتح كل المحتوى للجميع. 
+
+# Cluster P — Enterprise Search, Knowledge Graph & AI Retrieval ERD
+
+أقسمه إلى **17 Sub-Domains**:
+
+```text
+P1   Search Source Registry
+P2   Search Index Registry
+P3   Search Documents / Index Records
+P4   Full-Text Search
+P5   Facets / Smart Filters
+P6   Saved Searches
+P7   Search Security
+P8   Permission-Aware Indexing
+P9   Knowledge Entity Registry
+P10  Knowledge Graph Nodes
+P11  Knowledge Graph Relationships
+P12  Semantic Embeddings
+P13  Vector Index
+P14  RAG Knowledge Chunks
+P15  AI Retrieval Policies
+P16  Search Analytics & Relevance
+P17  Search Operations & Governance
+```
+
+---
+
+# 1. Search Architecture
+
+المسار الصحيح:
+
+```text
+Business Domains
+A → O
+   |
+   | Events / CDC
+   v
+Search Ingestion
+   |
+   v
+Search Normalization
+   |
+   +---------+---------+
+   |                   |
+   v                   v
+Text Index         Vector Index
+   |                   |
+   +---------+---------+
+             |
+             v
+      Unified Search API
+             |
+      +------+------+------+
+      |      |      |      |
+      v      v      v      v
+    Web   Mobile   BI    AI Copilot
+```
+
+---
+
+# 2. لا يوجد Search مباشر على Production DB
+
+لا أريد:
+
+```text
+Search Employee
+→ SELECT LIKE '%Ahmed%'
+```
+
+على operational tables.
+
+الأفضل:
+
+```text
+EmployeeUpdated Event
+      ↓
+Search Indexer
+      ↓
+Employee Search Document
+```
+
+ثم الـSearch Service يستعلم من الـIndex.
+
+---
+
+# P1. Search Source Registry
+
+### `search_source`
+
+```text
+search_source
+-------------
+search_source_id PK
+
+tenant_id NULL
+
+source_code
+source_name
+
+source_domain
+  EMPLOYEE
+  ORGANIZATION
+  RECRUITMENT
+  LEARNING
+  DOCUMENT
+  HSE
+  ER
+  PROJECT
+  POLICY
+  KNOWLEDGE
+
+source_entity_type
+
+source_service_id FK
+
+indexing_strategy
+  EVENT
+  CDC
+  BATCH
+  API
+
+authoritative_source
+
+status
+```
+
+---
+
+# P2. Search Index Definition
+
+### `search_index`
+
+```text
+search_index
+------------
+search_index_id PK
+
+index_code
+index_name
+
+index_type
+  FULL_TEXT
+  VECTOR
+  HYBRID
+
+entity_type
+
+tenant_scope
+  GLOBAL
+  TENANT
+  COMPANY
+
+index_version
+
+language_support_json
+
+status
+```
+
+---
+
+# 3. Search Document
+
+### `search_document`
+
+```text
+search_document
+---------------
+search_document_id PK
+
+tenant_id
+
+search_index_id FK
+
+entity_type
+entity_id
+
+entity_version
+
+title
+subtitle
+
+searchable_text
+
+metadata_json
+
+security_classification
+
+source_updated_at
+
+indexed_at
+
+status
+```
+
+مثال Employee:
+
+```json
+{
+  "employeeCode": "AFRO-1024",
+  "name": "Ahmed Ali",
+  "position": "Project Engineer",
+  "department": "HR Operations",
+  "project": "Huawei",
+  "skills": ["FTTH", "HSE", "Fiber Testing"]
+}
+```
+
+---
+
+# 4. Search Document Field
+
+### `search_document_field`
+
+```text
+search_document_field
+---------------------
+search_document_field_id PK
+
+search_document_id FK
+
+field_code
+
+field_value_text
+field_value_number
+field_value_date
+
+is_searchable
+is_filterable
+is_sortable
+is_facetable
+
+security_level
+```
+
+يفيد عندما نريد Field-aware filters بدل metadata JSON فقط.
+
+---
+
+# 5. Search Entity Types
+
+أقترح أول Release يدعم:
+
+```text
+Employees
+Positions
+Departments
+Projects
+Candidates
+Skills
+Courses
+Policies
+Documents
+Cases
+Requests
+HSE Certifications
+Training Certificates
+Job Vacancies
+Organization Units
+```
+
+لكن ليس كل entity بنفس مستوى الوصول.
+
+---
+
+# 6. Full-Text Search
+
+مثال:
+
+```text
+"fiber engineer cairo"
+```
+
+يبحث في:
+
+```text
+Employee Name
+Job Title
+Skills
+Department
+Project
+Location
+```
+
+لكن ليس في:
+
+```text
+Salary
+Medical Diagnosis
+Investigation Notes
+```
+
+إلا لو search scope يسمح بذلك.
+
+---
+
+# P3. Search Field Definition
+
+### `search_field_definition`
+
+```text
+search_field_definition
+-----------------------
+search_field_definition_id PK
+
+search_index_id FK
+
+field_code
+field_name
+
+field_type
+  TEXT
+  KEYWORD
+  NUMBER
+  DATE
+  BOOLEAN
+  GEO
+
+weight
+
+searchable
+filterable
+sortable
+facetable
+
+analyzer_type
+
+security_classification
+
+status
+```
+
+---
+
+# 7. Field Weighting
+
+مثال Employee search:
+
+```text
+Employee Name        Weight 10
+Employee Code        Weight 10
+Position             Weight 8
+Skill                Weight 7
+Department           Weight 5
+Project              Weight 5
+Document OCR Text    Weight 2
+```
+
+حتى تكون النتائج أكثر منطقية.
+
+---
+
+# 8. Multilingual Search
+
+نحتاج:
+
+```text
+Arabic
+English
+French
+```
+
+ويجب أن يدعم:
+
+```text
+Arabic normalization
+English stemming
+French stemming
+```
+
+مثل:
+
+```text
+محمد
+Mohamed
+Mohammad
+```
+
+لكن لا أنصح بعمل fuzzy matching غير محدود على identity searches لأنه قد يعيد نتائج خاطئة.
+
+---
+
+# P4. Search Synonym
+
+### `search_synonym`
+
+```text
+search_synonym
+--------------
+search_synonym_id PK
+
+tenant_id NULL
+
+language_code
+
+term
+
+synonym_term
+
+synonym_type
+  EXACT
+  ABBREVIATION
+  BUSINESS_TERM
+  TRANSLATION
+
+status
+```
+
+مثال:
+
+```text
+HR
+Human Resources
+People & Culture
+
+PM
+Project Manager
+
+TA
+Talent Acquisition
+```
+
+---
+
+# 9. Search Alias
+
+### `search_alias`
+
+```text
+search_alias
+------------
+search_alias_id PK
+
+entity_type
+entity_id
+
+alias_text
+
+alias_type
+  SHORT_NAME
+  ALTERNATIVE_NAME
+  LEGACY_CODE
+  TRANSLITERATION
+
+language_code
+```
+
+مفيد للأسماء العربية/الإنجليزية.
+
+---
+
+# 10. Facets / Smart Filters
+
+مثال Employee Search:
+
+```text
+Company
+Department
+Position
+Project
+Location
+Employee Type
+Grade
+Skill
+Employment Status
+Certification Status
+```
+
+---
+
+# P5. Facet Definition
+
+### `search_facet_definition`
+
+```text
+search_facet_definition
+-----------------------
+facet_id PK
+
+search_index_id
+
+facet_code
+facet_name
+
+source_field
+
+facet_type
+  TERM
+  RANGE
+  DATE_RANGE
+  BOOLEAN
+
+display_order
+
+status
+```
+
+---
+
+# P6. Filter Preset
+
+### `search_filter_preset`
+
+```text
+search_filter_preset
+--------------------
+filter_preset_id PK
+
+tenant_id
+
+preset_name
+
+entity_type
+
+filter_definition_json
+
+owner_user_id NULL
+
+visibility
+  PRIVATE
+  TEAM
+  TENANT
+
+status
+```
+
+مثال:
+
+```text
+Field Technicians - Alexandria - Expiring Certification < 30 days
+```
+
+---
+
+# 11. Saved Searches
+
+### `saved_search`
+
+```text
+saved_search
+------------
+saved_search_id PK
+
+tenant_id
+user_id
+
+search_name
+
+search_scope
+
+query_text
+
+filters_json
+sort_json
+
+notify_on_new_match
+
+status
+
+created_at
+```
+
+---
+
+# P7. Saved Search Alert
+
+```text
+saved_search_alert
+------------------
+saved_search_alert_id PK
+
+saved_search_id FK
+
+last_evaluated_at
+
+last_match_count
+
+new_match_count
+
+notification_status
+```
+
+مثال:
+
+> Notify me when a technician with Fiber + HSE certification becomes available.
+
+---
+
+# 12. Search Security
+
+هذه أهم منطقة في Cluster P.
+
+Search لا يجب أن يعيد Document ثم يقول:
+
+> Sorry, you cannot open it.
+
+حتى مجرد وجود النتيجة قد يكون sensitive.
+
+لذلك نحتاج:
+
+> **Security trimming before result return.**
+
+---
+
+# P8. Search ACL
+
+### `search_acl`
+
+```text
+search_acl
+----------
+search_acl_id PK
+
+search_document_id FK
+
+principal_type
+  USER
+  ROLE
+  TEAM
+  POSITION
+  ORG_UNIT
+  PROJECT
+
+principal_id
+
+permission
+  DISCOVER
+  VIEW
+  OPEN
+  DOWNLOAD
+
+effective_from
+effective_to
+
+status
+```
+
+---
+
+# 13. الفرق بين Discover وView
+
+مهم جدًا.
+
+مثال:
+
+HR Manager قد يرى:
+
+```text
+ER Case exists
+Case ID
+Status
+```
+
+لكن لا يرى:
+
+```text
+Evidence
+Witness Statement
+Investigation Details
+```
+
+لذلك:
+
+```text
+DISCOVER = allowed
+VIEW = denied
+```
+
+---
+
+# 14. Security Filter
+
+### `search_security_policy`
+
+```text
+search_security_policy
+----------------------
+search_security_policy_id PK
+
+entity_type
+
+security_zone
+
+rule_id FK
+
+apply_at
+  INDEX_TIME
+  QUERY_TIME
+  BOTH
+
+status
+```
+
+---
+
+# 15. Permission Snapshot
+
+لتحسين الأداء يمكن إنشاء:
+
+### `search_permission_snapshot`
+
+```text
+search_permission_snapshot
+--------------------------
+snapshot_id PK
+
+tenant_id
+
+user_id
+
+allowed_company_ids_json
+allowed_org_units_json
+allowed_projects_json
+allowed_security_zones_json
+
+generated_at
+expires_at
+```
+
+لكن يظل source الأساسي هو IAM/authorization system.
+
+---
+
+# 16. Permission-Aware Indexing
+
+بعض البيانات لا يجب أن تدخل shared index أصلاً.
+
+مثال:
+
+```text
+Medical Documents
+ER Evidence
+Bank Documents
+```
+
+يمكن وضعها في:
+
+```text
+Restricted Search Index
+```
+
+منفصل عن General Index.
+
+---
+
+# Search Zones
+
+أوصي بـ:
+
+```text
+GENERAL
+RESTRICTED
+HIGHLY_RESTRICTED
+```
+
+مثال:
+
+```text
+Employee Directory
+→ GENERAL
+
+Payroll
+→ RESTRICTED
+
+Medical / ER Evidence
+→ HIGHLY_RESTRICTED
+```
+
+---
+
+# 17. Knowledge Entity Registry
+
+Search وحده يعيد Documents.
+
+Knowledge Layer يجب أن يفهم:
+
+```text
+Ahmed
+is Employee
+
+Fiber Splicing
+is Skill
+
+Project X
+is Project
+
+HSE Certificate
+is Certification
+```
+
+---
+
+# P9. Knowledge Entity
+
+### `knowledge_entity`
+
+```text
+knowledge_entity
+----------------
+knowledge_entity_id PK
+
+tenant_id
+
+entity_type
+
+source_entity_type
+source_entity_id
+
+canonical_name
+
+description
+
+language_code
+
+security_classification
+
+status
+```
+
+---
+
+# 18. Entity Types
+
+```text
+EMPLOYEE
+POSITION
+JOB
+ORG_UNIT
+PROJECT
+CUSTOMER
+SKILL
+COMPETENCY
+COURSE
+CERTIFICATION
+DOCUMENT
+POLICY
+ROLE
+LOCATION
+TECHNOLOGY
+```
+
+---
+
+# P10. Knowledge Entity Alias
+
+```text
+knowledge_entity_alias
+----------------------
+alias_id PK
+
+knowledge_entity_id FK
+
+alias_text
+
+language_code
+
+alias_type
+```
+
+---
+
+# 19. Knowledge Graph
+
+هنا تبدأ العلاقات.
+
+### `knowledge_relationship_type`
+
+```text
+knowledge_relationship_type
+---------------------------
+relationship_type_id PK
+
+relationship_code
+
+relationship_name
+
+from_entity_type
+to_entity_type
+
+directional
+
+status
+```
+
+---
+
+# P11. Knowledge Relationship
+
+```text
+knowledge_relationship
+----------------------
+knowledge_relationship_id PK
+
+tenant_id
+
+from_entity_id FK
+to_entity_id FK
+
+relationship_type_id FK
+
+source_reference
+
+confidence_score
+
+effective_from
+effective_to
+
+status
+```
+
+---
+
+# Examples
+
+```text
+Employee
+  HAS_SKILL
+Skill
+
+Employee
+  ASSIGNED_TO
+Project
+
+Position
+  REQUIRES_SKILL
+Skill
+
+Course
+  DEVELOPS_SKILL
+Skill
+
+Employee
+  REPORTS_TO
+Employee
+
+Employee
+  HOLDS_CERTIFICATION
+Certification
+
+Document
+  RELATES_TO
+Employee
+
+Policy
+  GOVERNS
+Process
+```
+
+---
+
+# 20. Knowledge Graph Value
+
+من هنا نستطيع أن نسأل:
+
+> من هم الموظفون الذين لديهم Fiber Splicing Skill ويعملون في القاهرة وليسوا مخصصين بالكامل لمشروع؟
+
+بدل join يدوي بين 6 modules.
+
+---
+
+# 21. Knowledge Graph Edge Source
+
+كل Relationship يجب أن نعرف مصدرها.
+
+### `knowledge_relationship_source`
+
+```text
+knowledge_relationship_source
+-----------------------------
+relationship_source_id PK
+
+knowledge_relationship_id FK
+
+source_domain
+
+source_entity_id
+
+source_event_id NULL
+
+derived_flag
+
+derivation_rule_id NULL
+```
+
+---
+
+# 22. Derived Relationships
+
+مثال:
+
+```text
+Employee
+  QUALIFIED_FOR
+Position
+```
+
+قد تكون مشتقة من:
+
+```text
+Skills
+Certifications
+Experience
+Training
+```
+
+ولا تكون stored business fact مباشر.
+
+لذلك:
+
+```text
+derived_flag = true
+```
+
+---
+
+# 23. Semantic Search
+
+Keyword search:
+
+```text
+"medical certificate"
+```
+
+Semantic search:
+
+```text
+"documents proving the employee is medically fit for field work"
+```
+
+يمكن أن يجد:
+
+```text
+Medical Form 111
+Fitness Clearance
+HSE Medical Approval
+```
+
+---
+
+# P12. Embedding Model Registry
+
+### `embedding_model`
+
+```text
+embedding_model
+---------------
+embedding_model_id PK
+
+model_code
+model_name
+
+provider
+
+dimension_count
+
+supported_languages_json
+
+version
+
+status
+```
+
+---
+
+# P13. Embedding Record
+
+```text
+embedding_record
+----------------
+embedding_record_id PK
+
+tenant_id
+
+entity_type
+entity_id
+
+chunk_id NULL
+
+embedding_model_id FK
+
+vector_reference
+
+content_hash
+
+created_at
+
+status
+```
+
+---
+
+# 24. لا نخزن كل شيء كـEmbedding
+
+ممنوع embedding raw sensitive content تلقائيًا.
+
+يجب قبل embedding:
+
+```text
+Security Classification
+PII Policy
+Redaction Policy
+Allowed AI Usage
+```
+
+---
+
+# 25. Vector Index
+
+### `vector_index`
+
+```text
+vector_index
+------------
+vector_index_id PK
+
+index_code
+
+entity_scope
+
+security_zone
+
+embedding_model_id
+
+similarity_metric
+  COSINE
+  DOT_PRODUCT
+  EUCLIDEAN
+
+status
+```
+
+---
+
+# P14. Vector Index Assignment
+
+```text
+vector_index_assignment
+-----------------------
+vector_index_assignment_id PK
+
+embedding_record_id
+vector_index_id
+
+indexed_at
+
+status
+```
+
+---
+
+# 26. RAG Knowledge Chunk
+
+الوثيقة الكبيرة لا تتحول إلى Embedding واحدة.
+
+### `knowledge_chunk`
+
+```text
+knowledge_chunk
+---------------
+knowledge_chunk_id PK
+
+tenant_id
+
+source_type
+  DOCUMENT
+  POLICY
+  PROCEDURE
+  COURSE
+  KNOWLEDGE_ARTICLE
+
+source_id
+
+source_version
+
+chunk_no
+
+chunk_text
+
+token_count
+
+heading_path
+
+page_number NULL
+
+language_code
+
+security_classification
+
+content_hash
+
+status
+```
+
+---
+
+# 27. Chunk Metadata
+
+### `knowledge_chunk_metadata`
+
+```text
+knowledge_chunk_metadata
+------------------------
+chunk_metadata_id PK
+
+knowledge_chunk_id FK
+
+metadata_key
+metadata_value
+```
+
+مثال:
+
+```text
+policy_type = payroll
+country = Egypt
+effective_date = 2026-01-01
+```
+
+---
+
+# 28. Chunk Permission
+
+### `knowledge_chunk_acl`
+
+```text
+knowledge_chunk_acl
+-------------------
+knowledge_chunk_acl_id PK
+
+knowledge_chunk_id
+
+principal_type
+principal_id
+
+permission
+  RETRIEVE
+  CITE
+  SUMMARIZE
+
+status
+```
+
+مهم جدًا لأن AI retrieval يجب أن يحترم permissions.
+
+---
+
+# 29. RAG Index
+
+### `rag_index`
+
+```text
+rag_index
+---------
+rag_index_id PK
+
+tenant_id NULL
+
+rag_index_code
+rag_index_name
+
+knowledge_scope
+
+security_zone
+
+embedding_model_id
+
+chunk_strategy
+
+status
+```
+
+---
+
+# 30. Chunking Policy
+
+### `chunking_policy`
+
+```text
+chunking_policy
+---------------
+chunking_policy_id PK
+
+document_type_id NULL
+
+chunk_strategy
+  PAGE
+  PARAGRAPH
+  HEADING
+  SEMANTIC
+
+max_tokens
+
+overlap_tokens
+
+preserve_tables
+
+preserve_section_context
+
+status
+```
+
+---
+
+# 31. RAG Source Registry
+
+### `rag_source`
+
+```text
+rag_source
+----------
+rag_source_id PK
+
+rag_index_id
+
+source_type
+source_id
+
+version
+
+indexed_at
+
+status
+```
+
+---
+
+# 32. AI Retrieval Policy
+
+### `ai_retrieval_policy`
+
+```text
+ai_retrieval_policy
+-------------------
+ai_retrieval_policy_id PK
+
+tenant_id
+
+use_case
+
+allowed_security_zones_json
+
+allowed_entity_types_json
+
+max_results
+
+minimum_similarity_score
+
+pii_allowed
+
+restricted_data_allowed
+
+citation_required
+
+status
+```
+
+---
+
+# 33. Example Policies
+
+HR Assistant:
+
+```text
+Policies
+Employee Handbook
+HR Procedures
+Leave Rules
+Training Catalog
+```
+
+Payroll Assistant:
+
+```text
+Payroll Policies
+Payroll Rules
+Pay Components
+Payroll SOP
+```
+
+ER Assistant:
+
+```text
+ER Policy
+Approved Procedures
+Case Metadata
+```
+
+لكن ليس بالضرورة raw investigation evidence.
+
+---
+
+# 34. AI Retrieval Request
+
+### `ai_retrieval_request`
+
+```text
+ai_retrieval_request
+--------------------
+ai_retrieval_request_id PK
+
+tenant_id
+user_id
+
+query_text
+
+use_case
+
+security_context_json
+
+rag_index_id
+
+requested_at
+
+status
+```
+
+---
+
+# P15. AI Retrieval Result
+
+```text
+ai_retrieval_result
+-------------------
+ai_retrieval_result_id PK
+
+ai_retrieval_request_id
+
+knowledge_chunk_id
+
+rank
+
+similarity_score
+
+security_decision
+
+included_in_context
+
+citation_reference
+```
+
+---
+
+# 35. AI Knowledge Session
+
+### `ai_knowledge_session`
+
+```text
+ai_knowledge_session
+--------------------
+session_id PK
+
+tenant_id
+user_id
+
+assistant_type
+
+started_at
+ended_at
+
+security_context_hash
+
+status
+```
+
+---
+
+# 36. Query Understanding
+
+قبل Search يمكن تحويل:
+
+```text
+"technicians outside cairo with expired HSE"
+```
+
+إلى:
+
+```text
+Entity = Employee
+EmployeeType = Technician
+Location != Cairo
+CertificationType = HSE
+CertificationStatus = Expired
+```
+
+---
+
+# P16. Parsed Search Query
+
+### `parsed_search_query`
+
+```text
+parsed_search_query
+-------------------
+parsed_search_query_id PK
+
+search_request_id
+
+raw_query
+
+detected_entity_type
+
+detected_intent
+
+normalized_terms_json
+
+extracted_filters_json
+
+language_code
+```
+
+---
+
+# 37. Search Request
+
+### `search_request`
+
+```text
+search_request
+--------------
+search_request_id PK
+
+tenant_id
+user_id
+
+query_text
+
+search_scope
+
+filters_json
+
+sort_json
+
+requested_at
+
+response_time_ms
+
+result_count
+```
+
+---
+
+# P17. Search Result Interaction
+
+```text
+search_result_interaction
+-------------------------
+interaction_id PK
+
+search_request_id
+
+search_document_id
+
+rank_position
+
+action
+  VIEW
+  OPEN
+  DOWNLOAD
+  IGNORE
+
+occurred_at
+```
+
+---
+
+# 38. Search Analytics
+
+نعرف:
+
+```text
+Most searched terms
+Zero-result searches
+Search abandonment
+Low relevance queries
+Most opened results
+```
+
+---
+
+# P18. Search Quality Metric
+
+### `search_quality_metric`
+
+```text
+search_quality_metric
+---------------------
+search_quality_metric_id PK
+
+period_start
+period_end
+
+search_index_id
+
+total_queries
+
+zero_result_rate
+
+click_through_rate
+
+avg_response_time_ms
+
+avg_first_click_rank
+
+status
+```
+
+---
+
+# 39. Relevance Feedback
+
+### `search_feedback`
+
+```text
+search_feedback
+---------------
+search_feedback_id PK
+
+search_request_id
+
+search_document_id NULL
+
+feedback_type
+  RELEVANT
+  NOT_RELEVANT
+  MISSING_RESULT
+  WRONG_PERMISSION
+
+comment NULL
+
+submitted_by
+```
+
+---
+
+# 40. Reindex Management
+
+### `reindex_job`
+
+```text
+reindex_job
+-----------
+reindex_job_id PK
+
+search_index_id
+
+scope_type
+  FULL
+  TENANT
+  ENTITY_TYPE
+  ENTITY
+
+scope_reference NULL
+
+requested_by
+
+started_at
+completed_at
+
+documents_processed
+documents_failed
+
+status
+```
+
+---
+
+# 41. Search Index Versioning
+
+### `search_index_version`
+
+```text
+search_index_version
+--------------------
+search_index_version_id PK
+
+search_index_id
+
+version
+
+mapping_definition_json
+
+created_at
+
+activated_at
+
+status
+```
+
+يسمح لنا بعمل:
+
+```text
+Index V1
+→ build V2
+→ validate
+→ switch alias
+```
+
+بدون downtime كبير.
+
+---
+
+# 42. Search Alias Routing
+
+### `search_index_alias`
+
+```text
+search_index_alias
+------------------
+search_index_alias_id PK
+
+alias_name
+
+search_index_version_id
+
+is_active
+
+activated_at
+```
+
+---
+
+# 43. Search Change Queue
+
+حتى لا نعمل full reindex عند كل تعديل.
+
+### `search_change_queue`
+
+```text
+search_change_queue
+-------------------
+search_change_queue_id PK
+
+tenant_id
+
+entity_type
+entity_id
+
+change_type
+  CREATE
+  UPDATE
+  DELETE
+  SECURITY_CHANGE
+
+source_version
+
+queued_at
+processed_at
+
+status
+```
+
+---
+
+# 44. Security Reindex
+
+أهم شيء:
+
+إذا صلاحيات Document تغيرت، يجب إعادة security metadata بسرعة.
+
+لا ننتظر nightly batch.
+
+```text
+DocumentPermissionChanged
+        ↓
+SearchChangeQueue
+        ↓
+Update ACL in Index
+```
+
+---
+
+# 45. Search Tombstone
+
+عند حذف record من operational system، نحتاج حذف من index.
+
+### `search_tombstone`
+
+```text
+search_tombstone
+----------------
+search_tombstone_id PK
+
+tenant_id
+
+entity_type
+entity_id
+
+deleted_at
+
+source_event_id
+
+index_cleanup_status
+```
+
+---
+
+# 46. Knowledge Graph Example
+
+يمكن أن يكون لدينا:
+
+```text
+Ahmed
+  |
+  +-- WORKS_AS --> Fiber Engineer
+  |
+  +-- ASSIGNED_TO --> Huawei FTTH
+  |
+  +-- HAS_SKILL --> Fiber Splicing
+  |
+  +-- HAS_SKILL --> OTDR Testing
+  |
+  +-- HOLDS --> Working at Heights
+  |
+  +-- REPORTS_TO --> Project Manager
+```
+
+ثم:
+
+```text
+Fiber Engineer
+  |
+  +-- REQUIRES_SKILL --> Fiber Splicing
+  |
+  +-- REQUIRES_CERTIFICATION --> HSE
+```
+
+---
+
+# 47. Skill Search Use Case
+
+سؤال:
+
+> أحتاج 10 technicians عندهم Fiber Splicing + OTDR ومتاحين الأسبوع القادم.
+
+Cluster P يستخدم:
+
+```text
+Knowledge Graph
++
+Employee Skills
++
+Certifications
++
+Project Assignment
++
+Availability
+```
+
+لكن availability نفسها تأتي من Cluster B/F، وليست owned by P.
+
+---
+
+# 48. Organizational Search
+
+يمكن للمدير البحث:
+
+```text
+"من المسؤول عن Payroll Huawei؟"
+```
+
+Knowledge Graph يربط:
+
+```text
+Person
+Position
+Function
+Customer Account
+Reporting Line
+```
+
+الهيكل الحالي أصلًا يوضح توزيع HR Operations بين Huawei & Nokia وEricsson، وهو مثال ممتاز لنوع العلاقات التي يجب أن تصبح searchable بدل الاعتماد على معرفة شخصية داخل الشركة. 
+
+---
+
+# 49. Policy Search
+
+المستخدم يسأل:
+
+> ما المستندات المطلوبة للتعيين؟
+
+RAG لا يخترع إجابة.
+
+يسترجع من approved policy/manual.
+
+والـManual الحالي يحتوي بالفعل required onboarding documents ومتطلبات contracting/HSE/activation، وبالتالي هذا النوع من المحتوى مناسب جدًا لـpermission-aware policy retrieval. 
+
+---
+
+# 50. Search vs Knowledge Graph vs RAG
+
+مهم جدًا عدم خلطهم:
+
+### Search
+
+```text
+Find documents / entities
+```
+
+### Knowledge Graph
+
+```text
+Understand relationships
+```
+
+### RAG
+
+```text
+Retrieve trusted content for AI answers
+```
+
+مثال:
+
+```text
+Search:
+Find Ahmed
+
+Graph:
+Who manages Ahmed?
+
+RAG:
+What policy governs Ahmed's project deployment?
+```
+
+---
+
+# 51. AI Grounding Priority
+
+عندما يسأل AI:
+
+> هل هذا الموظف مؤهل للعمل على المشروع؟
+
+لا يجب أن يعتمد فقط على semantic similarity.
+
+الترتيب:
+
+```text
+Structured Rules
+        ↓
+Authoritative Domain Data
+        ↓
+Knowledge Graph
+        ↓
+Approved Documents
+        ↓
+Semantic Retrieval
+```
+
+وليس العكس.
+
+---
+
+# 52. Structured Retrieval
+
+### `structured_retrieval_source`
+
+```text
+structured_retrieval_source
+---------------------------
+structured_retrieval_source_id PK
+
+use_case
+
+service_id
+
+entity_type
+
+allowed_fields_json
+
+priority
+
+status
+```
+
+مثال:
+
+Employee status يأتي من Employee Service API وليس من RAG chunk.
+
+---
+
+# 53. Knowledge Confidence
+
+ليست كل Relationship بنفس الثقة.
+
+### `knowledge_confidence_policy`
+
+```text
+knowledge_confidence_policy
+---------------------------
+confidence_policy_id PK
+
+source_type
+
+default_confidence
+
+requires_verification_below
+
+status
+```
+
+مثال:
+
+```text
+HR Master Data       1.00
+Approved Policy      1.00
+OCR Extracted        0.85
+AI Derived Skill     0.65
+```
+
+---
+
+# 54. AI-Derived Knowledge
+
+إذا AI استنتج:
+
+> Employee likely has Fiber Testing experience.
+
+لا نحفظها كحقيقة.
+
+### `derived_knowledge_claim`
+
+```text
+derived_knowledge_claim
+-----------------------
+derived_claim_id PK
+
+tenant_id
+
+subject_entity_id
+
+predicate
+
+object_value
+
+source_reference
+
+model_version
+
+confidence_score
+
+verification_status
+  UNVERIFIED
+  VERIFIED
+  REJECTED
+
+verified_by NULL
+
+created_at
+```
+
+---
+
+# 55. User Search Preferences
+
+### `search_user_preference`
+
+```text
+search_user_preference
+----------------------
+user_id PK
+
+default_search_scope
+
+default_sort
+
+recent_filters_json
+
+personalization_enabled
+```
+
+لكن personalization لا يجب أن يتجاوز permissions.
+
+---
+
+# 56. Recent Search
+
+### `recent_search`
+
+```text
+recent_search
+-------------
+recent_search_id PK
+
+user_id
+
+query_text
+
+search_scope
+
+searched_at
+```
+
+مع retention قصير لأن search history قد تكون حساسة.
+
+---
+
+# 57. Popular Search Suggestions
+
+### `search_suggestion`
+
+```text
+search_suggestion
+-----------------
+search_suggestion_id PK
+
+tenant_id
+
+suggestion_text
+
+entity_type
+
+popularity_score
+
+status
+```
+
+---
+
+# 58. Query Redaction
+
+لو المستخدم كتب:
+
+```text
+National ID 2980...
+```
+
+لا نريد تخزينها كاملة في analytics log.
+
+### `search_log_redaction_policy`
+
+```text
+search_log_redaction_policy
+---------------------------
+redaction_policy_id PK
+
+pattern_type
+
+pattern_expression
+
+replacement
+
+status
+```
+
+---
+
+# 59. Sensitive Query Detection
+
+### `sensitive_search_event`
+
+```text
+sensitive_search_event
+----------------------
+sensitive_search_event_id PK
+
+user_id
+
+query_category
+
+risk_level
+
+search_scope
+
+occurred_at
+
+review_required
+
+status
+```
+
+مثال:
+
+```text
+Bulk salary lookup
+Mass employee personal data search
+Investigation evidence search
+```
+
+---
+
+# 60. Search Abuse Controls
+
+يمكن وضع limits على:
+
+```text
+Bulk Search
+Enumeration
+Mass Export
+Sensitive Data Discovery
+```
+
+حتى لو المستخدم authenticated.
+
+---
+
+# P19. Search Rate Limit Policy
+
+```text
+search_rate_limit_policy
+------------------------
+policy_id PK
+
+principal_type
+principal_id NULL
+
+search_scope
+
+max_queries
+window_seconds
+
+max_results_per_query
+
+status
+```
+
+---
+
+# 61. Search Result Export Governance
+
+Search لا يعني Export unlimited.
+
+### `search_export_request`
+
+```text
+search_export_request
+---------------------
+search_export_request_id PK
+
+user_id
+
+search_request_id
+
+requested_format
+
+estimated_row_count
+
+contains_sensitive_data
+
+approval_required
+
+approved_by NULL
+
+status
+```
+
+---
+
+# 62. Global Search UI
+
+أقترح Header Search موحد:
+
+```text
+Search employees, projects, documents, skills, policies...
+```
+
+ثم categories:
+
+```text
+All
+People
+Organization
+Projects
+Skills
+Documents
+Policies
+Learning
+Requests
+```
+
+مع عدم عرض categories غير المصرح بها أصلًا.
+
+---
+
+# 63. Search Result Card
+
+Employee:
+
+```text
+Ahmed Ali
+Fiber Engineer
+Project: Huawei FTTH
+Location: Cairo
+Skills: OTDR, Splicing
+```
+
+Policy:
+
+```text
+Employee Onboarding Policy
+Version 3
+Effective: Jan 2026
+Approved
+```
+
+Document:
+
+```text
+Employment Contract
+Employee: Ahmed
+Version 2
+Verified
+```
+
+---
+
+# 64. Deep Links
+
+كل Search Result لا يعرض data كاملة.
+
+يربط إلى:
+
+```text
+Employee Profile
+Project Page
+Document Viewer
+Policy Page
+Course Page
+```
+
+والـtarget module يعيد authorization check مرة أخرى.
+
+---
+
+# 65. Search API
+
+### `search_api_request`
+
+منطقياً:
+
+```text
+POST /search
+
+{
+  "query": "...",
+  "scope": ["employee", "document"],
+  "filters": {},
+  "page": 1
+}
+```
+
+ثم Search Service تطبق:
+
+```text
+Tenant Context
++
+Permission Context
++
+Index Scope
++
+Query
+```
+
+---
+
+# 66. Hybrid Search
+
+أفضل approach للـAI:
+
+```text
+Keyword Search
++
+Semantic Search
++
+Metadata Filters
++
+Security Filters
++
+Re-ranking
+```
+
+وليس Vector Search وحده.
+
+---
+
+# 67. Re-ranking
+
+### `reranking_policy`
+
+```text
+reranking_policy
+----------------
+reranking_policy_id PK
+
+use_case
+
+reranker_model
+
+candidate_count
+
+final_result_count
+
+security_recheck_required
+
+status
+```
+
+---
+
+# 68. Retrieval Pipeline
+
+```text
+User Query
+   ↓
+Intent Detection
+   ↓
+Security Context
+   ↓
+Metadata Filters
+   ↓
+Keyword Retrieval
+   +
+Vector Retrieval
+   ↓
+Merge
+   ↓
+Security Trim
+   ↓
+Re-rank
+   ↓
+Final Results
+```
+
+---
+
+# 69. AI RAG Pipeline
+
+```text
+User Question
+     ↓
+Identity / Permission
+     ↓
+Intent
+     ↓
+Structured Data Needed?
+  /       \
+Yes       No
+ |         |
+API        RAG
+ |         |
+ +----+----+
+      ↓
+Evidence Set
+      ↓
+Answer Generation
+      ↓
+Citation / Source Reference
+```
+
+---
+
+# 70. RAG Citation
+
+### `rag_citation`
+
+```text
+rag_citation
+------------
+rag_citation_id PK
+
+ai_response_id
+
+knowledge_chunk_id
+
+source_id
+
+source_version
+
+page_number NULL
+
+citation_order
+```
+
+حتى نستطيع معرفة:
+
+> AI قال هذا بناءً على ماذا؟
+
+---
+
+# 71. Knowledge Freshness
+
+### `knowledge_freshness_status`
+
+```text
+knowledge_freshness_status
+--------------------------
+source_id PK
+
+source_updated_at
+
+indexed_at
+
+lag_seconds
+
+freshness_status
+  FRESH
+  DELAYED
+  STALE
+```
+
+---
+
+# 72. Knowledge Supersession
+
+لو Policy V4 أصبحت Active:
+
+```text
+V3 = SUPERSEDED
+```
+
+لا يجب أن يعطي RAG V3 كأفضل نتيجة إلا لو السؤال تاريخي.
+
+---
+
+# P20. Knowledge Version
+
+```text
+knowledge_version
+-----------------
+knowledge_version_id PK
+
+knowledge_entity_id
+
+source_version
+
+effective_from
+effective_to
+
+is_current
+
+status
+```
+
+---
+
+# 73. Historical Search
+
+أحيانًا نحتاج:
+
+> What was the policy in March 2025?
+
+لذلك Search Query يجب أن تدعم:
+
+```text
+as_of_date
+```
+
+وتستخدم effective dating.
+
+---
+
+# 74. Search Event Integration
+
+Cluster P يستهلك Events من N:
+
+```text
+Employee.Created
+Employee.Updated
+Employee.Separated
+
+OrgUnit.Updated
+
+Skill.Assigned
+Skill.Removed
+
+Document.Verified
+Document.Updated
+Document.PermissionChanged
+
+Policy.Published
+Policy.Superseded
+
+Project.Updated
+```
+
+---
+
+# 75. Cluster P High-Level ERD
+
+```text
+SEARCH_SOURCE
+     |
+     v
+SEARCH_INDEX
+     |
+     +---- SEARCH_FIELD_DEFINITION
+     |
+     v
+SEARCH_DOCUMENT
+     |
+     +---- SEARCH_DOCUMENT_FIELD
+     |
+     +---- SEARCH_ACL
+     |
+     +---- SEARCH_INDEX_VERSION
+```
+
+Knowledge:
+
+```text
+KNOWLEDGE_ENTITY
+       |
+       +---- KNOWLEDGE_ENTITY_ALIAS
+       |
+       v
+KNOWLEDGE_RELATIONSHIP
+       |
+       v
+KNOWLEDGE_ENTITY
+```
+
+Semantic:
+
+```text
+SOURCE CONTENT
+      |
+      v
+KNOWLEDGE_CHUNK
+      |
+      +---- CHUNK ACL
+      |
+      v
+EMBEDDING_RECORD
+      |
+      v
+VECTOR_INDEX
+      |
+      v
+RAG RETRIEVAL
+```
+
+---
+
+# 76. Core Production Entities
+
+لو اختصرنا Cluster P إلى production-grade core:
+
+```text
+01 search_source
+02 search_index
+03 search_index_version
+04 search_index_alias
+
+05 search_document
+06 search_document_field
+07 search_field_definition
+
+08 search_synonym
+09 search_alias
+
+10 search_facet_definition
+11 search_filter_preset
+
+12 saved_search
+13 saved_search_alert
+
+14 search_acl
+15 search_security_policy
+16 search_permission_snapshot
+
+17 knowledge_entity
+18 knowledge_entity_alias
+
+19 knowledge_relationship_type
+20 knowledge_relationship
+21 knowledge_relationship_source
+
+22 embedding_model
+23 embedding_record
+
+24 vector_index
+25 vector_index_assignment
+
+26 knowledge_chunk
+27 knowledge_chunk_metadata
+28 knowledge_chunk_acl
+
+29 rag_index
+30 chunking_policy
+31 rag_source
+
+32 ai_retrieval_policy
+33 ai_retrieval_request
+34 ai_retrieval_result
+35 ai_knowledge_session
+
+36 search_request
+37 parsed_search_query
+38 search_result_interaction
+
+39 search_quality_metric
+40 search_feedback
+
+41 reindex_job
+42 search_change_queue
+43 search_tombstone
+
+44 structured_retrieval_source
+
+45 knowledge_confidence_policy
+46 derived_knowledge_claim
+
+47 search_user_preference
+48 recent_search
+49 search_suggestion
+
+50 search_log_redaction_policy
+51 sensitive_search_event
+
+52 search_rate_limit_policy
+53 search_export_request
+
+54 reranking_policy
+55 rag_citation
+56 knowledge_freshness_status
+57 knowledge_version
+```
+
+إذن لدينا تقريبًا **57 core entities**.
+
+---
+
+# 77. أهم Architectural Rules
+
+هذه أعتبرها Non-Negotiable:
+
+1. **Search Index ليس System of Record.**
+2. Search لا تكتب Business Data.
+3. كل Result يخضع لـTenant Isolation.
+4. Permission trimming يجب أن يحدث قبل إرجاع النتيجة.
+5. Restricted content لا يدخل General Search Index.
+6. Search security ليست UI filtering فقط.
+7. Index updates يجب أن تكون event-driven حيثما أمكن.
+8. Security changes يجب أن تحدث لها reindex سريع.
+9. RAG لا يقرأ raw production DB مباشرة.
+10. RAG retrieval يجب أن يكون permission-aware.
+11. AI لا يحصل على جميع documents بسبب وجودها في Vector DB.
+12. Embeddings تعتبر data ويجب حمايتها.
+13. Medical وER content تحتاج security zones مستقلة.
+14. Semantic similarity لا تعني business truth.
+15. Structured authoritative data لها أولوية على semantic content.
+16. AI-derived relationships تظل unverified حتى اعتمادها.
+17. Policies يجب أن تدعم versions وeffective dates.
+18. AI answers على policy/process يجب أن تستخدم current approved version افتراضيًا.
+19. Search history نفسها قد تكون sensitive.
+20. Search logs يجب أن تمنع تسريب PII.
+21. Bulk export يحتاج governance منفصل.
+22. Deep link يعيد authorization check في الـsource module.
+23. Deleted records يجب إزالتها من search/vector indexes.
+24. Tenant data يجب ألا تختلط في vector retrieval حتى لو similarity عالية.
+25. Hybrid retrieval أفضل من vector-only retrieval لمعظم HR use cases.
+
+---
+
+# 78. الفرق بين Cluster P والـClusters الأخرى
+
+```text
+Cluster A–J
+Own business facts.
+
+Cluster O
+Own documents/files/records.
+
+Cluster M
+Own analytics/metrics.
+
+Cluster P
+Own searchable representations,
+knowledge relationships,
+indexes,
+embeddings,
+retrieval metadata.
+```
+
+مثال:
+
+```text
+Employee Skill
+
+Cluster F:
+owns skill assignment.
+
+Cluster P:
+indexes and relates the skill
+for search and knowledge retrieval.
+```
+
+ومثال:
+
+```text
+Employment Contract
+
+Cluster O:
+owns the document.
+
+Cluster P:
+indexes permitted metadata/text
+and makes it discoverable.
+```
+
+---
+
+# 79. وضع الـArchitecture بعد Cluster P
+
+أصبح لدينا:
+
+```text
+A–J
+Business Domains
+
+K
+Integration & Data Governance
+
+L
+Configuration / SaaS Control Plane
+
+M
+Analytics / BI / AI
+
+N
+API / Events / Runtime Backbone
+
+O
+Documents / Records / Evidence
+
+P
+Enterprise Search / Knowledge / RAG
+```
+
+وبعد Cluster P، النظام لم يعد فقط قادرًا على **تخزين وتشغيل البيانات**، بل أصبح قادرًا أيضًا على **العثور عليها، ربطها ببعضها، فهم علاقتها، واسترجاعها بشكل آمن لخدمة المستخدم والـAI**.
+
+**الخطوة التالية المنطقية الآن هي Cluster Q — Enterprise AI Platform, AI Copilot, Agent Runtime, Prompt Registry, Model Gateway, Model Routing, Tool Registry, AI Permissions, Human-in-the-Loop, AI Audit, Evaluation, Guardrails, Cost Control, Conversation Memory, Agent Tasks & AI Governance ERD**؛ لأننا بعد Cluster M جهزنا analytical intelligence، وبعد P أصبح لدينا permission-aware retrieval، لكن ما زلنا لم نبنِ الطبقة التي تدير الـAI نفسه كمنصة مؤسسية قابلة للرقابة بدل وضع chatbot منفصل داخل كل Module.

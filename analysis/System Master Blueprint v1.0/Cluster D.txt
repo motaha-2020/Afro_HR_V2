@@ -1,0 +1,2654 @@
+تمام. ننتقل إلى:
+
+# Cluster D — Performance, Learning, Competency, Certification, Talent, Succession, Promotion & Internal Mobility ERD
+
+هنا يجب أن نفصل بوضوح بين 3 أشياء مختلفة:
+
+1. **Facts**: Performance score، skill level، certification status.
+2. **Assessment/Interpretation**: talent review، readiness، potential.
+3. **Decision**: promotion، succession nomination، internal move، compensation change.
+
+هذا الفصل مهم لأن النظام لا يجب أن يقول:
+
+> Performance = 95% إذًا الموظف يُرقّى تلقائيًا.
+
+الـManual الحالي يدعم بعض أجزاء هذا الـCluster فقط: يوجد KPI evaluation يدخل لاحقًا في KPI bonus، ويوجد training/certification requirements أثناء hiring/onboarding، كما يشترط approvals موثقة لأي promotions أو transfers. لكنه لا يحتوي حتى الآن على Performance Management أو Succession أو Nine-Box process مفصلة؛ لذلك الأجزاء التالية هي **System Design المقترح** وليست نقلًا مباشرًا من الـManual.  
+
+والـOrg Chart الحالي يجعل **Organizational Development** أقرب Business Owner لهذا الـcluster، مع مشاركة Managers وHR Operations وP&C Management حسب العملية. 
+
+---
+
+# 1. الصورة الكاملة
+
+```text
+JOB / POSITION
+      │
+      ▼
+Required Competencies
+      │
+      │                      BUSINESS OBJECTIVES
+      │                              │
+      ▼                              ▼
+EMPLOYEE                      Performance Cycle
+      │                              │
+      ├──── Skills                   ├── Goals
+      ├──── Competencies             ├── KPIs
+      ├──── Certifications           └── Reviews
+      │                                  │
+      │                                  ▼
+      │                           Performance Result
+      │                                  │
+      └──────────────────┬───────────────┘
+                         ▼
+                    Gap Analysis
+                         │
+              ┌──────────┴──────────┐
+              ▼                     ▼
+       Development Plan        Talent Review
+              │                     │
+              ▼                     ▼
+       Training / Learning       Nine Box
+              │                     │
+              ▼                     ▼
+      Updated Skills          Talent Pool
+              │                     │
+              └──────────┬──────────┘
+                         ▼
+                   Succession Plan
+                         │
+                         ▼
+                 Career / Promotion
+                         │
+                  Approval Decision
+                         │
+        ┌────────────────┼────────────────┐
+        ▼                ▼                ▼
+    New Position    New Assignment   Compensation
+```
+
+---
+
+# 2. Database Schemas
+
+أقترح:
+
+```text
+performance.*
+competency.*
+learning.*
+talent.*
+career.*
+```
+
+مع الاعتماد على:
+
+```text
+org.*
+core_hr.*
+workforce.*
+compensation.*
+documents.*
+workflow.*
+```
+
+---
+
+# 3. Competency Domain أولًا
+
+لا يمكن بناء Performance/Talent جيد بدون تعريف:
+
+> ما المطلوب من الوظيفة أصلًا؟
+
+نبدأ بـ:
+
+```text
+competency.skills
+competency.competencies
+competency.competency_frameworks
+
+competency.job_skill_requirements
+competency.job_competency_requirements
+
+competency.employee_skills
+competency.employee_competencies
+
+competency.assessments
+```
+
+---
+
+# 4. Skill vs Competency
+
+لا أنصح بدمجهما.
+
+## Skill
+
+قدرة محددة:
+
+```text
+Fiber Splicing
+Excel
+Power BI
+Python
+Negotiation
+Project Scheduling
+```
+
+## Competency
+
+سلوك/قدرة أوسع مرتبطة بالأداء:
+
+```text
+Leadership
+Problem Solving
+Customer Orientation
+Planning
+Decision Making
+Communication
+```
+
+---
+
+# 5. `competency.skills`
+
+```text
+skill_id UUID PK
+
+tenant_id
+
+skill_code
+
+name_ar
+name_en
+name_fr
+
+skill_category
+
+description
+
+status
+```
+
+---
+
+# 6. Skill Categories
+
+مثال:
+
+```text
+TECHNICAL
+DIGITAL
+MANAGEMENT
+LANGUAGE
+SAFETY
+COMMERCIAL
+SOFT_SKILL
+```
+
+---
+
+# 7. `competency.competencies`
+
+```text
+competency_id
+
+competency_code
+
+name
+
+category
+
+description
+
+proficiency_scale_id
+
+status
+```
+
+---
+
+# 8. Proficiency Scale
+
+لا نستخدم دائمًا:
+
+```text
+Beginner / Intermediate / Expert
+```
+
+Hard Coded.
+
+نعمل:
+
+```text
+competency.proficiency_scales
+competency.proficiency_levels
+```
+
+مثال:
+
+```text
+Level 1 — Awareness
+Level 2 — Working Knowledge
+Level 3 — Proficient
+Level 4 — Advanced
+Level 5 — Expert
+```
+
+---
+
+# 9. Position / Job Requirements
+
+يمكن للـJob أن يقول:
+
+```text
+Project Manager
+
+Planning = Level 4
+Leadership = Level 4
+Risk Management = Level 4
+Financial Management = Level 3
+```
+
+فنستخدم:
+
+```text
+competency.job_competency_requirements
+```
+
+---
+
+# 10. Job Requirement Table
+
+```text
+requirement_id
+
+job_id
+competency_id
+
+required_level
+
+mandatory BOOLEAN
+
+weight
+
+effective_from
+effective_to
+```
+
+---
+
+# 11. لكن Position قد تحتاج Requirements إضافية
+
+مثل:
+
+```text
+Job:
+Project Manager
+
+Position:
+Huawei Project Manager
+```
+
+قد تحتاج:
+
+```text
+Huawei Customer Certification
+```
+
+لذلك نحتاج optional override:
+
+```text
+competency.position_requirements
+```
+
+---
+
+# 12. Employee Skill Record
+
+```text
+competency.employee_skills
+```
+
+```text
+employee_skill_id
+
+employee_id
+skill_id
+
+proficiency_level
+
+assessment_source
+
+verified BOOLEAN
+verified_by
+
+assessment_date
+
+valid_from
+valid_to
+
+evidence_document_id
+```
+
+---
+
+# 13. Assessment Source
+
+```text
+SELF_ASSESSMENT
+MANAGER_ASSESSMENT
+TECHNICAL_TEST
+CERTIFICATION
+TRAINING_RESULT
+PERFORMANCE_REVIEW
+EXTERNAL_ASSESSMENT
+```
+
+---
+
+# 14. لا نكتب Skill Level فوق القديم
+
+مثال:
+
+```text
+Python
+
+2026-01 = Level 2
+2027-01 = Level 3
+```
+
+نحتفظ بالتاريخ.
+
+وهذا يسمح لاحقًا بتحليل:
+
+```text
+Skill Growth
+```
+
+وليس فقط Current Skill.
+
+---
+
+# 15. Certification Domain
+
+مهم جدًا للـfield workforce.
+
+والـManual نفسه ينص على HSE training/certifications كشرط deployment في safety-sensitive roles. 
+
+الجداول:
+
+```text
+learning.certification_types
+learning.certification_requirements
+
+learning.employee_certifications
+learning.certification_renewals
+```
+
+---
+
+# 16. Certification Type
+
+```text
+certification_type_id
+
+code
+name
+
+issuing_authority
+
+validity_period_months
+
+requires_renewal
+
+status
+```
+
+مثال:
+
+```text
+Working at Heights
+Electrical Safety
+First Aid
+Fiber Splicing Certification
+Huawei Certification
+Ericsson Certification
+```
+
+---
+
+# 17. Certification Requirement
+
+يمكن ربطه بـ:
+
+```text
+Job
+Position
+Project
+Customer
+Site
+```
+
+```text
+learning.certification_requirements
+
+requirement_id
+
+certification_type_id
+
+job_id nullable
+position_id nullable
+project_id nullable
+customer_id nullable
+
+mandatory
+
+blocking_deployment
+
+effective_from
+effective_to
+```
+
+---
+
+# 18. Employee Certification
+
+```text
+employee_certification_id
+
+employee_id
+
+certification_type_id
+
+certificate_number
+
+issue_date
+expiry_date
+
+status
+
+issuing_authority
+
+document_id
+
+verification_status
+verified_by
+```
+
+---
+
+# 19. Certification Status
+
+يفضل Derived:
+
+```text
+VALID
+EXPIRING
+EXPIRED
+SUSPENDED
+REVOKED
+```
+
+ويصدر Event:
+
+```text
+certification.expiring
+certification.expired
+```
+
+ويستهلكه:
+
+```text
+Availability
+Workforce Assignment
+HSE
+Manager
+```
+
+---
+
+# 20. Deployment Interaction
+
+مثلًا:
+
+```text
+Employee Available = YES
+
+Certification = EXPIRED
+
+Project requires certificate
+```
+
+النتيجة:
+
+```text
+Employee Time Availability = AVAILABLE
+
+Deployment Eligibility = BLOCKED
+```
+
+لا نغير Employment Status.
+
+---
+
+# 21. Performance Domain
+
+الجداول الرئيسية:
+
+```text
+performance.cycles
+
+performance.goal_libraries
+performance.goals
+performance.employee_goals
+
+performance.kpi_definitions
+performance.employee_kpis
+performance.kpi_results
+
+performance.reviews
+performance.review_sections
+performance.review_ratings
+
+performance.feedback
+
+performance.calibration_sessions
+performance.calibration_entries
+
+performance.improvement_plans
+```
+
+---
+
+# 22. Performance Cycle
+
+```text
+cycle_id
+
+company_id
+
+cycle_name
+
+cycle_type
+
+start_date
+end_date
+
+goal_setting_start
+goal_setting_end
+
+midyear_start
+midyear_end
+
+final_review_start
+final_review_end
+
+status
+```
+
+Types:
+
+```text
+ANNUAL
+SEMI_ANNUAL
+QUARTERLY
+PROBATION
+PROJECT
+```
+
+---
+
+# 23. Cycle State
+
+```text
+DRAFT
+ ↓
+PLANNING
+ ↓
+ACTIVE
+ ↓
+MID_YEAR
+ ↓
+FINAL_REVIEW
+ ↓
+CALIBRATION
+ ↓
+APPROVED
+ ↓
+CLOSED
+```
+
+---
+
+# 24. Goals
+
+فرق مهم:
+
+```text
+Goal ≠ KPI
+```
+
+Goal:
+
+> Deliver project by Q4.
+
+KPI:
+
+> Schedule variance ≤5%.
+
+يمكن Goal أن يحتوي KPIs متعددة.
+
+---
+
+# 25. Goal Table
+
+```text
+goal_id
+
+cycle_id
+
+goal_type
+
+title
+description
+
+measurement_method
+
+weight
+
+start_date
+due_date
+
+status
+```
+
+---
+
+# 26. Goal Types
+
+```text
+CORPORATE
+DEPARTMENT
+PROJECT
+TEAM
+INDIVIDUAL
+DEVELOPMENT
+```
+
+---
+
+# 27. Cascading Goals
+
+نحتاج:
+
+```text
+parent_goal_id
+```
+
+مثل:
+
+```text
+Company Goal
+    ↓
+Sector Goal
+    ↓
+Department Goal
+    ↓
+Manager Goal
+    ↓
+Employee Goal
+```
+
+---
+
+# 28. Employee Goals
+
+```text
+employee_goal_id
+
+goal_id
+employee_id
+
+target
+
+weight
+
+assigned_by
+
+status
+
+approved_at
+```
+
+مهم:
+
+```text
+SUM(goal weights) = 100%
+```
+
+حسب Policy.
+
+---
+
+# 29. KPI Definition
+
+الـManual يستخدم KPI Evaluation حاليًا كمدخل Quarterly للـbonus، لكنه لا يعرّف KPI engine نفسه. 
+
+لذلك نبني:
+
+```text
+performance.kpi_definitions
+```
+
+```text
+kpi_id
+
+kpi_code
+
+name
+
+description
+
+measurement_unit
+
+direction
+
+calculation_method
+
+data_source
+
+frequency
+
+status
+```
+
+---
+
+# 30. Direction
+
+```text
+HIGHER_IS_BETTER
+LOWER_IS_BETTER
+TARGET_RANGE
+BINARY
+```
+
+مثال:
+
+```text
+Revenue → Higher
+Defect Rate → Lower
+Schedule Variance → Target Range
+Certification Completed → Binary
+```
+
+---
+
+# 31. KPI Data Sources
+
+هذه نقطة قوية جدًا.
+
+KPI يمكن أن يأتي من:
+
+```text
+MANUAL
+ERP
+PROJECT_SYSTEM
+CRM
+ATTENDANCE
+FINANCE
+CUSTOMER_SYSTEM
+API
+FORMULA
+```
+
+حتى لا يكون كل KPI manual input.
+
+---
+
+# 32. KPI Target
+
+```text
+employee_kpis
+
+employee_id
+cycle_id
+kpi_id
+
+target_value
+threshold_value
+stretch_value
+
+weight
+
+assigned_at
+
+approved_at
+```
+
+---
+
+# 33. KPI Results
+
+```text
+kpi_result_id
+
+employee_kpi_id
+
+measurement_period
+
+actual_value
+
+normalized_score
+
+source_system
+
+source_reference
+
+calculated_at
+
+validation_status
+
+approved_at
+```
+
+---
+
+# 34. KPI Result يجب ألا يعدل Payroll
+
+كما ثبتنا في Cluster C:
+
+```text
+Performance
+KPI Score = 92%
+```
+
+ينتج:
+
+```text
+kpi.result.approved
+```
+
+Compensation يستقبله ويحسب bonus.
+
+---
+
+# 35. Review Model
+
+```text
+performance.reviews
+```
+
+```text
+review_id
+
+cycle_id
+employee_id
+
+review_type
+
+reviewer_employee_id
+
+status
+
+overall_score
+
+submitted_at
+
+approved_at
+```
+
+---
+
+# 36. Review Types
+
+```text
+SELF
+MANAGER
+SECOND_LEVEL_MANAGER
+PEER
+SUBORDINATE
+CUSTOMER
+PROJECT_MANAGER
+360
+```
+
+يمكن الـTenant تفعيل ما يريده.
+
+---
+
+# 37. لا ندمج كل Reviewers في Row واحد
+
+لأننا قد ندعم 360 later.
+
+الصحيح:
+
+```text
+employee performance cycle
+      ↓
+multiple reviews
+```
+
+ثم Final Result.
+
+---
+
+# 38. Review Sections
+
+مثل:
+
+```text
+Goals         50%
+Competencies  30%
+Values         10%
+Development    10%
+```
+
+تكون Configurable:
+
+```text
+performance.review_templates
+performance.review_template_sections
+```
+
+---
+
+# 39. Final Performance Result
+
+لا نستخدم Manager Score مباشرة كـfinal.
+
+نحتاج:
+
+```text
+performance.performance_results
+```
+
+```text
+result_id
+
+cycle_id
+employee_id
+
+goal_score
+kpi_score
+competency_score
+
+pre_calibration_score
+calibrated_score
+
+final_rating
+
+status
+
+approved_at
+```
+
+---
+
+# 40. لماذا Pre-calibration وFinal؟
+
+حتى نعرف:
+
+```text
+Manager gave 4.8
+
+Calibration Committee approved 4.2
+```
+
+ولا نمسح التقييم الأصلي.
+
+---
+
+# 41. Calibration
+
+الجداول:
+
+```text
+performance.calibration_sessions
+performance.calibration_entries
+```
+
+تستخدم لمقارنة ratings داخل:
+
+```text
+Department
+Grade
+Job Family
+Management Level
+```
+
+لكن لا أنصح بفرض forced distribution افتراضيًا.
+
+تكون Policy اختيارية.
+
+---
+
+# 42. Performance Evidence
+
+أي تقييم مهم يمكن أن يشير إلى:
+
+```text
+documents
+project metrics
+customer feedback
+KPI source
+```
+
+حتى لا يكون:
+
+> Manager says employee excellent.
+
+بدون evidence.
+
+---
+
+# 43. Performance Improvement Plan — PIP
+
+```text
+performance.improvement_plans
+performance.pip_actions
+performance.pip_reviews
+```
+
+---
+
+# 44. PIP
+
+```text
+pip_id
+
+employee_id
+
+performance_result_id
+
+start_date
+end_date
+
+reason
+
+expected_outcome
+
+status
+
+manager_id
+
+hr_owner_id
+```
+
+لكن:
+
+> Poor performance ≠ disciplinary case تلقائيًا.
+
+M10 Performance وM13 ER يجب أن يظلا منفصلين.
+
+---
+
+# 45. Gap Analysis
+
+الآن نصل للرابط بين Performance وLearning.
+
+نحتاج:
+
+```text
+competency.gap_assessments
+```
+
+---
+
+# 46. Gap Example
+
+Position requires:
+
+```text
+Leadership = 4
+Risk Management = 4
+```
+
+Employee:
+
+```text
+Leadership = 3
+Risk Management = 2
+```
+
+فتكون:
+
+```text
+Leadership Gap = 1
+Risk Gap = 2
+```
+
+لكن لا يعني ذلك تلقائيًا training course.
+
+---
+
+# 47. Development Plan
+
+نحتاج:
+
+```text
+learning.development_plans
+learning.development_plan_items
+```
+
+---
+
+# 48. Development Item Types
+
+ليست Training فقط:
+
+```text
+COURSE
+COACHING
+MENTORING
+SHADOWING
+PROJECT_ASSIGNMENT
+JOB_ROTATION
+CERTIFICATION
+SELF_STUDY
+STRETCH_ASSIGNMENT
+```
+
+وهذا أفضل من بناء L&D على courses فقط.
+
+---
+
+# 49. Development Plan
+
+```text
+development_plan_id
+
+employee_id
+cycle_id nullable
+
+source_type
+
+status
+
+start_date
+target_completion_date
+
+owner_employee_id
+```
+
+Source:
+
+```text
+PERFORMANCE_GAP
+TALENT_REVIEW
+CAREER_PLAN
+MANAGER_REQUEST
+CERTIFICATION_REQUIREMENT
+EMPLOYEE_REQUEST
+```
+
+---
+
+# 50. Learning Catalog
+
+```text
+learning.courses
+learning.programs
+learning.learning_paths
+
+learning.providers
+
+learning.sessions
+learning.session_instructors
+
+learning.enrollments
+
+learning.attendance
+learning.assessments
+
+learning.results
+```
+
+---
+
+# 51. Course
+
+```text
+course_id
+
+course_code
+course_name
+
+delivery_method
+
+duration_hours
+
+provider_id
+
+cost
+
+currency
+
+validity_period nullable
+
+status
+```
+
+Delivery:
+
+```text
+CLASSROOM
+VIRTUAL
+E_LEARNING
+ON_THE_JOB
+BLENDED
+```
+
+---
+
+# 52. Training Session
+
+Course = تعريف.
+
+Session = تنفيذ.
+
+```text
+course:
+Working at Heights
+
+session:
+15-Sep-2026 Cairo
+```
+
+---
+
+# 53. Enrollment
+
+```text
+enrollment_id
+
+session_id
+employee_id
+
+source
+
+status
+
+approval_status
+
+enrolled_at
+completed_at
+```
+
+---
+
+# 54. Training Result
+
+```text
+training_result_id
+
+enrollment_id
+
+attendance_percentage
+
+assessment_score
+
+result
+
+certificate_generated
+
+completed_at
+```
+
+---
+
+# 55. Training Completion Events
+
+```text
+training.completed
+```
+
+قد يؤدي إلى:
+
+```text
+employee.skill.updated
+
+certification.issued
+
+development.item.completed
+```
+
+حسب course configuration.
+
+---
+
+# 56. Training Budget
+
+من الأفضل دعم:
+
+```text
+learning.training_budgets
+learning.training_costs
+```
+
+حسب:
+
+```text
+Company
+Department
+Project
+Employee
+```
+
+لكن لا نجعلها جزءًا من Payroll.
+
+---
+
+# 57. Talent Management
+
+الآن Facts أصبحت موجودة:
+
+```text
+Performance
+Skills
+Competencies
+Experience
+Training
+```
+
+فنستطيع بناء Talent Review.
+
+الجداول:
+
+```text
+talent.review_cycles
+talent.employee_reviews
+
+talent.potential_assessments
+
+talent.nine_box_definitions
+talent.nine_box_results
+
+talent.talent_pools
+talent.talent_pool_members
+```
+
+---
+
+# 58. Performance vs Potential
+
+فرق مهم جدًا:
+
+```text
+Performance
+=
+كيف أدى الموظف حاليًا؟
+```
+
+بينما:
+
+```text
+Potential
+=
+ما مدى قدرته/استعداده لتحمل مسؤولية أكبر مستقبلًا؟
+```
+
+لا نشتق Potential تلقائيًا من Performance.
+
+---
+
+# 59. Potential Assessment
+
+```text
+potential_assessment_id
+
+employee_id
+talent_cycle_id
+
+assessor_id
+
+potential_rating
+
+leadership_readiness
+
+mobility_readiness
+
+risk_of_loss
+
+business_criticality
+
+comments
+
+status
+```
+
+---
+
+# 60. Nine Box
+
+يمكن بناء:
+
+```text
+Performance
+×
+Potential
+```
+
+مثل:
+
+```text
+Low / Medium / High
+```
+
+لكن الـNine Box يجب أن يكون:
+
+```text
+Decision-support tool
+```
+
+وليس Automatic Promotion Engine.
+
+---
+
+# 61. Nine Box Result
+
+```text
+nine_box_result_id
+
+employee_id
+talent_cycle_id
+
+performance_rating
+potential_rating
+
+box_code
+
+calculated_box
+final_box
+
+calibration_status
+
+approved_at
+```
+
+مرة أخرى:
+
+```text
+calculated_box ≠ final_box
+```
+
+للحفاظ على committee decision.
+
+---
+
+# 62. Talent Pool
+
+مثال:
+
+```text
+High Potential
+Future Project Managers
+Technical Experts
+Critical Talent
+Leadership Pipeline
+```
+
+الجداول:
+
+```text
+talent.talent_pools
+talent.talent_pool_members
+```
+
+---
+
+# 63. Talent Pool Membership
+
+Effective-dated:
+
+```text
+employee_id
+pool_id
+
+start_date
+end_date
+
+reason
+
+status
+
+approved_by
+```
+
+لا يصبح عضوًا للأبد.
+
+---
+
+# 64. Critical Position
+
+Succession لا يبدأ من Employee.
+
+يبدأ من:
+
+```text
+Position
+```
+
+لذلك:
+
+```text
+talent.critical_positions
+```
+
+---
+
+# 65. Critical Position Fields
+
+```text
+critical_position_id
+
+position_id
+
+criticality_level
+
+business_impact
+
+replacement_difficulty
+
+vacancy_risk
+
+status
+```
+
+---
+
+# 66. Succession Planning
+
+الجداول:
+
+```text
+talent.succession_plans
+talent.succession_candidates
+talent.succession_readiness
+```
+
+---
+
+# 67. Succession Plan
+
+```text
+succession_plan_id
+
+position_id
+
+review_cycle_id
+
+status
+
+approved_by
+approved_at
+```
+
+---
+
+# 68. Succession Candidate
+
+```text
+succession_candidate_id
+
+succession_plan_id
+
+employee_id
+
+readiness_level
+
+priority_rank
+
+development_gap
+
+risk_of_loss
+
+nomination_status
+```
+
+---
+
+# 69. Readiness Level
+
+```text
+READY_NOW
+
+READY_0_1_YEAR
+
+READY_1_2_YEARS
+
+READY_2_3_YEARS
+
+DEVELOPMENT_REQUIRED
+```
+
+Configurable.
+
+---
+
+# 70. لا نساوي Successor بالبديل الفعلي
+
+Employee يمكن أن يكون:
+
+```text
+READY NOW successor
+```
+
+لكن هذا لا يعني أنه انتقل للـPosition.
+
+Succession = Plan.
+
+Assignment = Actual movement.
+
+---
+
+# 71. Bus Factor
+
+من Analytics لاحقًا نستطيع كشف:
+
+```text
+Critical Position
++
+No Ready Successor
+```
+
+فتصبح:
+
+```text
+SUCCESSION_RISK
+```
+
+وهذه KPI جيدة جدًا للإدارة.
+
+---
+
+# 72. Career Architecture
+
+نحتاج:
+
+```text
+career.career_paths
+career.career_path_steps
+
+career.employee_career_preferences
+
+career.employee_career_plans
+```
+
+---
+
+# 73. Career Path Example
+
+```text
+Junior Project Engineer
+        ↓
+Project Engineer
+        ↓
+Senior Project Engineer
+        ↓
+Project Manager
+        ↓
+Senior Project Manager
+        ↓
+Program Manager
+```
+
+لكن يمكن أن يكون هناك:
+
+```text
+Management Track
+Technical Expert Track
+```
+
+حتى لا تكون الإدارة هي الطريق الوحيد للترقي.
+
+---
+
+# 74. Career Path Step
+
+```text
+career_path_step_id
+
+career_path_id
+
+from_job_id
+to_job_id
+
+minimum_grade nullable
+
+minimum_experience nullable
+
+required_performance_rating nullable
+
+required_competencies
+
+status
+```
+
+الأفضل عدم وضع كل eligibility في columns؛ يمكن ربطها بـRules Engine.
+
+---
+
+# 75. Promotion Request
+
+الترقية يجب أن تكون Transaction مستقلة:
+
+```text
+career.promotion_requests
+```
+
+---
+
+# 76. Promotion Request Structure
+
+```text
+promotion_request_id
+
+employee_id
+
+current_position_id
+proposed_position_id
+
+current_grade_id
+proposed_grade_id
+
+requested_effective_date
+
+reason
+
+source_type
+
+requested_by
+
+status
+```
+
+---
+
+# 77. Promotion Sources
+
+```text
+MANAGER_NOMINATION
+TALENT_REVIEW
+SUCCESSION
+ANNUAL_REVIEW
+VACANCY_APPLICATION
+HR_INITIATED
+```
+
+لكن المصدر لا يعني approval.
+
+---
+
+# 78. Promotion Eligibility Engine
+
+يفحص مثلًا:
+
+```text
+Position available?
+
+Employee performance meets rule?
+
+Required competencies?
+
+Required certifications?
+
+Minimum tenure?
+
+No blocking disciplinary restriction?
+
+Budget available?
+
+Grade movement permitted?
+
+Required approvals?
+```
+
+ثم:
+
+```text
+ELIGIBLE
+ELIGIBLE_WITH_EXCEPTION
+NOT_ELIGIBLE
+```
+
+---
+
+# 79. Important Rule
+
+Eligibility لا ينفذ Promotion.
+
+هو فقط:
+
+```text
+Decision Support
+```
+
+والـManual يشترط أصلًا documented approvals قبل promotions/transfers. 
+
+---
+
+# 80. Promotion Approval
+
+بعد الاعتماد ينتج:
+
+```text
+promotion.approved
+```
+
+ولا يقوم M12 بتعديل كل الجداول بنفسه.
+
+Event-driven chain:
+
+```text
+promotion.approved
+       │
+       ├──→ M04 Workforce
+       │      New Assignment
+       │
+       ├──→ M01 Core HR
+       │      Employment History
+       │
+       ├──→ M03 IAM
+       │      Re-evaluate Access
+       │
+       ├──→ Compensation
+       │      Compensation Change Workflow
+       │
+       └──→ Analytics
+              Headcount / Talent Update
+```
+
+---
+
+# 81. Compensation Change ليس جزءًا من Promotion Record
+
+Promotion يمكن أن يقترح:
+
+```text
+salary_change_required = true
+```
+
+لكن Compensation Domain هو الذي ينشئ:
+
+```text
+compensation.change_request
+```
+
+ويطبق DoA.
+
+هذا يمنع Talent module من تعديل Salary مباشرة.
+
+---
+
+# 82. Internal Mobility
+
+لا تعني دائمًا Promotion.
+
+قد تكون:
+
+```text
+TRANSFER
+LATERAL_MOVE
+PROMOTION
+DEMOTION
+SECONDMENT
+PROJECT_MOVE
+LOCATION_MOVE
+ACTING_ASSIGNMENT
+JOB_ROTATION
+```
+
+---
+
+# 83. Mobility Request
+
+```text
+career.mobility_requests
+```
+
+```text
+mobility_request_id
+
+employee_id
+
+movement_type
+
+current_position_id
+target_position_id
+
+current_org_unit_id
+target_org_unit_id
+
+current_location_id
+target_location_id
+
+effective_date
+
+reason
+
+status
+```
+
+---
+
+# 84. Mobility Lifecycle
+
+```text
+REQUESTED
+ ↓
+ELIGIBILITY_CHECK
+ ↓
+MANAGER_REVIEW
+ ↓
+HR_REVIEW
+ ↓
+APPROVED
+ ↓
+EXECUTION_PENDING
+ ↓
+EXECUTED
+```
+
+---
+
+# 85. Execution
+
+لا نغير Current Assignment داخل same row.
+
+الصحيح:
+
+```text
+Current Assignment
+end_date = 31-Aug
+
+New Assignment
+start_date = 01-Sep
+```
+
+حتى نحافظ على التاريخ.
+
+---
+
+# 86. Talent Review Security
+
+هذا Domain حساس.
+
+Manager لا يجب أن يرى:
+
+```text
+Potential Rating
+Successor Ranking
+Risk of Loss
+Confidential Talent Notes
+```
+
+لكل الشركة.
+
+نحتاج:
+
+```text
+TALENT_REVIEWER
+TALENT_COMMITTEE
+OD_ADMIN
+P&C_MANAGER
+AUTHORIZED_EXECUTIVE
+```
+
+مع scope.
+
+---
+
+# 87. Employee Visibility
+
+Employee يستطيع رؤية غالبًا:
+
+```text
+Goals
+Performance Review Result
+Development Plan
+Training
+Career Opportunities
+```
+
+لكن ليس بالضرورة:
+
+```text
+Nine Box Position
+Successor Rank
+Potential Score
+Confidential Calibration Notes
+```
+
+حسب Company Policy.
+
+---
+
+# 88. Talent Data Classification
+
+| Data                     | Classification                    |
+| ------------------------ | --------------------------------- |
+| Employee Goals           | Confidential                      |
+| Final Performance Rating | Restricted                        |
+| Manager Feedback         | Restricted                        |
+| Skill Profile            | Internal/Restricted               |
+| Development Plan         | Confidential                      |
+| Potential Rating         | Highly Restricted                 |
+| Nine Box                 | Highly Restricted                 |
+| Successor Ranking        | Highly Restricted                 |
+| Promotion Decision       | Highly Restricted until announced |
+
+---
+
+# 89. Performance Events
+
+```text
+performance.cycle.opened
+
+goal.assigned
+goal.approved
+
+kpi.result.recorded
+kpi.result.approved
+
+performance.review.submitted
+
+performance.calibrated
+performance.review.approved
+
+performance.gap.detected
+
+pip.created
+pip.completed
+```
+
+---
+
+# 90. Learning Events
+
+```text
+development.plan.created
+
+training.requested
+training.approved
+
+training.enrolled
+training.completed
+training.failed
+
+skill.updated
+
+certification.issued
+certification.expiring
+certification.expired
+```
+
+---
+
+# 91. Talent Events
+
+```text
+talent.review.completed
+
+employee.added_to_talent_pool
+
+potential.assessed
+
+succession.candidate.nominated
+succession.readiness.changed
+
+promotion.requested
+promotion.approved
+promotion.rejected
+
+mobility.approved
+mobility.executed
+```
+
+---
+
+# 92. Cluster D Logical ERD
+
+```text
+                  JOB
+                   │
+          ┌────────┴─────────┐
+          ▼                  ▼
+    Required Skills    Required Competencies
+          │                  │
+          └────────┬─────────┘
+                   ▼
+                EMPLOYEE
+                   │
+         ┌─────────┼────────────┐
+         │         │            │
+         ▼         ▼            ▼
+       Skills  Certifications Performance
+                               │
+                               ├── Goals
+                               ├── KPIs
+                               └── Reviews
+                                    │
+                                    ▼
+                             Performance Result
+                                    │
+                         ┌──────────┴──────────┐
+                         ▼                     ▼
+                   Gap Analysis          Talent Review
+                         │                     │
+                         ▼                     ▼
+                Development Plan          Potential
+                         │                     │
+                         ▼                     ▼
+                 Training / Learning       Nine Box
+                         │                     │
+                         ▼                     ▼
+                     Skills             Talent Pool
+                         │                     │
+                         └─────────┬───────────┘
+                                   ▼
+                              Succession
+                                   │
+                                   ▼
+                        Promotion / Mobility
+                                   │
+                           Approved Decision
+                                   │
+                       ┌───────────┼───────────┐
+                       ▼           ▼           ▼
+                   Position    Assignment  Compensation
+```
+
+---
+
+# 93. Source of Truth Matrix
+
+| Entity                     | Owner                  |
+| -------------------------- | ---------------------- |
+| Job Competency Requirement | Competency/OD          |
+| Employee Skill             | Competency             |
+| Certification              | Learning/Certification |
+| Goal                       | Performance            |
+| KPI Definition             | Performance            |
+| KPI Actual Result          | Performance            |
+| Final Performance Rating   | Performance            |
+| Development Plan           | Learning/Talent        |
+| Training Course            | Learning               |
+| Training Result            | Learning               |
+| Potential Assessment       | Talent                 |
+| Nine Box Result            | Talent                 |
+| Talent Pool                | Talent                 |
+| Critical Position          | Talent + Org Design    |
+| Succession Plan            | Talent                 |
+| Career Path                | Career/OD              |
+| Promotion Request          | Career/Talent          |
+| Actual Position            | Organization           |
+| Actual Assignment          | Workforce              |
+| Salary Change              | Compensation           |
+
+---
+
+# 94. أهم Anti-Duplication Rule
+
+لا نكرر:
+
+```text
+Employee performance score
+```
+
+في:
+
+```text
+Talent table
+Promotion table
+Succession table
+KPI bonus table
+```
+
+الكل يحتفظ فقط:
+
+```text
+performance_result_id
+```
+
+أو Snapshot عند الحاجة لقرار تاريخي.
+
+نفس الشيء مع Skill وCertification.
+
+---
+
+# 95. Decision Snapshot
+
+لكن عند اتخاذ قرار Promotion مثلًا، نحتاج الاحتفاظ بـDecision Evidence Snapshot:
+
+```text
+Performance Rating at Decision = 4.3
+Potential = High
+Readiness = Ready Now
+```
+
+حتى لو Performance data تغير لاحقًا.
+
+إذن:
+
+```text
+Source of Truth = Performance
+Decision Snapshot = Promotion
+```
+
+فرق مهم جدًا.
+
+---
+
+# 96. Skill Gap Engine
+
+يمكن للنظام حساب:
+
+```text
+Required Level - Current Verified Level
+```
+
+ثم يعطي:
+
+```text
+NO_GAP
+MINOR_GAP
+MODERATE_GAP
+CRITICAL_GAP
+```
+
+لكن لا أريد AI هو الذي يقرر Skill Level من نفسه.
+
+AI يمكن أن يقترح:
+
+```text
+Possible skill gap
+Recommended development action
+```
+
+لكن Human/Assessment process يعتمد النتيجة.
+
+---
+
+# 97. AI Layer لاحقًا
+
+هذا Cluster ممتاز للـAI لكن مع Guardrails.
+
+يمكن للـAI:
+
+```text
+Summarize performance evidence
+
+Suggest development plan
+
+Detect competency gaps
+
+Suggest possible successors
+
+Find employees matching position requirements
+
+Suggest training
+
+Detect talent risks
+
+Compare readiness
+```
+
+لكن لا يقرر تلقائيًا:
+
+```text
+Promotion
+Termination
+Performance Rating
+Disciplinary Action
+Salary
+```
+
+---
+
+# 98. Talent Matching Engine
+
+مثلًا لدينا Position:
+
+```text
+Project Manager — Huawei
+```
+
+المتطلبات:
+
+```text
+Project Management 4
+Leadership 4
+Huawei certification
+English 3
+Experience ≥ X
+```
+
+النظام يستطيع عمل:
+
+```text
+Candidate Fit Score
+```
+
+على الموظفين الداخليين.
+
+لكن Score يجب أن يظهر Breakdown:
+
+```text
+Skills          85%
+Certification  100%
+Performance     90%
+Experience      80%
+```
+
+وليس Black Box score فقط.
+
+---
+
+# 99. Certification Expiry Cascade
+
+مثال:
+
+```text
+Working at Heights expired
+          ↓
+certification.expired
+          ↓
+Deployment Eligibility Engine
+          ↓
+NOT_DEPLOYABLE
+          ↓
+Roster Warning
+          ↓
+Project Manager Notification
+          ↓
+Training Renewal Request
+```
+
+هذه سلسلة مهمة جدًا في شركة Field Workforce.
+
+---
+
+# 100. Performance → KPI Bonus Chain
+
+لربط Cluster D بـCluster C:
+
+```text
+KPI Actual
+      ↓
+Validation
+      ↓
+KPI Result Approved
+      ↓
+Performance Domain publishes
+kpi.result.approved
+      ↓
+Compensation
+calculates incentive
+      ↓
+Approved Incentive Result
+      ↓
+Payroll Input
+      ↓
+Payroll
+```
+
+وبذلك Performance لا يدفع أموالًا.
+
+---
+
+# 101. Promotion Chain
+
+```text
+Performance
++
+Competency
++
+Talent
++
+Succession
+        ↓
+Promotion Request
+        ↓
+Eligibility Check
+        ↓
+Approval
+        ↓
+promotion.approved
+        ↓
+Organization Position
+        ↓
+Workforce Assignment
+        ↓
+Compensation Change
+        ↓
+IAM Scope Change
+        ↓
+Payroll future period
+```
+
+---
+
+# 102. Internal Vacancy Integration
+
+مهم ألا يكون Recruitment منفصلًا عن Career.
+
+Vacancy في M05 يمكن أن تكون:
+
+```text
+EXTERNAL_ONLY
+INTERNAL_ONLY
+INTERNAL_AND_EXTERNAL
+```
+
+إذا كانت Internal:
+
+```text
+Vacancy
+  ↓
+Internal Opportunity
+  ↓
+Employee applies
+  ↓
+Career Eligibility
+  ↓
+Recruitment Assessment
+  ↓
+Mobility / Promotion
+```
+
+وبذلك نبني Internal Talent Marketplace مستقبلًا.
+
+---
+
+# 103. Performance & Project Assignments
+
+لأن الموظف قد يعمل في أكثر من مشروع، التقييم قد يحتاج:
+
+```text
+Primary Manager
+Project Manager
+Functional Manager
+```
+
+لذلك Review Relationship لا تعتمد فقط على `reports_to`.
+
+بل:
+
+```text
+reviewer_source =
+PRIMARY_MANAGER
+PROJECT_MANAGER
+FUNCTIONAL_MANAGER
+CUSTOM
+```
+
+وهذا مناسب للهيكل الذي يفرق بين functional وadministrative reporting. 
+
+---
+
+# 104. Key Data Integrity Rules
+
+أثبت القواعد التالية:
+
+**Rule 1:** لا يوجد Performance Review بدون valid cycle.
+
+**Rule 2:** لا يتجاوز مجموع weights الحد المسموح به.
+
+**Rule 3:** KPI Result له Source + period + validation status.
+
+**Rule 4:** Certification لا تصبح VALID بدون evidence/verification حسب Policy.
+
+**Rule 5:** Talent Review لا يغير Employee Master.
+
+**Rule 6:** Succession Nomination لا ينفذ Assignment.
+
+**Rule 7:** Promotion approval لا يعدل Salary مباشرة.
+
+**Rule 8:** Mobility execution يتم بإنهاء Assignment قديم وإنشاء جديد.
+
+**Rule 9:** Talent scores التاريخية لا يتم overwrite لها.
+
+**Rule 10:** Promotions/transfers تحتاج documented approval، وهو متوافق مع الـManual الحالي. 
+
+---
+
+# 105. Shared Engines المستخدمة
+
+Cluster D يستخدم بكثافة:
+
+```text
+Workflow Engine
+
+Rules Engine
+
+Scoring Engine
+
+Document Engine
+
+Notification Engine
+
+Effective Dating Engine
+
+Audit Engine
+
+Analytics Engine
+
+Recommendation Engine
+
+Event Bus
+```
+
+ولا نبني أيًا منها مرة ثانية داخل Modules.
+
+---
+
+# 106. Dashboards الناتجة
+
+يمكن لاحقًا إنتاج:
+
+### Employee
+
+```text
+My Goals
+My Performance
+My Skills
+My Certifications
+My Development Plan
+My Training
+My Career Opportunities
+```
+
+### Manager
+
+```text
+Team Performance
+Goals Pending
+Skill Gaps
+Certifications Expiring
+Training Progress
+Talent Review
+Successor Coverage
+```
+
+### OD
+
+```text
+Performance Distribution
+Competency Gaps
+Training ROI
+Critical Skills
+Talent Pools
+Nine Box
+Succession Coverage
+Critical Position Risk
+Promotion Pipeline
+```
+
+### Executive
+
+```text
+Leadership Bench Strength
+Succession Risk
+High Potential Population
+Critical Skill Gap
+Internal Mobility
+Talent Retention Risk
+```
+
+---
+
+# 107. القرار المعماري لـCluster D
+
+أقترح تثبيت:
+
+> **Performance, Skill, Competency and Certification are factual/assessment domains. Talent and Succession interpret those facts for workforce decisions. Promotion and Mobility are controlled business transactions. Actual organizational movement remains owned by Organization/Workforce, while compensation impact remains owned by Compensation.**
+
+وبذلك لا نسمح لـTalent Module أن يتحول إلى Master Owner للموظف أو الوظيفة أو الراتب.
+
+---
+
+# ما أصبح لدينا حتى الآن
+
+```text
+CORE
+Tenant → Company → Org → Job → Position
+→ Employee → Employment → Assignment
+
+Cluster A
+Recruitment → Offer → Onboarding → Activation
+
+Cluster B
+Calendar → Shift → Roster → Attendance
+→ Leave → Availability → Payroll-ready Time
+
+Cluster C
+Compensation → Payroll Inputs → Payroll
+→ Bank → Finance → Project Cost
+
+Cluster D
+Performance → Competency → Learning
+→ Talent → Succession → Promotion/Mobility
+```
+
+## الخطوة التالية
+
+الآن يأتي **Cluster E — Employee Relations, Grievances, Disciplinary, Investigations, HR Case Management, HR Service Desk, Employee Requests & Confidential Evidence ERD**.
+
+وهذا Cluster يحتاج تصميمًا حساسًا جدًا للصلاحيات، لأننا سنفصل:
+
+```text
+Employee Request
+        ≠
+Grievance
+        ≠
+Complaint
+        ≠
+Incident
+        ≠
+Investigation
+        ≠
+Disciplinary Action
+```
+
+وسنبني فيه **Case Engine + Evidence Chain + Restricted Access + SLA + Appeal + Legal Review + Decision Execution**، مع منع مدير أو HR User غير مخول من رؤية الحالات الحساسة حتى لو كان لديه صلاحية عامة على بيانات الموظفين.

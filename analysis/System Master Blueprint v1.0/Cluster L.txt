@@ -1,0 +1,3286 @@
+تمام. **Cluster L** هو فعليًا الـ**Control Plane** للنظام كله.
+الـClusters السابقة تدير الـHR business data، أما هذا الـCluster فيدير **كيف يعمل النظام نفسه**: من يستطيع إعداد ماذا، ما الذي يتغير على مستوى الـTenant أو Company، كيف تعمل الـWorkflows والـRules، كيف يتم إصدار الأرقام، ما هي التقويمات واللغات، ما الذي يتم تشغيله أو إيقافه، وكيف نعرف من غيّر أي إعداد ومتى.
+
+وهذا مهم جدًا مع الـMulti-Company SaaS لأن الخطأ هنا أخطر من الخطأ داخل Module واحد: Rule خاطئة في Payroll أو Workflow approval أو Calendar قد تؤثر على آلاف الموظفين.
+
+الـOperations Manual نفسه يشدد على أن كل العمليات يجب أن تتبع workflows وSLAs معتمدة، وأن أي تغيير مثل salary/allowance/KPI/status يحتاج documented approval، وأن الأنشطة يجب أن تكون traceable وقابلة للتدقيق، وأي deviation يحتاج prior written approval. لذلك Cluster L ليس technical extra؛ بل هو الأساس الذي يحول هذه الضوابط إلى configuration قابلة للإدارة. 
+
+---
+
+# Cluster L — System Administration & Platform Configuration ERD
+
+سأقسمه إلى **16 Sub-Domains** مترابطة.
+
+---
+
+## L1. SaaS Tenant Management
+
+أعلى مستوى في النظام.
+
+### `saas_tenant`
+
+يمثل العميل المشترك في النظام.
+
+```text
+saas_tenant
+-----------
+tenant_id PK
+tenant_code UNIQUE
+tenant_name
+legal_name
+commercial_name
+
+tenant_type
+  INTERNAL
+  CUSTOMER
+  DEMO
+  SANDBOX
+  PARTNER
+
+subscription_plan_id FK
+subscription_status
+  TRIAL
+  ACTIVE
+  SUSPENDED
+  EXPIRED
+  TERMINATED
+
+default_language_code
+default_timezone
+default_currency_code
+
+data_region
+environment_type
+  PRODUCTION
+  SANDBOX
+  TEST
+
+max_companies
+max_employees
+max_users
+max_storage_gb
+
+activated_at
+trial_end_date
+subscription_start_date
+subscription_end_date
+
+status
+created_at
+created_by
+updated_at
+```
+
+---
+
+## L2. Tenant Organization Boundary
+
+داخل كل Tenant قد توجد عدة شركات.
+
+### `tenant_company`
+
+```text
+tenant_company
+--------------
+tenant_company_id PK
+tenant_id FK
+company_id FK
+
+is_primary_company
+company_role
+  HOLDING
+  SUBSIDIARY
+  BRANCH_COMPANY
+  OPERATING_COMPANY
+
+status
+effective_from
+effective_to
+```
+
+العلاقة:
+
+```text
+SAAS_TENANT
+   |
+   +----< TENANT_COMPANY >---- COMPANY
+```
+
+---
+
+# L3. Subscription & Capability Management
+
+لا أربط الـSubscription فقط بعدد الموظفين، بل بما يستطيع العميل تشغيله.
+
+### `subscription_plan`
+
+```text
+subscription_plan
+-----------------
+subscription_plan_id PK
+plan_code
+plan_name
+
+billing_cycle
+monthly_price
+annual_price
+
+employee_limit
+user_limit
+company_limit
+storage_limit_gb
+
+api_request_limit
+integration_limit
+
+is_active
+```
+
+---
+
+### `platform_capability`
+
+هذه أهم من مجرد Modules.
+
+مثال:
+
+```text
+PAYROLL
+ATTENDANCE
+GPS_ATTENDANCE
+FACE_RECOGNITION
+ATS
+PERFORMANCE
+LEARNING
+EXPENSE
+TRAVEL
+HSE
+AI_COPILOT
+ADVANCED_ANALYTICS
+API_ACCESS
+SSO
+MULTI_COMPANY
+CUSTOM_WORKFLOW
+CUSTOM_RULES
+```
+
+```text
+platform_capability
+-------------------
+capability_id PK
+capability_code UNIQUE
+capability_name
+
+capability_category
+description
+
+dependency_capability_id FK NULL
+
+is_core
+is_billable
+status
+```
+
+---
+
+### `plan_capability`
+
+```text
+plan_capability
+---------------
+plan_capability_id PK
+subscription_plan_id FK
+capability_id FK
+
+enabled_by_default
+
+usage_limit
+limit_unit
+
+configuration_json
+```
+
+---
+
+# L4. Feature Flag Engine
+
+يختلف عن Subscription.
+
+Subscription:
+
+> العميل دفع مقابل الخاصية؟
+
+Feature Flag:
+
+> هل الخاصية مفعّلة الآن؟ وعلى من؟
+
+---
+
+### `feature_flag`
+
+```text
+feature_flag
+------------
+feature_flag_id PK
+
+feature_key UNIQUE
+feature_name
+description
+
+feature_scope
+  PLATFORM
+  TENANT
+  COMPANY
+  USER
+  ROLE
+  MODULE
+
+default_state
+
+release_stage
+  INTERNAL
+  ALPHA
+  BETA
+  GA
+  DEPRECATED
+
+status
+created_at
+```
+
+---
+
+### `feature_flag_assignment`
+
+```text
+feature_flag_assignment
+-----------------------
+assignment_id PK
+feature_flag_id FK
+
+tenant_id FK NULL
+company_id FK NULL
+role_id FK NULL
+user_id FK NULL
+
+enabled
+
+rollout_percentage NULL
+
+effective_from
+effective_to
+
+reason
+approved_by
+created_by
+```
+
+وبالتالي يمكن مثلًا:
+
+```text
+AI_COPILOT
+enabled:
+Tenant A = Yes
+Tenant B = No
+
+Tenant A:
+Company Egypt = Yes
+Company KSA   = Beta only
+```
+
+---
+
+# L5. Configuration Registry
+
+بدل وضع آلاف الـsettings كـcolumns.
+
+### `configuration_definition`
+
+```text
+configuration_definition
+------------------------
+config_definition_id PK
+
+config_key UNIQUE
+config_name
+
+module_code
+configuration_group
+
+data_type
+  STRING
+  INTEGER
+  DECIMAL
+  BOOLEAN
+  DATE
+  JSON
+  ENUM
+
+default_value
+
+allowed_values_json
+validation_rule_json
+
+configuration_scope
+  PLATFORM
+  TENANT
+  COMPANY
+  BRANCH
+  PROJECT
+
+is_sensitive
+is_encrypted
+
+requires_approval
+restart_required
+
+description
+
+status
+```
+
+مثال:
+
+```text
+attendance.allow_manual_entry
+payroll.lock_after_payment
+leave.allow_negative_balance
+employee.hr_code_format
+expense.max_claim_age_days
+security.password_expiry_days
+```
+
+---
+
+### `configuration_value`
+
+```text
+configuration_value
+-------------------
+configuration_value_id PK
+config_definition_id FK
+
+tenant_id FK
+company_id FK NULL
+branch_id FK NULL
+project_id FK NULL
+
+value_text
+value_json
+
+effective_from
+effective_to
+
+status
+
+version_no
+
+approved_by
+approved_at
+
+created_by
+created_at
+```
+
+---
+
+# Configuration Inheritance
+
+يجب أن يدعم النظام:
+
+```text
+Platform Default
+      ↓
+Tenant Override
+      ↓
+Company Override
+      ↓
+Branch Override
+      ↓
+Project Override
+```
+
+مثال:
+
+```text
+Attendance Method
+
+Platform
+GPS + Fingerprint
+
+Tenant
+GPS + Fingerprint + Supervisor
+
+Company
+GPS
+
+Project X
+Supervisor + GPS
+```
+
+والـRule Engine يقرأ **أكثر Configuration Specific**.
+
+---
+
+# L6. Workflow Definition Engine
+
+وهذا من أهم أجزاء Cluster L.
+
+بدل أن نكتب:
+
+```text
+Hiring Approval =
+Manager → HR → CEO
+```
+
+داخل الـcode.
+
+نخزنها Configuration.
+
+---
+
+### `workflow_definition`
+
+```text
+workflow_definition
+-------------------
+workflow_definition_id PK
+
+tenant_id FK
+
+workflow_code
+workflow_name
+
+business_object_type
+
+module_code
+
+workflow_category
+  APPROVAL
+  REVIEW
+  ACTIVATION
+  CASE
+  REQUEST
+  COMPLIANCE
+
+version_no
+
+status
+  DRAFT
+  ACTIVE
+  RETIRED
+
+effective_from
+effective_to
+
+created_by
+approved_by
+```
+
+مثال:
+
+```text
+HIRING_REQUEST_APPROVAL
+SALARY_CHANGE_APPROVAL
+LEAVE_APPROVAL
+PAYROLL_APPROVAL
+EXPENSE_APPROVAL
+PROMOTION_APPROVAL
+OFFBOARDING_CLEARANCE
+DISCIPLINARY_APPROVAL
+```
+
+---
+
+# L7. Workflow Steps
+
+### `workflow_step_definition`
+
+```text
+workflow_step_definition
+------------------------
+workflow_step_id PK
+
+workflow_definition_id FK
+
+step_no
+step_code
+step_name
+
+step_type
+  APPROVAL
+  REVIEW
+  TASK
+  SYSTEM_ACTION
+  WAIT
+  CONDITION
+  PARALLEL_GATEWAY
+  JOIN
+  NOTIFICATION
+
+assignment_type
+  USER
+  ROLE
+  POSITION
+  DIRECT_MANAGER
+  MANAGER_LEVEL
+  DEPARTMENT_HEAD
+  PROJECT_MANAGER
+  DYNAMIC_RULE
+
+role_id FK NULL
+
+is_mandatory
+can_skip
+
+sla_value
+sla_unit
+
+escalation_enabled
+
+sequence_no
+
+status
+```
+
+---
+
+# L8. Workflow Transitions
+
+### `workflow_transition`
+
+```text
+workflow_transition
+-------------------
+transition_id PK
+
+workflow_definition_id FK
+
+from_step_id FK
+to_step_id FK
+
+action_code
+
+transition_condition_id FK NULL
+
+action_label
+
+requires_comment
+requires_attachment
+
+status
+```
+
+مثال:
+
+```text
+APPROVE
+REJECT
+RETURN
+REQUEST_INFORMATION
+ESCALATE
+CANCEL
+```
+
+---
+
+# L9. Workflow Runtime
+
+Definition شيء، والتنفيذ الفعلي شيء آخر.
+
+### `workflow_instance`
+
+```text
+workflow_instance
+-----------------
+workflow_instance_id PK
+
+workflow_definition_id FK
+workflow_version
+
+tenant_id
+company_id
+
+business_object_type
+business_object_id
+
+initiated_by
+
+current_step_id
+
+workflow_status
+  RUNNING
+  COMPLETED
+  REJECTED
+  CANCELLED
+  FAILED
+
+started_at
+completed_at
+```
+
+---
+
+### `workflow_task`
+
+```text
+workflow_task
+-------------
+workflow_task_id PK
+workflow_instance_id FK
+workflow_step_id FK
+
+assigned_user_id FK NULL
+assigned_role_id FK NULL
+
+task_status
+
+assigned_at
+due_at
+completed_at
+
+action_taken
+
+comments
+
+delegated_from_user_id FK NULL
+
+escalation_level
+```
+
+---
+
+# L10. Approval Delegation
+
+ضرورية جدًا.
+
+لأن المدير قد يكون:
+
+```text
+Vacation
+Travel
+Sick Leave
+Temporary Assignment
+```
+
+---
+
+### `approval_delegation`
+
+```text
+approval_delegation
+-------------------
+delegation_id PK
+
+tenant_id
+delegator_user_id
+delegate_user_id
+
+delegation_scope
+  ALL
+  MODULE
+  WORKFLOW
+
+module_code NULL
+workflow_definition_id FK NULL
+
+valid_from
+valid_to
+
+reason
+
+status
+approved_by
+```
+
+---
+
+# L11. Rules Engine
+
+الـWorkflow يحدد:
+
+> ماذا يحدث وبأي ترتيب؟
+
+الـRules Engine يحدد:
+
+> متى؟ ولماذا؟ وبأي شروط؟
+
+---
+
+### `rule_definition`
+
+```text
+rule_definition
+---------------
+rule_id PK
+
+tenant_id
+
+rule_code
+rule_name
+
+module_code
+
+rule_category
+  ELIGIBILITY
+  CALCULATION
+  VALIDATION
+  ROUTING
+  COMPLIANCE
+  ALLOWANCE
+  ATTENDANCE
+  LEAVE
+  PAYROLL
+  BENEFIT
+  EXPENSE
+
+rule_scope
+
+priority
+
+execution_event
+
+effective_from
+effective_to
+
+status
+
+version_no
+```
+
+---
+
+### `rule_condition`
+
+```text
+rule_condition
+--------------
+rule_condition_id PK
+
+rule_id FK
+
+condition_group
+
+field_name
+
+operator
+  EQ
+  NE
+  GT
+  LT
+  GTE
+  LTE
+  IN
+  NOT_IN
+  BETWEEN
+  EXISTS
+  CONTAINS
+
+comparison_value
+comparison_value_json
+
+logical_operator
+  AND
+  OR
+
+sequence_no
+```
+
+---
+
+### `rule_action`
+
+```text
+rule_action
+-----------
+rule_action_id PK
+
+rule_id FK
+
+action_type
+  SET_VALUE
+  ADD_AMOUNT
+  DEDUCT_AMOUNT
+  BLOCK
+  WARN
+  ROUTE
+  CREATE_TASK
+  SEND_NOTIFICATION
+  REQUIRE_APPROVAL
+
+target_field
+
+action_value
+action_expression
+
+sequence_no
+```
+
+---
+
+# Example Rule
+
+Field Allowance:
+
+```text
+IF
+employee.work_location != Cairo
+AND
+employee.grade IN [G5,G6,G7]
+AND
+attendance.worked_days >= 1
+
+THEN
+location_allowance =
+worked_days × location_daily_rate
+```
+
+ولا يتم hard-code ذلك داخل Payroll.
+
+---
+
+# L12. Rule Versioning
+
+ممنوع تعديل rule مستخدمة تاريخيًا.
+
+### `rule_version`
+
+```text
+rule_version
+------------
+rule_version_id PK
+rule_id FK
+
+version_no
+
+definition_snapshot_json
+
+effective_from
+effective_to
+
+status
+
+change_reason
+
+created_by
+approved_by
+created_at
+```
+
+Payroll Jan-2026 يجب أن يظل قادرًا على إثبات:
+
+```text
+Rule Version = 3
+```
+
+حتى لو وصلنا الآن إلى Version 8.
+
+---
+
+# L13. Notification Engine
+
+الـManual الحالي يعتمد في عدة أماكن على notifications وhandovers بين TA وPersonnel وIT وHSE وOperations؛ مثل Hiring Email ثم onboarding coordination، وبالتالي من الأفضل ألا تبقى هذه الرسائل موزعة داخل modules منفردة. 
+
+---
+
+### `notification_template`
+
+```text
+notification_template
+---------------------
+notification_template_id PK
+
+tenant_id
+
+template_code
+template_name
+
+module_code
+event_code
+
+channel
+  EMAIL
+  SMS
+  PUSH
+  WHATSAPP
+  IN_APP
+
+language_code
+
+subject_template
+body_template
+
+variables_json
+
+priority
+
+status
+
+version_no
+```
+
+---
+
+### `notification_rule`
+
+```text
+notification_rule
+-----------------
+notification_rule_id PK
+
+event_code
+
+template_id FK
+
+recipient_type
+  USER
+  EMPLOYEE
+  MANAGER
+  ROLE
+  POSITION
+  DYNAMIC
+
+delay_value
+delay_unit
+
+condition_rule_id FK NULL
+
+is_enabled
+```
+
+---
+
+### `notification_outbox`
+
+```text
+notification_outbox
+-------------------
+notification_id PK
+
+tenant_id
+
+template_id FK
+
+recipient
+channel
+
+subject_rendered
+body_rendered
+
+status
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+
+attempt_count
+
+scheduled_at
+sent_at
+
+failure_reason
+```
+
+---
+
+# L14. Escalation Engine
+
+SLA موجود بالفعل بشكل واضح في الـOperations Manual، من Hiring وOnboarding حتى investigation وPayroll timelines. لذلك يجب أن يكون SLA وEscalation مركزيًا وليس logic منفصلًا داخل كل module. 
+
+### `escalation_policy`
+
+```text
+escalation_policy
+-----------------
+escalation_policy_id PK
+
+tenant_id
+
+policy_code
+policy_name
+
+applies_to
+  WORKFLOW
+  TASK
+  REQUEST
+  CASE
+  DOCUMENT
+  COMPLIANCE
+
+trigger_type
+  BEFORE_DUE
+  ON_DUE
+  AFTER_DUE
+
+trigger_offset
+
+escalation_level
+
+recipient_rule
+
+notification_template_id FK
+
+repeat_interval NULL
+max_escalations
+
+status
+```
+
+مثال:
+
+```text
+Hiring P0
+
+0 Hour overdue
+→ Notify TA Head
+
+4 Hours overdue
+→ Notify P&C Manager
+
+24 Hours overdue
+→ Notify CEO / authorized executive
+```
+
+---
+
+# L15. Numbering & Sequence Engine
+
+لا نريد:
+
+```text
+EMP0001
+EMP0002
+```
+
+hard-coded.
+
+### `numbering_scheme`
+
+```text
+numbering_scheme
+----------------
+numbering_scheme_id PK
+
+tenant_id
+
+scheme_code
+scheme_name
+
+entity_type
+
+prefix_template
+suffix_template
+
+sequence_length
+
+reset_policy
+  NEVER
+  YEARLY
+  MONTHLY
+  COMPANY
+  PROJECT
+
+start_number
+increment_by
+
+separator
+
+sample_format
+
+status
+```
+
+مثال:
+
+```text
+Employee:
+AFRO-EG-HR-2026-000234
+
+Hiring Request:
+AFRO-MPR-2026-0012
+
+Expense:
+EXP-EG-2026-03482
+
+Case:
+ER-CASE-2026-0087
+```
+
+---
+
+### `number_sequence`
+
+```text
+number_sequence
+---------------
+sequence_id PK
+
+numbering_scheme_id FK
+
+tenant_id
+company_id NULL
+
+period_key
+
+current_value
+
+last_generated_at
+
+version_no
+```
+
+ويجب استخدام atomic locking لمنع:
+
+```text
+two employees = same HR Code
+```
+
+---
+
+# L16. Calendar Management
+
+Calendar ليس فقط holidays.
+
+### `business_calendar`
+
+```text
+business_calendar
+-----------------
+calendar_id PK
+
+tenant_id
+
+calendar_code
+calendar_name
+
+country_code
+region_code
+
+calendar_type
+  CORPORATE
+  WORKING
+  PAYROLL
+  PROJECT
+  BANK
+  GOVERNMENT
+
+timezone
+
+week_start_day
+
+status
+```
+
+---
+
+### `calendar_working_day`
+
+```text
+calendar_working_day
+--------------------
+working_day_id PK
+
+calendar_id FK
+
+day_of_week
+
+is_working_day
+
+start_time
+end_time
+
+standard_hours
+```
+
+---
+
+### `calendar_holiday`
+
+```text
+calendar_holiday
+----------------
+holiday_id PK
+
+calendar_id FK
+
+holiday_name
+
+holiday_date
+
+holiday_type
+  PUBLIC
+  COMPANY
+  RELIGIOUS
+  PROJECT
+  SPECIAL
+
+is_paid
+is_recurring
+
+source
+status
+```
+
+---
+
+# Calendar Hierarchy
+
+```text
+Egypt Calendar
+     ↓
+Afro Egypt Calendar
+     ↓
+Project Calendar
+     ↓
+Employee Shift Calendar
+```
+
+---
+
+# L17. Fiscal / Payroll Calendars
+
+### `processing_calendar`
+
+```text
+processing_calendar
+-------------------
+processing_calendar_id PK
+
+tenant_id
+
+calendar_type
+  PAYROLL
+  PERFORMANCE
+  KPI
+  BENEFIT
+  EXPENSE
+  FINANCIAL
+
+period_name
+
+period_start
+period_end
+
+input_cutoff_date
+approval_cutoff_date
+processing_date
+payment_date
+
+status
+  OPEN
+  LOCKED
+  CLOSED
+```
+
+هذا يسمح بتطبيق الـPayroll timetable الموجود في الـManual مثل new hire submission في 18th، project allocations بين 20–23، payroll submission بحلول 25، والدفع حتى نهاية الشهر، لكن كإعدادات قابلة للتغيير مستقبلًا بدل hard-code. 
+
+---
+
+# L18. Localization & Translation Engine
+
+لدينا:
+
+```text
+Arabic
+English
+French
+```
+
+والـArabic:
+
+```text
+RTL
+```
+
+بينما:
+
+```text
+English → LTR
+French → LTR
+```
+
+---
+
+### `language_definition`
+
+```text
+language_definition
+-------------------
+language_code PK
+
+language_name
+
+direction
+  RTL
+  LTR
+
+locale_code
+
+date_format
+number_format
+
+is_active
+```
+
+---
+
+### `translation_key`
+
+```text
+translation_key
+---------------
+translation_key_id PK
+
+translation_key
+module_code
+
+default_text
+
+context
+```
+
+---
+
+### `translation_value`
+
+```text
+translation_value
+-----------------
+translation_value_id PK
+
+translation_key_id FK
+language_code FK
+
+tenant_id FK NULL
+
+translated_text
+
+status
+```
+
+وهذا يسمح للـTenant نفسه بتغيير:
+
+```text
+Employee → Associate
+Department → Business Unit
+```
+
+بدون تغيير الـcode.
+
+---
+
+# L19. Regional Settings
+
+### `locale_configuration`
+
+```text
+locale_configuration
+--------------------
+locale_config_id PK
+
+tenant_id
+company_id NULL
+
+language_code
+
+timezone
+
+currency_code
+
+date_format
+time_format
+
+decimal_separator
+thousand_separator
+
+first_day_of_week
+
+rtl_enabled
+
+country_code
+
+status
+```
+
+---
+
+# L20. Currency Configuration
+
+### `currency_definition`
+
+```text
+currency_definition
+-------------------
+currency_code PK
+
+currency_name
+currency_symbol
+
+decimal_places
+status
+```
+
+---
+
+### `exchange_rate`
+
+```text
+exchange_rate
+-------------
+exchange_rate_id PK
+
+from_currency
+to_currency
+
+rate
+
+effective_date
+
+source
+
+status
+```
+
+حتى Compensation / Expense / Travel يمكنها دعم:
+
+```text
+EGP
+USD
+SAR
+AED
+EUR
+```
+
+مستقبلًا.
+
+---
+
+# L21. System Lookup / Reference Configuration
+
+من الخطأ عمل hard-code لكل:
+
+```text
+Gender
+Employee Type
+Request Status
+Contract Type
+Expense Type
+Reason Codes
+```
+
+### `lookup_category`
+
+```text
+lookup_category
+---------------
+lookup_category_id PK
+
+category_code
+
+category_name
+
+module_code
+
+allow_tenant_customization
+
+status
+```
+
+---
+
+### `lookup_value`
+
+```text
+lookup_value
+------------
+lookup_value_id PK
+
+lookup_category_id FK
+
+tenant_id FK NULL
+
+value_code
+display_name
+
+sort_order
+
+is_default
+
+effective_from
+effective_to
+
+status
+```
+
+---
+
+# L22. Custom Fields Engine
+
+SaaS HR بدون Custom Fields سيجبرنا بعد فترة على تعديل الـDB لكل عميل.
+
+### `custom_field_definition`
+
+```text
+custom_field_definition
+-----------------------
+custom_field_id PK
+
+tenant_id
+
+entity_type
+
+field_code
+field_label
+
+data_type
+
+is_required
+is_searchable
+is_reportable
+
+validation_json
+
+allowed_values_json
+
+display_order
+
+status
+```
+
+مثال:
+
+```text
+Employee:
+Vodafone ID
+Huawei ID
+Ericsson ID
+Site Access Number
+Security Clearance Level
+```
+
+---
+
+### `custom_field_value`
+
+```text
+custom_field_value
+------------------
+custom_field_value_id PK
+
+custom_field_id FK
+
+entity_type
+entity_id
+
+value_text
+value_number
+value_date
+value_json
+
+created_at
+updated_at
+```
+
+---
+
+# L23. Dynamic Form Engine
+
+حتى الـForms نفسها يمكن إعدادها.
+
+### `form_definition`
+
+```text
+form_definition
+---------------
+form_definition_id PK
+
+tenant_id
+
+form_code
+form_name
+
+module_code
+
+business_object
+
+version_no
+status
+```
+
+---
+
+### `form_section`
+
+```text
+form_section
+------------
+form_section_id PK
+form_definition_id FK
+
+section_name
+sequence_no
+
+visibility_rule_id FK NULL
+```
+
+---
+
+### `form_field`
+
+```text
+form_field
+----------
+form_field_id PK
+
+form_section_id FK
+
+field_code
+
+label_translation_key
+
+field_type
+
+source_field
+custom_field_id FK NULL
+
+required_rule_id FK NULL
+visibility_rule_id FK NULL
+
+editable_rule_id FK NULL
+
+sequence_no
+```
+
+هذا مهم لأن Hiring Request الحالي مثلًا يحتوي Position, vacancies, project, reporting manager, location, salary range, skills, priority وhiring type؛ بدل تصميم form ثابت يمكن تعريفه عن طريق الـDynamic Form Engine. 
+
+---
+
+# L24. Document Template Engine
+
+### `document_template`
+
+```text
+document_template
+-----------------
+document_template_id PK
+
+tenant_id
+
+template_code
+template_name
+
+document_type
+
+language_code
+
+file_template_uri
+
+merge_fields_json
+
+version_no
+
+effective_from
+effective_to
+
+status
+
+approved_by
+```
+
+مثال:
+
+```text
+Employment Contract
+Offer Letter
+Salary Certificate
+Experience Letter
+Warning Letter
+Investigation Notice
+Promotion Letter
+Bank Letter
+```
+
+---
+
+# L25. Audit Configuration
+
+نفس الـAudit Log سيكون في Security Cluster، لكن هنا ندير **ماذا نراجع**.
+
+### `audit_policy`
+
+```text
+audit_policy
+------------
+audit_policy_id PK
+
+tenant_id
+
+entity_type
+
+audit_create
+audit_update
+audit_delete
+audit_view
+
+capture_before_value
+capture_after_value
+
+capture_ip
+capture_device
+
+retention_days
+
+mask_sensitive_values
+
+status
+```
+
+---
+
+# L26. Configuration Change Audit
+
+### `configuration_change_log`
+
+```text
+configuration_change_log
+------------------------
+change_id PK
+
+tenant_id
+
+configuration_type
+
+configuration_entity_id
+
+operation
+  CREATE
+  UPDATE
+  ACTIVATE
+  DEACTIVATE
+  PUBLISH
+  ROLLBACK
+
+old_value_json
+new_value_json
+
+change_reason
+
+requested_by
+approved_by
+
+changed_at
+
+ip_address
+session_id
+```
+
+---
+
+# L27. Maker–Checker Administration
+
+هذه نقطة أساسية.
+
+لا يجب أن يستطيع Admin:
+
+```text
+Create Payroll Rule
++
+Approve Payroll Rule
+```
+
+إذا أردنا governance قوي.
+
+### `configuration_change_request`
+
+```text
+configuration_change_request
+----------------------------
+change_request_id PK
+
+tenant_id
+
+config_type
+
+target_record_id
+
+change_type
+
+proposed_value_json
+
+business_reason
+
+risk_level
+
+requested_by
+requested_at
+
+approval_status
+
+approved_by
+approved_at
+
+implemented_at
+```
+
+---
+
+# L28. Configuration Publication Lifecycle
+
+كل Configuration مهمة يجب أن تمر:
+
+```text
+DRAFT
+   ↓
+UNDER_REVIEW
+   ↓
+APPROVED
+   ↓
+SCHEDULED
+   ↓
+ACTIVE
+   ↓
+SUPERSEDED
+   ↓
+ARCHIVED
+```
+
+وليس:
+
+```text
+Edit → Save → Production
+```
+
+خصوصًا:
+
+```text
+Payroll Rules
+Attendance Rules
+Leave Rules
+Workflow Approvals
+Tax Rules
+Social Insurance
+Allowance Rates
+```
+
+---
+
+# L29. Configuration Deployment / Promotion
+
+لأننا سنحتاج environments.
+
+```text
+DEV
+TEST
+UAT
+PRODUCTION
+```
+
+### `configuration_package`
+
+```text
+configuration_package
+---------------------
+package_id PK
+
+tenant_id
+
+package_name
+version
+
+source_environment
+target_environment
+
+created_by
+approved_by
+
+deployment_status
+
+created_at
+deployed_at
+```
+
+---
+
+### `configuration_package_item`
+
+```text
+configuration_package_item
+--------------------------
+package_item_id PK
+
+package_id FK
+
+config_type
+config_record_id
+config_version
+
+dependency_order
+```
+
+---
+
+# L30. Platform Environment Registry
+
+### `platform_environment`
+
+```text
+platform_environment
+--------------------
+environment_id PK
+
+environment_code
+
+environment_name
+
+environment_type
+
+region
+
+base_url
+
+status
+```
+
+---
+
+# L31. Integration Configuration Reference
+
+Cluster K يدير integrations نفسها.
+
+Cluster L يدير:
+
+```text
+enable/disable
+credentials reference
+environment
+configuration
+```
+
+### `integration_configuration`
+
+```text
+integration_configuration
+-------------------------
+integration_config_id PK
+
+tenant_id
+
+integration_definition_id FK
+
+environment_id FK
+
+enabled
+
+configuration_json
+
+credential_secret_reference
+
+timeout_seconds
+
+retry_policy_id FK
+
+status
+```
+
+بدون تخزين password أو API secret plaintext.
+
+---
+
+# L32. Scheduled Jobs
+
+### `scheduled_job_definition`
+
+```text
+scheduled_job_definition
+------------------------
+job_id PK
+
+tenant_id
+
+job_code
+job_name
+
+job_type
+
+cron_expression
+
+timezone
+
+handler_name
+
+max_runtime_minutes
+
+retry_count
+
+enabled
+
+status
+```
+
+مثال:
+
+```text
+Payroll nightly validation
+Document expiry checker
+Leave accrual
+Attendance aggregation
+Notification reminder
+Integration sync
+Data reconciliation
+```
+
+---
+
+### `job_execution`
+
+```text
+job_execution
+-------------
+job_execution_id PK
+
+job_id FK
+
+started_at
+completed_at
+
+status
+
+records_processed
+
+error_count
+
+error_message
+
+execution_node
+```
+
+---
+
+# L33. System Parameters
+
+بعض الإعدادات صغيرة جدًا ولا تستحق Rule Engine.
+
+### `system_parameter`
+
+```text
+system_parameter
+----------------
+parameter_id PK
+
+tenant_id
+
+parameter_key
+
+parameter_value
+
+parameter_type
+
+module_code
+
+environment_id
+
+is_secret
+
+status
+```
+
+---
+
+# L34. Data Retention Policies
+
+### `data_retention_policy`
+
+```text
+data_retention_policy
+---------------------
+retention_policy_id PK
+
+tenant_id
+
+entity_type
+
+retention_period
+retention_unit
+
+archive_after
+
+delete_after
+
+legal_hold_supported
+
+anonymize_after
+
+status
+```
+
+---
+
+# L35. Legal Hold
+
+### `legal_hold`
+
+```text
+legal_hold
+----------
+legal_hold_id PK
+
+tenant_id
+
+entity_type
+entity_id
+
+hold_reason
+
+start_date
+release_date
+
+authorized_by
+
+status
+```
+
+حتى لا يقوم retention engine بحذف:
+
+```text
+Investigation
+Court Case
+Audit Case
+Employee Dispute
+```
+
+---
+
+# L36. Data Masking Configuration
+
+### `data_masking_rule`
+
+```text
+data_masking_rule
+-----------------
+masking_rule_id PK
+
+tenant_id
+
+entity_type
+field_name
+
+mask_type
+  PARTIAL
+  FULL
+  HASH
+  TOKENIZE
+
+visible_roles_json
+
+status
+```
+
+مثال:
+
+```text
+National ID:
+***********1234
+
+Bank Account:
+********8976
+```
+
+---
+
+# L37. System Branding
+
+### `tenant_branding`
+
+```text
+tenant_branding
+---------------
+tenant_branding_id PK
+
+tenant_id
+
+company_id NULL
+
+logo_uri
+favicon_uri
+
+primary_theme
+secondary_theme
+
+login_background_uri
+
+application_name
+
+email_header_uri
+email_footer_html
+
+status
+```
+
+---
+
+# L38. Tenant Domain
+
+### `tenant_domain`
+
+```text
+tenant_domain
+-------------
+tenant_domain_id PK
+
+tenant_id
+
+domain_name
+
+domain_type
+  SUBDOMAIN
+  CUSTOM_DOMAIN
+
+ssl_status
+
+verification_status
+
+is_primary
+
+status
+```
+
+مثال:
+
+```text
+afro.hrplatform.com
+
+hr.afro-group.com
+```
+
+---
+
+# L39. Maintenance Mode
+
+### `maintenance_window`
+
+```text
+maintenance_window
+------------------
+maintenance_window_id PK
+
+tenant_id NULL
+
+scope
+  PLATFORM
+  TENANT
+  MODULE
+
+module_code NULL
+
+start_at
+end_at
+
+maintenance_message
+
+allow_admin_access
+
+status
+```
+
+---
+
+# L40. Platform Announcement
+
+### `system_announcement`
+
+```text
+system_announcement
+-------------------
+announcement_id PK
+
+tenant_id NULL
+
+title
+message
+
+severity
+  INFO
+  WARNING
+  CRITICAL
+
+target_roles_json
+
+start_at
+end_at
+
+dismissible
+
+status
+```
+
+---
+
+# L41. Support / Impersonation Governance
+
+مهم جدًا إذا تحول النظام SaaS خارجي.
+
+لا يجب أن يدخل Platform Admin على Tenant بشكل مفتوح.
+
+### `support_access_request`
+
+```text
+support_access_request
+----------------------
+support_access_request_id PK
+
+tenant_id
+
+requested_by_platform_user
+
+reason
+
+access_level
+
+requested_duration_minutes
+
+approved_by_tenant_admin
+
+approved_from
+approved_until
+
+status
+```
+
+---
+
+### `support_impersonation_session`
+
+```text
+support_impersonation_session
+-----------------------------
+session_id PK
+
+support_access_request_id FK
+
+platform_user_id
+
+impersonated_user_id
+
+started_at
+ended_at
+
+actions_logged
+```
+
+كل action audit mandatory.
+
+---
+
+# L42. Platform Operational Health
+
+### `platform_health_check`
+
+```text
+platform_health_check
+---------------------
+health_check_id PK
+
+service_name
+
+environment_id
+
+status
+  HEALTHY
+  DEGRADED
+  DOWN
+
+response_time_ms
+
+checked_at
+
+details_json
+```
+
+---
+
+# L43. Operational Incident
+
+### `platform_incident`
+
+```text
+platform_incident
+-----------------
+incident_id PK
+
+environment_id
+
+incident_type
+
+severity
+
+started_at
+detected_at
+resolved_at
+
+affected_tenants
+
+root_cause
+
+resolution
+
+status
+```
+
+---
+
+# L44. Admin Action Registry
+
+بعض actions شديدة الخطورة:
+
+```text
+Unlock Payroll
+Delete Employee
+Reverse Final Settlement
+Deactivate Tenant
+Reset MFA
+Export Employee Data
+```
+
+### `privileged_admin_action`
+
+```text
+privileged_admin_action
+-----------------------
+admin_action_id PK
+
+action_code
+
+action_name
+
+risk_level
+
+requires_reason
+requires_mfa
+requires_second_approval
+
+allowed_roles_json
+
+status
+```
+
+---
+
+# ERD — High-Level View
+
+```text
+                         SAAS_TENANT
+                              |
+        +---------------------+----------------------+
+        |                     |                      |
+        v                     v                      v
+ TENANT_COMPANY        SUBSCRIPTION_PLAN       TENANT_BRANDING
+        |                     |
+        v                     v
+     COMPANY           PLAN_CAPABILITY
+                              |
+                              v
+                     PLATFORM_CAPABILITY
+
+
+SAAS_TENANT
+    |
+    +-------- CONFIGURATION_VALUE
+    |              |
+    |              v
+    |      CONFIGURATION_DEFINITION
+    |
+    +-------- WORKFLOW_DEFINITION
+    |              |
+    |              +---- WORKFLOW_STEP
+    |              |
+    |              +---- WORKFLOW_TRANSITION
+    |              |
+    |              +---- WORKFLOW_INSTANCE
+    |                        |
+    |                        v
+    |                  WORKFLOW_TASK
+    |
+    +-------- RULE_DEFINITION
+    |              |
+    |              +---- RULE_CONDITION
+    |              |
+    |              +---- RULE_ACTION
+    |              |
+    |              +---- RULE_VERSION
+    |
+    +-------- NOTIFICATION_TEMPLATE
+    |              |
+    |              +---- NOTIFICATION_RULE
+    |              |
+    |              +---- NOTIFICATION_OUTBOX
+    |
+    +-------- NUMBERING_SCHEME
+    |              |
+    |              v
+    |         NUMBER_SEQUENCE
+    |
+    +-------- BUSINESS_CALENDAR
+    |              |
+    |              +---- CALENDAR_WORKING_DAY
+    |              |
+    |              +---- CALENDAR_HOLIDAY
+    |
+    +-------- LOCALE_CONFIGURATION
+    |
+    +-------- CUSTOM_FIELD_DEFINITION
+    |              |
+    |              v
+    |        CUSTOM_FIELD_VALUE
+    |
+    +-------- FORM_DEFINITION
+    |              |
+    |              +---- FORM_SECTION
+    |                       |
+    |                       v
+    |                   FORM_FIELD
+    |
+    +-------- DOCUMENT_TEMPLATE
+    |
+    +-------- FEATURE_FLAG_ASSIGNMENT
+    |
+    +-------- AUDIT_POLICY
+    |
+    +-------- DATA_RETENTION_POLICY
+```
+
+---
+
+# أخطر Architectural Rule في Cluster L
+
+يجب ألا نسمح لأي Business Module أن يحتوي داخله على:
+
+```text
+tenant-specific logic
+```
+
+مثل:
+
+```python
+if company == "AFRO":
+    allowance = 500
+```
+
+أو:
+
+```python
+if tenant_id == 7:
+    approval = CEO
+```
+
+هذا ممنوع.
+
+الصحيح:
+
+```text
+Business Module
+      ↓
+Configuration Resolver
+      ↓
+Rules Engine
+      ↓
+Workflow Engine
+```
+
+---
+
+# Configuration Resolution Engine
+
+سنحتاج Service مركزية:
+
+```text
+Configuration Resolver
+```
+
+تسأل:
+
+> What is the applicable configuration for this employee/context?
+
+وتأخذ في الاعتبار:
+
+```text
+Tenant
+Company
+Legal Entity
+Business Unit
+Department
+Project
+Location
+Employee Type
+Grade
+Job
+Contract Type
+Date
+```
+
+ثم ترجع الـconfiguration الصحيحة.
+
+---
+
+# Rule Context
+
+مثال:
+
+```text
+Employee:
+Ahmed
+
+Company:
+Afro Egypt
+
+Project:
+Huawei FTTH
+
+Location:
+Alexandria
+
+Grade:
+G6
+
+Employee Type:
+Project Based
+
+Date:
+10-Aug-2026
+```
+
+الـEngine يبني:
+
+```json
+{
+  "tenant": "...",
+  "company": "...",
+  "project": "...",
+  "employeeType": "...",
+  "grade": "...",
+  "location": "...",
+  "effectiveDate": "..."
+}
+```
+
+ثم يطبق الـRules المناسبة.
+
+---
+
+# لا تجعل كل شيء Configurable
+
+وهنا نقطة تصميم مهمة جدًا.
+
+لو جعلنا كل شيء configurable سنصنع نظامًا يصعب فهمه وتشغيله.
+
+أقترح تقسيم النظام إلى:
+
+### Hard Platform Rules
+
+لا يمكن للـTenant تغييرها:
+
+```text
+Tenant isolation
+Audit integrity
+Password encryption
+Primary key architecture
+Payroll historical immutability
+Financial transaction integrity
+Data ownership rules
+```
+
+### Controlled Configuration
+
+يمكن تغييره لكن بموافقة:
+
+```text
+Payroll Rules
+Leave Rules
+Allowances
+Workflow Approval
+Attendance Policies
+Benefits
+```
+
+### Simple Tenant Settings
+
+يمكن للـTenant Admin تغييره مباشرة:
+
+```text
+Language
+Logo
+Notification Preferences
+Date Format
+Default Calendar
+```
+
+---
+
+# أهم صلاحيات Cluster L
+
+ولا أوصي بوجود Role واحد اسمه:
+
+```text
+Super Admin
+```
+
+يستطيع كل شيء داخل النظام بلا قيود.
+
+الأفضل:
+
+```text
+Platform Super Admin
+Tenant Super Admin
+Tenant Security Admin
+Configuration Admin
+Workflow Admin
+Payroll Configuration Admin
+Integration Admin
+Localization Admin
+Audit Viewer
+Support Engineer
+```
+
+مع Separation of Duties.
+
+---
+
+# مثال
+
+Payroll Admin يستطيع:
+
+```text
+Manage Payroll Rules
+```
+
+لكن لا يستطيع:
+
+```text
+Change Security Configuration
+View Employee Medical Data
+Manage Tenant Subscription
+```
+
+والـPlatform Admin لا ينبغي أن يستطيع تلقائيًا رؤية salary أو medical أو disciplinary records الخاصة بالـTenant.
+
+---
+
+# Tenant Isolation
+
+كل جدول Tenant-owned تقريبًا يجب أن يحتوي:
+
+```text
+tenant_id
+```
+
+ومعظم الجداول التشغيلية:
+
+```text
+tenant_id
+company_id
+```
+
+ونطبق العزل على:
+
+```text
+Application Layer
+Database Query Layer
+Cache
+Search Index
+Object Storage
+Background Jobs
+Reports
+Exports
+AI Context
+```
+
+وليس DB فقط.
+
+---
+
+# أهم Non-Functional Constraints
+
+## 1. Configuration Versioning
+
+أي Configuration تؤثر على المال أو compliance:
+
+```text
+Immutable after activation
+```
+
+التعديل = version جديد.
+
+---
+
+## 2. Effective Dating
+
+كل Rule تقريبًا:
+
+```text
+effective_from
+effective_to
+```
+
+---
+
+## 3. Maker–Checker
+
+لـ:
+
+```text
+Payroll
+Tax
+Allowance
+Leave
+Attendance
+Security
+Workflow
+```
+
+---
+
+## 4. Simulation Before Activation
+
+ميزة أعتبرها ضرورية.
+
+قبل تفعيل Payroll Rule جديدة:
+
+```text
+Simulate
+```
+
+مثال:
+
+> ما تأثير تغيير Outside Cairo Allowance من 150 إلى 180 جنيه؟
+
+النظام يعرض:
+
+```text
+Employees affected: 327
+Monthly cost before: 1.42M
+Monthly cost after: 1.68M
+Impact: +260K
+```
+
+ولا يتم التفعيل إلا بعدها.
+
+---
+
+# L45. Configuration Simulation
+
+### `configuration_simulation`
+
+```text
+configuration_simulation
+------------------------
+simulation_id PK
+
+tenant_id
+
+configuration_type
+configuration_version_id
+
+simulation_scope
+
+input_snapshot_date
+
+records_evaluated
+records_affected
+
+before_result_json
+after_result_json
+
+financial_impact
+
+executed_by
+executed_at
+```
+
+---
+
+# L46. Configuration Dependency
+
+من أخطر الأشياء تغيير Rule تؤثر على Rules أخرى.
+
+### `configuration_dependency`
+
+```text
+configuration_dependency
+------------------------
+dependency_id PK
+
+source_config_type
+source_config_id
+
+target_config_type
+target_config_id
+
+dependency_type
+  REQUIRES
+  AFFECTS
+  BLOCKS
+  OVERRIDES
+
+status
+```
+
+مثال:
+
+```text
+Attendance Rule
+       ↓
+Payroll Input Rule
+       ↓
+Allowance Rule
+       ↓
+Payroll Calculation
+```
+
+فيحذر النظام:
+
+> تعديل Attendance Rule سيؤثر على Payroll وProject Cost Allocation.
+
+---
+
+# L47. Configuration Impact Analysis
+
+قبل Publish:
+
+```text
+Affected Modules
+Affected Employees
+Affected Companies
+Affected Projects
+Affected Workflows
+Financial Impact
+Compliance Impact
+Integration Impact
+```
+
+وهذه ميزة Administration قوية جدًا.
+
+---
+
+# علاقة Cluster L بالـClusters السابقة
+
+```text
+Cluster A
+Employee / Org Structure
+        ↑
+        |
+Cluster L
+Workflow + Configuration + Numbering
+
+
+Cluster B
+Attendance / Leave
+        ↑
+Rules / Calendars
+
+
+Cluster C
+Payroll
+        ↑
+Rules / Processing Calendar / Approval
+
+
+Cluster D–J
+Business Modules
+        ↑
+Workflow / Notification / Forms / Documents
+
+
+Cluster K
+Integrations
+        ↑
+Integration Config / Schedules / Feature Flags
+```
+
+بالتالي:
+
+> **Cluster L لا يملك Employee/Payroll/Attendance data.**
+
+هو يملك:
+
+> **Configuration governing how those domains operate.**
+
+وهذا distinction مهم جدًا.
+
+---
+
+# أهم Events التي يستهلكها Cluster L
+
+```text
+EmployeeCreated
+EmployeeActivated
+HiringRequestCreated
+LeaveRequested
+AttendanceExceptionRaised
+PayrollRunStarted
+PayrollRunCompleted
+ExpenseSubmitted
+DocumentExpiring
+MedicalFitnessExpired
+WorkflowTaskOverdue
+IntegrationFailed
+ConfigurationChanged
+```
+
+ومنها يشغل:
+
+```text
+Rules
+Workflow
+Notification
+Escalation
+Audit
+```
+
+---
+
+# System Administration Center UI
+
+في الـFrontend أوصي أن يظهر كـControl Center:
+
+```text
+System Administration
+│
+├── Tenant Management
+├── Companies
+├── Subscription & Capabilities
+├── Feature Flags
+│
+├── Configuration Center
+├── Business Rules
+├── Workflow Designer
+├── Approval Matrix
+│
+├── Calendars
+├── Payroll Periods
+├── Numbering
+│
+├── Notification Templates
+├── Escalations
+│
+├── Forms & Custom Fields
+├── Document Templates
+│
+├── Languages & Localization
+├── Lookups
+│
+├── Integrations
+├── Scheduled Jobs
+│
+├── Audit Configuration
+├── Retention Policies
+│
+├── Branding
+│
+├── Environment Management
+├── Deployment Packages
+│
+└── Platform Health
+```
+
+---
+
+# Workflow Designer
+
+Visual Designer مثل:
+
+```text
+Hiring Request
+      |
+      v
+Line Manager
+      |
+ Amount / Grade?
+      |
+ ┌────┴────┐
+ v         v
+Normal   Executive
+ |          |
+HR        HR Director
+ |          |
+Finance     CEO
+ └────┬─────┘
+      |
+    Approved
+```
+
+بدون developer intervention.
+
+---
+
+# Rules Designer
+
+Business Admin يرى:
+
+```text
+WHEN
+
+Employee Work Location
+is outside
+Cairo
+
+AND
+
+Worked Days
+greater than
+0
+
+THEN
+
+Create earning
+Location Allowance
+
+Amount =
+Worked Days × Daily Rate
+```
+
+بدل كتابة code.
+
+---
+
+# نقطة مهمة من الـOrg Chart
+
+الهيكل الحالي يظهر فصلًا وظيفيًا بين Organizational Development وTalent Acquisition وER & Compliance وPayroll وPersonnel وHR Operations، مع People & Culture Manager فوقهم، كما توجد HR Operations مخصصة لحسابات/عملاء مثل Huawei & Nokia وEricsson. هذا يعزز الحاجة إلى أن يكون الـWorkflow/Configuration قابلًا لتحديد الصلاحية أو الإجراء بناءً على team/account/project وليس department فقط. 
+
+---
+
+# Cluster L Final Core Tables
+
+إذا أردنا استخراج **الـCore Production Schema فقط** وليس كل الـsupporting tables، فأعتبر هذه الجداول إلزامية:
+
+```text
+01 saas_tenant
+02 tenant_company
+
+03 subscription_plan
+04 platform_capability
+05 plan_capability
+
+06 feature_flag
+07 feature_flag_assignment
+
+08 configuration_definition
+09 configuration_value
+10 configuration_change_request
+11 configuration_change_log
+
+12 workflow_definition
+13 workflow_step_definition
+14 workflow_transition
+15 workflow_instance
+16 workflow_task
+17 approval_delegation
+
+18 rule_definition
+19 rule_condition
+20 rule_action
+21 rule_version
+
+22 notification_template
+23 notification_rule
+24 notification_outbox
+25 escalation_policy
+
+26 numbering_scheme
+27 number_sequence
+
+28 business_calendar
+29 calendar_working_day
+30 calendar_holiday
+31 processing_calendar
+
+32 language_definition
+33 translation_key
+34 translation_value
+35 locale_configuration
+
+36 lookup_category
+37 lookup_value
+
+38 custom_field_definition
+39 custom_field_value
+
+40 form_definition
+41 form_section
+42 form_field
+
+43 document_template
+
+44 audit_policy
+45 data_retention_policy
+46 legal_hold
+
+47 scheduled_job_definition
+48 job_execution
+
+49 tenant_branding
+50 tenant_domain
+
+51 configuration_package
+52 configuration_package_item
+
+53 configuration_dependency
+54 configuration_simulation
+
+55 support_access_request
+56 support_impersonation_session
+
+57 platform_environment
+58 platform_health_check
+59 platform_incident
+```
+
+أي حوالي **59 entity أساسية** في Cluster L بالكامل.
+
+---
+
+# النتيجة المعمارية
+
+بعد Cluster L أصبح لدينا:
+
+```text
+Business Domains
+A → J
+
+Integration & Data Governance
+K
+
+Platform Control Plane
+L
+```
+
+وأصبح النظام لا يعتمد على developers لتغيير:
+
+```text
+Policies
+Rules
+Approvals
+SLAs
+Calendars
+Numbering
+Templates
+Forms
+Languages
+Features
+Tenant settings
+```
+
+مع الحفاظ في الوقت نفسه على:
+
+```text
+Versioning
+Approval
+Audit
+Effective Dating
+Rollback
+Simulation
+Impact Analysis
+Tenant Isolation
+```
+
+وهذا بالضبط ما يحول AfroHR من **HR application** إلى **configurable enterprise HR SaaS platform**.
+
+**الخطوة التالية المنطقية الآن هي Cluster M — Enterprise Reporting, Data Warehouse/Lakehouse, KPI Semantic Layer, BI, Executive Dashboards, Embedded Analytics, AI/ML Feature Store, Data Lineage & Analytical Security ERD**؛ لأن الـtransactional architecture والـintegration/configuration layers أصبحت شبه مكتملة، وحان فصل الـOperational DB عن طبقة التحليل والإدارة التنفيذية بدل تشغيل التقارير الثقيلة مباشرة على الـproduction database.

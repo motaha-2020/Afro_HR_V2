@@ -1,0 +1,3574 @@
+تمام. الآن نبني **Cluster E** باعتباره الـCase & Employee Relations Engine للنظام، وليس مجرد شاشة شكاوى.
+
+الـManual الحالي يضع **Employee Relations** و **Investigation & Disciplinary Process** ضمن HR Operations، ويحدد أن العملية تشمل استلام البلاغ، مراجعة المخالفة، إخطار الموظف، جلسة التحقيق، جمع الأقوال والأدلة، التنسيق مع Legal Affairs، إصدار القرار وتحديث ملف الموظف. كما يشترط السرية، العدالة، التوثيق والـtraceability. وفي الـOrg Chart يوجد فعليًا **Employee Relations and Compliance Leader + Specialist**، وبالتالي سأجعل هذا الـCluster يخدم HR Operations وER & Compliance مع فصل الصلاحيات الحساسة.  
+
+# Cluster E
+
+## Employee Relations, Grievances, Disciplinary, Investigations, HR Case Management, HR Service Desk, Employee Requests & Confidential Evidence ERD
+
+---
+
+# 1. الهدف المعماري
+
+هذا الـCluster مسؤول عن سبعة مجالات مترابطة لكن **يجب ألا نخلطها في Table واحدة**:
+
+1. **HR Service Desk**
+2. **Employee Requests**
+3. **Employee Relations Cases**
+4. **Grievances & Complaints**
+5. **Investigations**
+6. **Disciplinary Actions**
+7. **Confidential Evidence & Restricted Case Records**
+
+والقاعدة الأساسية:
+
+> `Employee Request ≠ HR Case ≠ Investigation ≠ Disciplinary Action`
+
+يمكن أن يبدأ الموضوع كـRequest عادي، ثم يتحول إلى Case، ثم Investigation، ثم ينتج عنه Disciplinary Action.
+
+مثال:
+
+```text
+Employee Request
+    ↓
+Complaint Submitted
+    ↓
+ER Case Created
+    ↓
+Preliminary Assessment
+    ↓
+Investigation
+    ↓
+Findings
+    ↓
+Disciplinary Recommendation
+    ↓
+Approval
+    ↓
+Disciplinary Action
+    ↓
+Appeal
+    ↓
+Case Closure
+```
+
+لكن ليس كل Request يصل إلى Investigation.
+
+---
+
+# 2. مكان Cluster E داخل الـMaster HR Architecture
+
+```text
+Employee Master
+      │
+      ├── Organization / Position
+      ├── Attendance
+      ├── Leave
+      ├── Payroll
+      ├── Performance
+      │
+      ▼
+┌──────────────────────────────┐
+│         CLUSTER E            │
+│                              │
+│ Service Desk                 │
+│ Employee Requests            │
+│ Employee Relations           │
+│ Grievances                   │
+│ Investigations               │
+│ Disciplinary                 │
+│ Appeals                      │
+│ Confidential Evidence        │
+└──────────────┬───────────────┘
+               │
+       ┌───────┼───────────┐
+       ▼       ▼           ▼
+   Payroll  Performance  Offboarding
+      │          │           │
+ deductions   restricted   termination
+ only after   outcome      if approved
+ approval      signal
+```
+
+مهم جدًا: **Payroll أو Performance لا يقرأان تفاصيل التحقيق أو الشكوى.**
+
+يصل لهما فقط **Approved Outcome / Authorized Action** عند الحاجة.
+
+---
+
+# 3. الـERD Domains
+
+أقسم Cluster E إلى 12 Sub-Domains.
+
+```text
+E01 HR Service Desk
+E02 Employee Request Management
+E03 HR Case Management
+E04 Case Parties
+E05 Grievance & Complaint Management
+E06 Incident / Allegation Management
+E07 Investigation Management
+E08 Interview / Statement Management
+E09 Confidential Evidence Vault
+E10 Findings & Disciplinary Decisions
+E11 Appeal & Review
+E12 Case Security, Audit, SLA & Communication
+```
+
+---
+
+# 4. E01 — HR Service Desk
+
+هذا هو الـFront Door لكل خدمات HR.
+
+## hr_service_catalog
+
+```text
+hr_service_catalog
+-------------------
+service_id PK
+tenant_id FK
+company_id FK
+
+service_code
+service_name_ar
+service_name_en
+service_name_fr
+
+service_category_id FK
+
+description
+request_channel
+
+employee_self_service_allowed
+manager_request_allowed
+hr_only
+
+requires_approval
+workflow_definition_id FK
+
+default_priority
+default_sla_policy_id FK
+
+confidentiality_level
+
+requires_attachment
+required_document_rule_id FK
+
+auto_assignment_rule_id FK
+
+active_flag
+
+effective_from
+effective_to
+
+created_at
+created_by
+```
+
+أمثلة Services:
+
+```text
+Employment Letter
+Salary Certificate
+HR Letter
+Contract Copy
+Medical Insurance Request
+Employee Data Correction
+Bank Letter
+Leave Balance Inquiry
+Payroll Inquiry
+Complaint
+Grievance
+Transfer Request
+Manager Change Request
+Workplace Issue
+HR Consultation
+Resignation Inquiry
+Policy Clarification
+```
+
+---
+
+# 5. Service Categories
+
+## hr_service_category
+
+```text
+service_category_id PK
+tenant_id FK
+
+category_code
+
+category_name_ar
+category_name_en
+category_name_fr
+
+parent_category_id FK nullable
+
+default_owner_team_id FK
+confidentiality_level
+
+display_order
+active_flag
+```
+
+Hierarchy ممكن:
+
+```text
+Employee Services
+│
+├── Personnel
+├── Payroll
+├── Benefits
+├── Leave
+├── Attendance
+├── Documents
+├── Employee Relations
+├── Complaints
+├── Grievances
+└── General HR Support
+```
+
+---
+
+# 6. E02 — Employee Request
+
+## employee_request
+
+هذه الـtransaction الرئيسية للـService Desk.
+
+```text
+employee_request
+----------------
+request_id PK
+tenant_id FK
+company_id FK
+
+request_number UNIQUE
+
+requester_employee_id FK
+requested_for_employee_id FK nullable
+
+service_id FK
+
+subject
+request_description
+
+source_channel
+priority
+
+request_status
+
+submitted_at
+
+assigned_team_id FK
+assigned_user_id FK nullable
+
+sla_policy_id FK
+sla_due_at
+
+first_response_at
+resolved_at
+closed_at
+
+resolution_code
+resolution_summary
+
+employee_confirmation_status
+
+confidentiality_level
+
+related_employee_id FK nullable
+related_project_id FK nullable
+
+linked_case_id FK nullable
+
+created_at
+created_by
+updated_at
+updated_by
+```
+
+---
+
+# 7. Request Status
+
+لا تستخدم مجرد Open/Closed.
+
+```text
+Draft
+Submitted
+Acknowledged
+Assigned
+In Progress
+Waiting for Employee
+Waiting for Manager
+Waiting for HR
+Waiting for External Party
+Pending Approval
+Resolved
+Rejected
+Cancelled
+Closed
+Escalated
+Converted to Case
+```
+
+---
+
+# 8. Request Participant
+
+## employee_request_participant
+
+```text
+request_participant_id PK
+request_id FK
+
+participant_type
+participant_employee_id FK nullable
+participant_user_id FK nullable
+participant_team_id FK nullable
+
+role_type
+
+added_at
+removed_at
+
+visibility_scope
+```
+
+مثل:
+
+```text
+Requester
+Requested For
+Approver
+Handler
+Watcher
+Manager
+HR Operations
+Payroll
+Personnel
+ER Specialist
+```
+
+---
+
+# 9. Request Comments
+
+## employee_request_comment
+
+```text
+comment_id PK
+request_id FK
+
+comment_type
+
+comment_text
+
+is_internal_note
+employee_visible
+
+confidentiality_level
+
+author_user_id FK
+
+created_at
+edited_at
+```
+
+وهنا يجب الفصل بين:
+
+```text
+Employee-visible reply
+
+vs
+
+Internal HR note
+```
+
+---
+
+# 10. E03 — HR Case Management
+
+هذه أهم Entity في Cluster E.
+
+## hr_case
+
+```text
+hr_case
+-------
+case_id PK
+tenant_id FK
+company_id FK
+
+case_number UNIQUE
+
+case_type_id FK
+case_category_id FK
+
+case_title
+case_summary
+
+case_source
+
+origin_request_id FK nullable
+origin_incident_id FK nullable
+
+reported_at
+opened_at
+
+case_owner_team_id FK
+case_owner_user_id FK
+
+case_manager_id FK
+
+priority
+severity
+risk_level
+
+confidentiality_level
+
+case_status
+case_stage
+
+primary_employee_id FK nullable
+
+project_id FK nullable
+department_id FK nullable
+business_unit_id FK nullable
+location_id FK nullable
+
+policy_id FK nullable
+policy_version_id FK nullable
+
+legal_review_required
+legal_case_flag
+
+anonymous_flag
+
+retaliation_risk_flag
+safeguarding_required_flag
+
+target_resolution_date
+
+closed_at
+closed_by
+
+closure_reason
+closure_summary
+
+retention_policy_id FK
+
+created_at
+created_by
+
+updated_at
+updated_by
+
+row_version
+```
+
+---
+
+# 11. Case Types
+
+## hr_case_type
+
+```text
+Employee Complaint
+Employee Grievance
+Workplace Conflict
+Misconduct
+Policy Violation
+Attendance Misconduct
+Harassment Complaint
+Discrimination Complaint
+Behavioral Issue
+Performance Conduct Issue
+Safety Violation
+Fraud / Integrity Concern
+Theft / Asset Misuse
+Confidentiality Breach
+Data / Information Security Concern
+Managerial Conduct
+Workplace Violence
+Absence / Abandonment
+Customer Complaint Against Employee
+Legal Compliance
+Whistleblowing
+Other
+```
+
+هذه Types تكون configurable وليست hard-coded.
+
+---
+
+# 12. Case Category Hierarchy
+
+## hr_case_category
+
+```text
+case_category_id PK
+parent_category_id FK
+
+category_code
+category_name
+
+default_severity
+default_confidentiality_level
+
+investigation_required_by_default
+
+legal_review_required
+
+default_sla_policy_id FK
+
+active_flag
+```
+
+مثال:
+
+```text
+Conduct
+ ├── Attendance
+ ├── Insubordination
+ ├── Negligence
+ └── Workplace Behavior
+
+Integrity
+ ├── Fraud
+ ├── Theft
+ ├── Conflict of Interest
+ └── Confidential Information
+
+Employee Relations
+ ├── Complaint
+ ├── Grievance
+ ├── Manager Conflict
+ └── Work Environment
+```
+
+---
+
+# 13. E04 — Case Parties
+
+لا نضع:
+
+```text
+employee_id
+accused_employee_id
+complainant_employee_id
+witness_employee_id
+```
+
+داخل hr_case.
+
+لأن القضية قد تحتوي 20 شخصًا.
+
+نعمل:
+
+## hr_case_party
+
+```text
+case_party_id PK
+case_id FK
+
+party_type
+
+employee_id FK nullable
+external_person_id FK nullable
+
+party_role
+
+party_status
+
+anonymous_flag
+identity_restricted_flag
+
+legal_rep_name nullable
+
+joined_case_at
+left_case_at
+
+notes_restricted
+
+created_at
+```
+
+`party_role`:
+
+```text
+Complainant
+Grievant
+Subject
+Accused
+Respondent
+Affected Employee
+Witness
+Reporter
+Manager
+Investigator
+HR Representative
+Legal Representative
+External Party
+Customer Representative
+```
+
+---
+
+# 14. لماذا Case Party مهم؟
+
+مثلاً:
+
+```text
+Case ER-2026-000349
+
+Complainant:
+Employee A
+
+Subjects:
+Employee B
+Employee C
+
+Witnesses:
+Employee D
+Employee E
+External Contractor X
+
+Investigator:
+ER Specialist
+
+Legal Reviewer:
+Legal Officer
+```
+
+بدون Party Model مرن سيتعقد الـschema جدًا.
+
+---
+
+# 15. E05 — Grievance
+
+لا أعتبر Grievance مجرد `case_type`.
+
+لها lifecycle إضافي.
+
+## grievance
+
+```text
+grievance_id PK
+case_id FK UNIQUE
+
+grievance_type
+
+grievance_subject
+
+grievance_description
+
+submitted_by_employee_id FK
+submitted_at
+
+against_employee_id FK nullable
+against_department_id FK nullable
+
+desired_resolution
+
+previous_discussion_flag
+previous_discussion_date
+
+manager_awareness_flag
+
+anonymous_flag
+
+retaliation_concern_flag
+
+grievance_status
+
+acknowledged_at
+
+response_due_at
+
+resolution_date
+resolution_summary
+```
+
+---
+
+# 16. Grievance Stages
+
+```text
+Submitted
+Acknowledged
+Initial Review
+Informal Resolution
+Formal Review
+Investigation Required
+Decision Pending
+Decision Issued
+Appeal Window
+Closed
+```
+
+---
+
+# 17. Complaint ≠ Grievance
+
+يفضل فصل المعنى Business-wise.
+
+### Complaint
+
+موضوع أو مشكلة يطلب الموظف حلها.
+
+مثال:
+
+> Manager speaks aggressively.
+
+### Grievance
+
+اعتراض رسمي على:
+
+```text
+Decision
+Treatment
+Policy application
+Disciplinary action
+Working condition
+Managerial action
+Employment-related decision
+```
+
+وبالتالي Grievance لها Formal Lifecycle.
+
+---
+
+# 18. E06 — Incident / Allegation
+
+## hr_incident_report
+
+```text
+incident_id PK
+
+tenant_id FK
+company_id FK
+
+incident_number
+
+reported_by_employee_id FK nullable
+reported_by_external_party_id FK nullable
+
+anonymous_flag
+
+incident_datetime
+reported_at
+
+location_id FK nullable
+project_id FK nullable
+
+incident_category_id FK
+
+incident_description
+
+immediate_action_taken
+
+employee_safety_risk
+business_risk
+legal_risk
+financial_risk
+reputation_risk
+
+severity
+
+case_created_flag
+case_id FK nullable
+
+created_at
+created_by
+```
+
+---
+
+# 19. Allegations
+
+القضية الواحدة قد تتضمن أكثر من Allegation.
+
+## case_allegation
+
+```text
+allegation_id PK
+case_id FK
+
+allegation_number
+
+subject_party_id FK
+
+allegation_type_id FK
+
+allegation_description
+
+policy_id FK
+policy_clause_id FK nullable
+
+incident_date
+incident_location_id FK nullable
+
+reported_by_party_id FK nullable
+
+severity
+
+investigation_required
+
+allegation_status
+
+created_at
+created_by
+```
+
+مثلاً:
+
+```text
+Case ER-00122
+
+Allegation 01
+Unauthorized absence
+
+Allegation 02
+Falsification of attendance
+
+Allegation 03
+Insubordination
+```
+
+كل Allegation يجب أن تحصل على Finding مستقل.
+
+---
+
+# 20. E07 — Investigation
+
+وفق الـManual، Investigation تشمل notification، meeting، statements، supporting evidence والتنسيق مع Legal Affairs. 
+
+## investigation
+
+```text
+investigation_id PK
+
+case_id FK
+
+investigation_number
+
+investigation_type
+
+investigation_scope
+
+investigation_reason
+
+opened_at
+planned_start_date
+actual_start_date
+
+target_completion_date
+actual_completion_date
+
+lead_investigator_user_id FK
+
+investigation_team_id FK nullable
+
+legal_review_required
+external_investigator_flag
+
+investigation_status
+
+suspension_required_flag
+
+conflict_of_interest_checked
+conflict_check_completed_at
+
+final_report_id FK nullable
+
+closed_at
+
+created_at
+created_by
+```
+
+---
+
+# 21. Investigation Status
+
+```text
+Not Started
+Planning
+Conflict Check
+Evidence Collection
+Interviews In Progress
+Analysis
+Awaiting Information
+Legal Review
+Findings Preparation
+Completed
+Suspended
+Cancelled
+Reopened
+```
+
+---
+
+# 22. Investigation Team
+
+## investigation_member
+
+```text
+investigation_member_id PK
+investigation_id FK
+
+user_id FK
+
+investigation_role
+
+joined_at
+removed_at
+
+access_level
+
+conflict_check_status
+conflict_notes_restricted
+```
+
+Roles:
+
+```text
+Lead Investigator
+Investigator
+ER Representative
+Legal Advisor
+Technical Expert
+HSE Expert
+Observer
+External Investigator
+```
+
+---
+
+# 23. Investigation Plan
+
+## investigation_plan_item
+
+```text
+plan_item_id PK
+investigation_id FK
+
+item_type
+
+description
+
+responsible_user_id FK
+
+planned_date
+completed_date
+
+status
+
+sequence_no
+```
+
+مثل:
+
+```text
+Interview complainant
+Interview subject
+Collect attendance records
+Review CCTV
+Review emails
+Legal consultation
+Site visit
+Policy review
+```
+
+---
+
+# 24. E08 — Interviews
+
+## investigation_interview
+
+```text
+interview_id PK
+investigation_id FK
+
+interview_type
+
+interviewee_party_id FK
+
+scheduled_at
+started_at
+ended_at
+
+location_type
+location_id FK nullable
+
+meeting_link nullable
+
+interviewer_user_id FK
+
+legal_representative_present
+hr_representative_present
+
+interview_status
+
+statement_confirmed_flag
+
+recording_allowed_flag
+
+created_at
+```
+
+---
+
+# 25. Interview Questions
+
+## investigation_interview_question
+
+```text
+question_id PK
+interview_id FK
+
+sequence_number
+
+question_text
+
+answer_text
+
+answer_confidentiality
+
+asked_by_user_id FK
+asked_at
+```
+
+---
+
+# 26. Formal Statements
+
+## case_statement
+
+```text
+statement_id PK
+case_id FK
+investigation_id FK nullable
+
+party_id FK
+
+statement_type
+
+statement_text
+
+statement_date
+
+submitted_method
+
+employee_acknowledged_flag
+acknowledged_at
+
+signature_document_id FK nullable
+
+version_no
+
+is_final
+
+created_by
+created_at
+```
+
+Statement Types:
+
+```text
+Complaint Statement
+Subject Statement
+Witness Statement
+Manager Statement
+Expert Statement
+Supplementary Statement
+```
+
+---
+
+# 27. E09 — Confidential Evidence Vault
+
+هذا الجزء يجب أن يكون **منفصلًا أمنيًا**.
+
+ليس مجرد Attachment table.
+
+الـManual نفسه ينص على أن disciplinary documentation والبيانات الوظيفية الحساسة يجب أن تكون Confidential ولا يصل إليها إلا authorized personnel، كما يشترط traceability. 
+
+---
+
+# 28. evidence_item
+
+```text
+evidence_item
+-------------
+evidence_id PK
+
+tenant_id FK
+case_id FK
+investigation_id FK nullable
+allegation_id FK nullable
+
+evidence_number
+
+evidence_type
+
+evidence_title
+evidence_description
+
+source_type
+source_reference
+
+collected_by_user_id FK
+collected_at
+
+evidence_date
+
+original_file_id FK nullable
+
+content_hash
+file_hash_algorithm
+
+classification_level
+
+contains_personal_data
+contains_sensitive_data
+
+legal_hold_flag
+
+chain_of_custody_required
+
+evidence_status
+
+retention_policy_id FK
+
+created_at
+```
+
+---
+
+# 29. Evidence Types
+
+```text
+Document
+Email
+Photo
+Video
+Audio
+CCTV
+Attendance Record
+GPS Record
+System Log
+WhatsApp / Message Export
+Witness Statement
+Employee Statement
+Manager Statement
+HR Record
+Payroll Record
+Medical Document
+HSE Record
+Customer Complaint
+Asset Record
+Access Control Log
+External Document
+Other
+```
+
+---
+
+# 30. لا نقوم بعمل Copy عشوائي للبيانات
+
+مثلاً لو Evidence هو Attendance:
+
+لا نخزن attendance data بالكامل.
+
+بل:
+
+```text
+evidence_source_link
+--------------------
+evidence_source_link_id
+evidence_id
+
+source_module
+source_entity_type
+source_entity_id
+
+snapshot_required
+snapshot_id nullable
+```
+
+وهذا يسمح بربط التحقيق ببيانات Cluster B بدون duplication.
+
+---
+
+# 31. Evidence Snapshot
+
+لكن ماذا لو تم تعديل الـrecord الأصلي؟
+
+هنا نحتاج Immutable Snapshot.
+
+## evidence_snapshot
+
+```text
+snapshot_id PK
+evidence_id FK
+
+source_system
+
+snapshot_timestamp
+
+snapshot_payload_json
+
+payload_hash
+
+generated_by
+
+immutable_flag
+```
+
+---
+
+# 32. Chain of Custody
+
+مهم جدًا للأدلة الحساسة.
+
+## evidence_custody_event
+
+```text
+custody_event_id PK
+evidence_id FK
+
+event_type
+
+from_user_id FK nullable
+to_user_id FK nullable
+
+event_timestamp
+
+purpose
+
+location
+
+access_method
+
+digital_signature_hash
+
+notes
+```
+
+Events:
+
+```text
+Collected
+Uploaded
+Viewed
+Downloaded
+Transferred
+Reviewed
+Copied
+Exported
+Sealed
+Unsealed
+Archived
+Destroyed
+```
+
+---
+
+# 33. Restricted Access
+
+## case_access_grant
+
+```text
+case_access_grant_id PK
+
+case_id FK
+
+grantee_type
+grantee_user_id FK nullable
+grantee_role_id FK nullable
+grantee_team_id FK nullable
+
+access_scope
+
+access_level
+
+valid_from
+valid_until
+
+granted_by
+
+grant_reason
+
+revoked_at
+revoked_by
+```
+
+---
+
+# 34. Access Levels
+
+```text
+Case Metadata Only
+Case Summary
+Case Full
+Investigation Only
+Evidence View
+Evidence Download
+Witness Identity
+Medical Evidence
+Legal Evidence
+Decision Only
+Audit Only
+```
+
+وهنا نخرج من RBAC التقليدي إلى:
+
+> **RBAC + ABAC + Case-Level ACL**
+
+---
+
+# 35. مثال أمني مهم
+
+Project Manager قد يعرف:
+
+```text
+Employee Ahmed
+Case Status: Under HR Review
+Operational Restriction: Temporarily Reassigned
+```
+
+لكن **لا يعرف**:
+
+```text
+Who complained
+Witness names
+Statements
+Evidence
+Investigator notes
+Legal recommendations
+```
+
+---
+
+# 36. E10 — Findings
+
+## investigation_finding
+
+```text
+finding_id PK
+
+investigation_id FK
+allegation_id FK
+
+finding_type
+
+finding_summary
+
+evidence_strength
+
+finding_status
+
+policy_breach_confirmed
+
+policy_id FK nullable
+policy_clause_id FK nullable
+
+recommended_action_type
+
+investigator_user_id FK
+
+finding_date
+
+legal_review_status
+
+approved_flag
+
+created_at
+```
+
+---
+
+# 37. Finding Types
+
+لا تستخدم Guilty/Not Guilty فقط.
+
+يفضل:
+
+```text
+Substantiated
+Partially Substantiated
+Unsubstantiated
+Insufficient Evidence
+Inconclusive
+Outside Scope
+Policy Breach Confirmed
+No Policy Breach
+```
+
+هذا أكثر مهنية في Case Management.
+
+---
+
+# 38. Disciplinary Matrix
+
+## disciplinary_rule
+
+```text
+disciplinary_rule_id PK
+
+tenant_id FK
+company_id FK
+
+violation_type_id FK
+
+severity_level
+
+first_occurrence_action
+second_occurrence_action
+third_occurrence_action
+
+default_action_type_id FK
+
+employee_category_id FK nullable
+
+employment_type_id FK nullable
+
+policy_id FK
+
+effective_from
+effective_to
+
+active_flag
+```
+
+**Configurable وليس hard-coded.**
+
+---
+
+# 39. Disciplinary Action
+
+## disciplinary_action
+
+```text
+disciplinary_action_id PK
+
+case_id FK
+investigation_id FK nullable
+finding_id FK nullable
+
+employee_id FK
+
+action_type_id FK
+
+action_reason
+
+decision_date
+effective_date
+expiry_date nullable
+
+duration_days nullable
+
+financial_impact_flag
+
+payroll_action_required
+
+performance_impact_flag
+
+employment_status_impact
+
+approved_by_user_id FK
+approved_at
+
+legal_review_status
+
+employee_notified_at
+
+employee_acknowledged_flag
+
+appeal_allowed
+appeal_deadline
+
+action_status
+
+created_at
+created_by
+```
+
+---
+
+# 40. Disciplinary Action Types
+
+Configurable:
+
+```text
+Verbal Warning
+Written Warning
+Final Written Warning
+Counseling
+Coaching
+Mandatory Training
+Corrective Action Plan
+Suspension
+Salary Deduction
+Benefit Restriction
+Transfer
+Project Reassignment
+Demotion
+Termination Recommendation
+Termination
+No Action
+Other
+```
+
+وهنا أنبه إلى نقطة مهمة:
+
+### Payroll لا ينفذ Salary Deduction مباشرة من Case.
+
+يمر عبر:
+
+```text
+Disciplinary Action
+↓
+Approved Financial Action
+↓
+Payroll Input
+↓
+Payroll Run
+```
+
+---
+
+# 41. Financial Action Bridge
+
+## disciplinary_payroll_instruction
+
+```text
+disciplinary_payroll_instruction_id PK
+
+disciplinary_action_id FK
+
+employee_id FK
+
+payroll_action_type
+
+amount nullable
+percentage nullable
+
+effective_payroll_period_id FK
+
+legal_basis_reference
+approval_reference
+
+instruction_status
+
+sent_to_payroll_at
+processed_payroll_run_id FK nullable
+
+processed_at
+```
+
+Status:
+
+```text
+Draft
+Pending Approval
+Approved
+Sent to Payroll
+Processed
+Rejected
+Cancelled
+```
+
+---
+
+# 42. E11 — Appeal
+
+## disciplinary_appeal
+
+```text
+appeal_id PK
+
+disciplinary_action_id FK
+case_id FK
+
+submitted_by_employee_id FK
+
+submitted_at
+
+appeal_reason
+appeal_statement
+
+appeal_status
+
+reviewer_user_id FK
+review_panel_id FK nullable
+
+review_started_at
+decision_date
+
+appeal_decision
+
+decision_reason
+
+original_action_confirmed
+original_action_modified
+original_action_revoked
+
+new_action_id FK nullable
+
+closed_at
+```
+
+---
+
+# 43. Appeal Outcome
+
+```text
+Upheld
+Partially Upheld
+Rejected
+Decision Modified
+Action Revoked
+Reinvestigation Required
+```
+
+---
+
+# 44. Reopen Investigation
+
+مهم جدًا عدم Edit التحقيق القديم.
+
+نعمل:
+
+```text
+investigation
+INV-001
+status = Completed
+
+↓ Appeal
+
+investigation
+INV-002
+parent_investigation_id = INV-001
+investigation_type = Reinvestigation
+```
+
+وبالتالي Audit كامل.
+
+---
+
+# 45. Case Decision
+
+## case_decision
+
+```text
+case_decision_id PK
+
+case_id FK
+
+decision_type
+
+decision_summary
+
+decision_reason
+
+decision_date
+
+recommended_by_user_id FK
+approved_by_user_id FK
+
+legal_review_required
+legal_review_completed
+
+employee_notification_required
+
+effective_date
+
+final_flag
+```
+
+---
+
+# 46. E12 — Case Activities
+
+كل Case يكون له timeline.
+
+## case_activity
+
+```text
+case_activity_id PK
+
+case_id FK
+
+activity_type
+
+activity_title
+activity_description
+
+actor_user_id FK
+
+activity_timestamp
+
+visibility_level
+
+related_entity_type
+related_entity_id
+
+system_generated_flag
+```
+
+Timeline مثال:
+
+```text
+08 Aug 09:15  Complaint submitted
+08 Aug 10:01  Case assigned to ER
+08 Aug 13:30  Preliminary assessment completed
+09 Aug 10:00  Investigation opened
+10 Aug 11:30  Employee interviewed
+11 Aug 09:20  Evidence received
+13 Aug 14:00  Legal review requested
+15 Aug 16:10  Decision approved
+```
+
+---
+
+# 47. Case Task
+
+## case_task
+
+```text
+case_task_id PK
+
+case_id FK
+
+task_type
+
+task_title
+task_description
+
+assigned_to_user_id FK
+assigned_to_team_id FK
+
+priority
+
+due_at
+
+task_status
+
+completed_at
+
+escalation_level
+
+sla_policy_id FK
+```
+
+---
+
+# 48. Case SLA
+
+الـManual يذكر أن التحقيق يبدأ خلال **7 calendar days من تاريخ الإبلاغ الرسمي عن المخالفة**، بينما مدة الإكمال تعتمد على تعقيد الحالة. يجب تمثيل ذلك كـSLA Policy configurable وليس كـhard-coded rule. 
+
+## case_sla_instance
+
+```text
+case_sla_instance_id PK
+
+case_id FK
+
+sla_policy_id FK
+
+sla_type
+
+start_at
+target_at
+
+paused_at
+resume_at
+
+total_pause_minutes
+
+breached_flag
+breached_at
+
+escalation_triggered_at
+
+completed_at
+```
+
+---
+
+# 49. SLA Types
+
+```text
+Acknowledgement SLA
+Initial Review SLA
+Investigation Initiation SLA
+Investigation Completion SLA
+Legal Review SLA
+Decision SLA
+Employee Notification SLA
+Appeal Response SLA
+Service Request SLA
+```
+
+---
+
+# 50. SLA Pause
+
+بعض الحالات يجب أن توقف الـtimer مثل:
+
+```text
+Waiting for Employee
+Waiting for Witness
+Waiting for Police / Government
+Waiting for External Customer
+Legal Hold
+Medical Absence
+Approved Investigation Pause
+```
+
+لكن Pause لازم يكون له:
+
+```text
+reason
+approved_by
+start
+end
+```
+
+ولا يوقف تلقائيًا بدون Audit.
+
+---
+
+# 51. Case Communication
+
+## case_communication
+
+```text
+communication_id PK
+
+case_id FK
+
+communication_type
+
+direction
+
+sender_party_id FK nullable
+recipient_party_id FK nullable
+
+subject
+
+message_text
+
+sent_at
+
+channel
+
+confidentiality_level
+
+delivery_status
+
+attachment_group_id FK nullable
+```
+
+Channels:
+
+```text
+Portal
+Email
+SMS
+Mobile Notification
+Letter
+Meeting
+Phone Call
+Internal Note
+```
+
+---
+
+# 52. Formal Employee Notification
+
+لأن Investigation يحتاج إثبات إخطار الموظف.
+
+## case_notification
+
+```text
+case_notification_id PK
+
+case_id FK
+
+notification_type
+
+employee_id FK
+
+notification_template_id FK
+
+issued_at
+
+delivery_method
+
+delivery_status
+
+delivered_at
+acknowledged_at
+
+acknowledgement_required
+
+document_id FK nullable
+```
+
+مثل:
+
+```text
+Investigation Notice
+Meeting Notice
+Disciplinary Decision
+Warning Letter
+Suspension Notice
+Appeal Decision
+Case Closure Notice
+```
+
+---
+
+# 53. Policy Link
+
+لا تكتب المخالفة Text فقط.
+
+## case_policy_reference
+
+```text
+case_policy_reference_id PK
+
+case_id FK
+allegation_id FK nullable
+finding_id FK nullable
+
+policy_id FK
+policy_version_id FK
+
+clause_code
+clause_text_snapshot
+
+applicability_type
+
+added_by
+```
+
+لماذا snapshot؟
+
+لأن Policy قد تتغير بعد سنتين، ويجب أن نعرف أي version كان ساريًا عند الواقعة.
+
+---
+
+# 54. Legal Review
+
+## case_legal_review
+
+```text
+legal_review_id PK
+
+case_id FK
+investigation_id FK nullable
+disciplinary_action_id FK nullable
+
+requested_by_user_id FK
+requested_at
+
+legal_reviewer_user_id FK
+
+review_type
+
+legal_opinion_summary
+
+legal_risk_level
+
+recommended_action
+
+review_status
+
+completed_at
+
+confidentiality_level
+```
+
+---
+
+# 55. HR Case ↔ Employee File
+
+هنا قاعدة مهمة جدًا.
+
+**لا ننقل Investigation File بالكامل إلى Employee Personnel File.**
+
+Personnel Profile يرى فقط الـapproved outcome الذي تسمح policy بحفظه.
+
+نعمل:
+
+## employee_case_record_link
+
+```text
+employee_case_record_link_id PK
+
+employee_id FK
+case_id FK
+
+record_visibility
+
+outcome_recorded_flag
+
+disciplinary_action_id FK nullable
+
+effective_from
+effective_to
+
+archive_date
+```
+
+---
+
+# 56. ماذا يرى Employee Profile؟
+
+مثلاً:
+
+```text
+Employee Relations
+─────────────────────────
+Active ER Case        Restricted
+Disciplinary Actions  1
+Last Action           Written Warning
+Effective Date        10-Aug-2026
+Expiry                10-Feb-2027
+```
+
+ولا يعرض:
+
+```text
+complainant
+witnesses
+evidence
+interview transcript
+legal notes
+```
+
+---
+
+# 57. Anonymous / Whistleblowing Cases
+
+نحتاج Model منفصل لهوية reporter.
+
+## confidential_reporter_identity
+
+```text
+reporter_identity_id PK
+
+case_id FK
+
+employee_id FK nullable
+external_person_id FK nullable
+
+encrypted_identity_payload
+
+identity_hash
+
+access_group_id FK
+
+sealed_at
+
+unsealed_at nullable
+unsealed_by nullable
+unseal_reason nullable
+```
+
+والـhr_case يحتوي فقط:
+
+```text
+anonymous_flag = true
+```
+
+حتى investigator نفسه يمكن ألا يرى الاسم لو السياسة تطلب ذلك.
+
+---
+
+# 58. Anti-Retaliation Tracking
+
+## case_protection_measure
+
+```text
+protection_measure_id PK
+
+case_id FK
+protected_party_id FK
+
+measure_type
+
+reason
+
+effective_from
+effective_to
+
+approved_by
+
+status
+```
+
+مثال:
+
+```text
+Temporary reporting line change
+Worksite transfer
+No direct contact
+Temporary project reassignment
+Confidential identity
+Manager access restriction
+```
+
+---
+
+# 59. Conflict of Interest
+
+Investigator لا يجب أن يحقق في شخص يربطه به conflict.
+
+## case_conflict_declaration
+
+```text
+conflict_declaration_id PK
+
+case_id FK
+
+user_id FK
+
+conflict_status
+
+relationship_type
+
+declaration_text
+
+declared_at
+
+reviewed_by
+
+decision
+
+recusal_required
+```
+
+---
+
+# 60. Case Merge / Split
+
+عمليًا ستحتاجها.
+
+## case_relationship
+
+```text
+case_relationship_id PK
+
+source_case_id FK
+target_case_id FK
+
+relationship_type
+
+reason
+
+created_by
+created_at
+```
+
+Types:
+
+```text
+Related
+Duplicate
+Parent
+Child
+Merged Into
+Split From
+Appeal Of
+Reopened From
+Retaliation Related
+```
+
+---
+
+# 61. Approval Workflow
+
+## case_approval_request
+
+```text
+case_approval_request_id PK
+
+case_id FK
+
+approval_type
+
+requested_by
+requested_at
+
+workflow_instance_id FK
+
+approval_status
+
+final_decision_at
+```
+
+Approval types:
+
+```text
+Investigation Opening
+Employee Suspension
+Legal Escalation
+Disciplinary Action
+Salary Deduction
+Final Warning
+Termination
+Case Closure
+Evidence Release
+Case Reopening
+```
+
+---
+
+# 62. Approval Matrix
+
+مثلاً configurable:
+
+```text
+Minor violation
+ER Specialist
+→ ER Leader
+
+Serious violation
+ER Leader
+→ P&C Manager
+→ Legal
+
+Termination
+ER Leader
+→ P&C Manager
+→ Legal
+→ Authorized Management
+```
+
+لا نثبت الأسماء داخل الـworkflow.
+
+نستخدم:
+
+```text
+Organization Role
+Position
+Authority Level
+```
+
+---
+
+# 63. Service Desk ↔ Case Conversion
+
+## request_case_conversion
+
+```text
+conversion_id PK
+
+request_id FK
+case_id FK
+
+conversion_reason
+
+converted_by
+
+converted_at
+
+request_snapshot_json
+```
+
+Request:
+
+```text
+REQ-2026-00521
+
+"My manager deducted two days from my salary."
+```
+
+HR Operations يعمل:
+
+```text
+Convert to Grievance Case
+```
+
+ينشأ:
+
+```text
+CASE-ER-2026-00211
+```
+
+مع بقاء الـRequest الأصلي للأثر Audit.
+
+---
+
+# 64. لا نسمح بحذف Cases
+
+قواعد Audit:
+
+```text
+HR Case       → No hard delete
+Investigation → No hard delete
+Evidence      → No hard delete
+Statement     → Versioning
+Decision      → Supersede
+Action        → Cancel / Revoke
+```
+
+وليس:
+
+```text
+DELETE FROM disciplinary_action
+```
+
+---
+
+# 65. Confidentiality Model
+
+أقترح 5 Levels:
+
+```text
+C0 – General HR
+C1 – Internal HR
+C2 – Confidential ER
+C3 – Highly Restricted Investigation
+C4 – Privileged / Legal / Whistleblower
+```
+
+---
+
+# 66. Encryption
+
+حقول مثل:
+
+```text
+statement_text
+legal_opinion
+medical_evidence
+reporter_identity
+witness_identity
+investigator_notes
+```
+
+يجب دعم:
+
+```text
+Field-level encryption
+Encrypted object storage
+Tenant-specific keys
+Key rotation
+Access logging
+```
+
+---
+
+# 67. Evidence Download Controls
+
+يفضل ألا يكون أي HR User قادرًا على Download كل الملفات.
+
+مثلاً:
+
+```text
+View Only
+Download
+Print
+Export
+Share
+```
+
+كل واحدة Permission مستقلة.
+
+---
+
+# 68. Watermark
+
+Evidence حساس يمكن عند فتحه وضع:
+
+```text
+CONFIDENTIAL
+Viewed by: Mohamed Hamed
+User ID: xxxx
+Date: 10-Aug-2026 09:44
+Case: ER-2026-000245
+```
+
+للحد من التسريب.
+
+---
+
+# 69. Audit Log
+
+## sensitive_access_audit
+
+```text
+audit_id PK
+
+tenant_id
+
+user_id
+
+case_id
+evidence_id nullable
+
+action
+
+access_timestamp
+
+ip_address
+device_id
+session_id
+
+reason_code
+
+successful_flag
+
+metadata_json
+```
+
+Actions:
+
+```text
+VIEW_CASE
+VIEW_EVIDENCE
+DOWNLOAD_EVIDENCE
+EXPORT_CASE
+VIEW_WITNESS
+VIEW_REPORTER
+UPDATE_CASE
+ADD_STATEMENT
+CHANGE_FINDING
+APPROVE_ACTION
+REOPEN_CASE
+```
+
+---
+
+# 70. Separation of Duties
+
+هذه قاعدة أساسية.
+
+نمنع مثلاً:
+
+```text
+Case Subject
+=
+Investigator
+```
+
+وبحسب configuration قد نمنع:
+
+```text
+Direct Manager
+=
+Final Disciplinary Approver
+```
+
+أو:
+
+```text
+Investigator
+=
+Appeal Reviewer
+```
+
+---
+
+# 71. Access by Role
+
+### Employee
+
+يرى:
+
+```text
+My Requests
+My Complaints
+My Grievances
+My Scheduled Meetings
+My Official Notices
+My Decisions
+My Appeals
+```
+
+ولا يرى internal notes.
+
+---
+
+### Manager
+
+يرى:
+
+```text
+Cases requiring management input
+Employee operational status
+Requested statement
+Required action
+Decision requiring implementation
+```
+
+لكن ليس بالضرورة evidence.
+
+---
+
+### HR Operations
+
+يرى:
+
+```text
+Operational HR Cases
+Service Requests
+Employee Relations coordination
+Investigation workflow status
+```
+
+---
+
+### ER Specialist
+
+```text
+Full ER Cases
+Investigations
+Statements
+Evidence as granted
+Recommendations
+```
+
+---
+
+### ER & Compliance Leader
+
+```text
+ER Portfolio
+Case Approvals
+Escalations
+Sensitive Cases
+Investigation Governance
+```
+
+وهذا يتماشى مع وجود ER & Compliance Function فعلية في الـOrg Chart. 
+
+---
+
+### Legal
+
+يرى فقط:
+
+```text
+Cases assigned for Legal Review
+Relevant evidence
+Legal notes
+Decision drafts
+```
+
+وليس كل HR Cases.
+
+---
+
+### P&C Manager
+
+```text
+Executive case oversight
+High severity
+Escalations
+Approvals
+Trend analytics
+```
+
+لكن حتى P&C Manager يمكن تقييد بعض whistleblower identity records حسب configuration.
+
+---
+
+# 72. HR Service Desk Queues
+
+## hr_work_queue
+
+```text
+queue_id PK
+
+queue_code
+queue_name
+
+owner_team_id
+
+queue_type
+
+routing_rule_id
+
+confidentiality_level
+```
+
+مثلاً:
+
+```text
+Personnel Queue
+Payroll Queue
+HR Operations Huawei/Nokia
+HR Operations Ericsson
+Employee Relations
+ER Confidential
+Legal Review
+P&C Manager Approval
+```
+
+وهذا يمكن مطابقته مع الهيكل الحالي حيث الـHR Operations موزع حسب Accounts/Customers، ومنها Huawei & Nokia وEricsson. 
+
+---
+
+# 73. Auto Routing
+
+مثلاً:
+
+```text
+IF
+employee.project.customer = Ericsson
+
+AND service_category = Operational HR
+
+THEN
+queue = HR Operations Ericsson
+```
+
+بينما:
+
+```text
+IF
+service = Formal Grievance
+
+THEN
+queue = Employee Relations
+```
+
+حتى لو الموظف تابع Ericsson.
+
+---
+
+# 74. Case Risk Assessment
+
+## case_risk_assessment
+
+```text
+assessment_id PK
+
+case_id FK
+
+people_risk_score
+legal_risk_score
+financial_risk_score
+safety_risk_score
+reputation_risk_score
+business_continuity_score
+
+overall_risk_score
+
+risk_level
+
+assessed_by
+assessed_at
+```
+
+---
+
+# 75. Severity Matrix
+
+مثلاً:
+
+```text
+Severity 1 – Low
+Informal issue
+
+Severity 2 – Moderate
+Policy issue
+
+Severity 3 – Serious
+Formal disciplinary risk
+
+Severity 4 – Critical
+Legal / safety / fraud / harassment
+
+Severity 5 – Emergency
+Immediate employee/company risk
+```
+
+---
+
+# 76. لكن Priority ≠ Severity
+
+مثلاً:
+
+```text
+Severity = Low
+Priority = Urgent
+
+Employee needs salary certificate tomorrow.
+```
+
+بينما:
+
+```text
+Severity = Critical
+Priority = Immediate
+
+Workplace violence allegation.
+```
+
+---
+
+# 77. Employee Request Dynamic Form
+
+لا نجعل كل الخدمات تستخدم Form واحد.
+
+نحتاج:
+
+## service_form_definition
+
+```text
+form_definition_id PK
+service_id FK
+
+version
+schema_json
+
+effective_from
+effective_to
+```
+
+مثلاً Salary Certificate يسأل:
+
+```text
+Language
+Purpose
+Embassy Name
+Include Salary?
+Include Job Title?
+```
+
+Grievance يسأل:
+
+```text
+Issue Type
+Date
+Person involved
+Previous attempts
+Requested resolution
+Confidential?
+Retaliation concern?
+```
+
+---
+
+# 78. Workflow Engine
+
+كل Case/Request لا يحمل workflow columns ضخمة.
+
+نعتمد:
+
+```text
+workflow_definition
+workflow_instance
+workflow_step_instance
+workflow_transition
+workflow_approval
+```
+
+والـCluster E يربط بها.
+
+---
+
+# 79. Main Relationships ERD
+
+الصورة المنطقية:
+
+```text
+EMPLOYEE
+   │
+   ├────────< EMPLOYEE_REQUEST
+   │               │
+   │               └──── REQUEST_CASE_CONVERSION
+   │                             │
+   │                             ▼
+   │                           HR_CASE
+   │                             │
+   ├────────< HR_CASE_PARTY >────┤
+   │                             │
+   │                 ┌───────────┼────────────┐
+   │                 │           │            │
+   │                 ▼           ▼            ▼
+   │             GRIEVANCE   ALLEGATION   CASE_TASK
+   │                             │
+   │                             ▼
+   │                       INVESTIGATION
+   │                             │
+   │                ┌────────────┼───────────┐
+   │                │            │           │
+   │                ▼            ▼           ▼
+   │            INTERVIEW    STATEMENT    EVIDENCE
+   │                                          │
+   │                                          ▼
+   │                                  CUSTODY_EVENT
+   │
+   │                             ▼
+   │                           FINDING
+   │                             │
+   │                             ▼
+   │                    DISCIPLINARY_ACTION
+   │                             │
+   │                ┌────────────┴────────────┐
+   │                ▼                         ▼
+   │             APPEAL                PAYROLL_INSTRUCTION
+   │                                           │
+   │                                           ▼
+   └────────────────────────────────────── PAYROLL
+```
+
+---
+
+# 80. Core FK Map
+
+```text
+employee_request.requester_employee_id
+              → employee.employee_id
+
+employee_request.linked_case_id
+              → hr_case.case_id
+
+hr_case.primary_employee_id
+              → employee.employee_id
+
+hr_case_party.case_id
+              → hr_case.case_id
+
+case_allegation.case_id
+              → hr_case.case_id
+
+investigation.case_id
+              → hr_case.case_id
+
+investigation_interview.investigation_id
+              → investigation.investigation_id
+
+evidence_item.case_id
+              → hr_case.case_id
+
+evidence_item.investigation_id
+              → investigation.investigation_id
+
+investigation_finding.allegation_id
+              → case_allegation.allegation_id
+
+disciplinary_action.finding_id
+              → investigation_finding.finding_id
+
+disciplinary_appeal.disciplinary_action_id
+              → disciplinary_action.disciplinary_action_id
+```
+
+---
+
+# 81. Integration مع Attendance
+
+Case يستطيع الحصول على Evidence من Cluster B:
+
+```text
+Attendance Day
+Late Arrival
+Absent
+Shift
+GPS punch
+Fingerprint punch
+Supervisor attendance
+Attendance correction
+```
+
+لكن Access:
+
+```text
+Case → attendance snapshot
+```
+
+وليس:
+
+```text
+Investigator edits attendance
+```
+
+---
+
+# 82. Integration مع Payroll
+
+Cluster E يرسل فقط:
+
+```text
+Approved Disciplinary Payroll Instruction
+```
+
+مثل:
+
+```text
+Employee
+Action Type
+Amount / Rule
+Effective Period
+Approval ID
+Legal Basis
+Case Reference
+```
+
+Payroll لا يحتاج:
+
+```text
+complaint text
+witness statements
+evidence
+```
+
+---
+
+# 83. Integration مع Performance
+
+هذه نقطة حساسة.
+
+لا أسمح أن يتم تلقائيًا:
+
+```text
+Employee has complaint
+→ Reduce appraisal
+```
+
+هذا خطأ تصميمي وأخلاقي.
+
+Performance يستقبل فقط:
+
+```text
+Authorized disciplinary outcome
+```
+
+إذا كانت السياسة تنص على تأثيره.
+
+---
+
+# 84. Integration مع Offboarding
+
+إذا كان outcome:
+
+```text
+Termination
+```
+
+Cluster E لا يغلق Employee مباشرة.
+
+بل يصدر:
+
+```text
+Employment Separation Instruction
+```
+
+إلى Cluster الخاص بـOffboarding:
+
+```text
+Case
+↓
+Termination Approval
+↓
+Offboarding Case
+↓
+Clearance
+↓
+Final Settlement
+↓
+Access Deactivation
+```
+
+وهذا يتفق مع الـManual الذي يفصل تنفيذ الـoffboarding في workflow مستقل. 
+
+---
+
+# 85. Integration مع Documents
+
+Warning Letter أو Investigation Notice أو Decision:
+
+```text
+Document Engine
+```
+
+يولد:
+
+```text
+PDF
+Document Number
+Template Version
+Employee Signature
+HR Signature
+Approval
+Archive
+```
+
+بدلاً من رفع Word file يدوي.
+
+---
+
+# 86. Integration مع Notification Engine
+
+Events:
+
+```text
+employee_request.submitted
+employee_request.assigned
+employee_request.sla_warning
+
+case.created
+case.assigned
+
+investigation.started
+investigation.interview_scheduled
+
+evidence.received
+
+case.legal_review_requested
+
+disciplinary_action.approved
+disciplinary_action.employee_notified
+
+appeal.submitted
+appeal.decided
+
+case.closed
+```
+
+---
+
+# 87. Executive Analytics
+
+Dashboard للـP&C Manager:
+
+```text
+Open HR Cases
+New Cases
+Cases by Category
+Cases by Severity
+Cases by Business Unit
+Cases by Project
+Cases by Manager
+Cases by Location
+
+Average Resolution Time
+SLA Compliance %
+Overdue Investigations
+
+Disciplinary Actions
+Appeals
+Appeal Overturn Rate
+
+Repeat Violations
+Repeat Complaints
+
+Grievance Rate / 100 Employees
+Case Rate / 100 Employees
+
+Top Root Causes
+
+High Risk Open Cases
+Legal Review Cases
+```
+
+---
+
+# 88. لكن Analytics يجب أن تكون Privacy-Preserving
+
+Executive dashboard لا يعرض:
+
+```text
+Employee Names
+Witness Names
+Complaint Text
+Evidence
+```
+
+إلا عند وجود permission.
+
+يفضل Aggregation:
+
+```text
+Project A
+Complaints = 14
+Grievances = 4
+Formal investigations = 2
+```
+
+---
+
+# 89. Employee Relations Risk Heatmap
+
+مثلاً:
+
+```text
+                 Low     Medium     High
+------------------------------------------------
+Workplace          12        7        1
+Manager Conduct     5       13        4
+Attendance         32        8        2
+Integrity           1        2        3
+HSE                 4        5        2
+```
+
+يمكن من خلالها اكتشاف:
+
+> Manager أو project لديه Pattern غير طبيعي.
+
+لكن نستخدمها كـrisk signal وليس automated guilt decision.
+
+---
+
+# 90. Root Cause
+
+## case_root_cause
+
+```text
+case_root_cause_id PK
+
+case_id FK
+
+root_cause_type_id FK
+
+contribution_level
+
+notes
+
+confirmed_flag
+```
+
+مثال:
+
+```text
+Policy Gap
+Manager Behavior
+Training Gap
+Workload
+Process Failure
+Communication
+Work Environment
+System Error
+Resource Shortage
+Role Ambiguity
+```
+
+---
+
+# 91. Corrective Action
+
+ليس كل Case ينتهي بعقوبة Employee.
+
+قد تكون المشكلة في الشركة نفسها.
+
+## case_corrective_action
+
+```text
+corrective_action_id PK
+
+case_id FK
+
+action_type
+
+action_description
+
+owner_user_id FK
+owner_department_id FK
+
+due_date
+
+status
+
+completion_date
+
+effectiveness_review_date
+
+effectiveness_status
+```
+
+مثلاً:
+
+```text
+Manager coaching
+Policy revision
+Shift redesign
+System control
+Additional HSE training
+Team restructuring
+Workload redistribution
+```
+
+---
+
+# 92. لماذا هذا مهم؟
+
+لو 20 شكوى من نفس Project Manager، النظام لا يجب أن يرى:
+
+> 20 موظفًا عندهم Problems.
+
+قد تكون الإشارة الصحيحة:
+
+> مشكلة قيادة أو بيئة عمل.
+
+وهنا Cluster E يصبح مصدرًا لـ**Organization Development** أيضًا.
+
+---
+
+# 93. AI Layer — مسموح
+
+يمكن للـAI:
+
+```text
+Summarize case chronology
+Extract dates
+Classify request category
+Suggest duplicate cases
+Generate interview question draft
+Summarize statements
+Identify missing evidence
+Check SLA
+Compare allegations with policies
+Suggest similar historical cases
+Detect recurring organizational patterns
+Generate case closure draft
+```
+
+---
+
+# 94. AI Layer — ممنوع أن يقرر
+
+لا أجعل AI:
+
+```text
+Determine guilt
+Issue disciplinary decision
+Fire employee
+Automatically deduct salary
+Automatically reject grievance
+Rate witness credibility
+```
+
+هذه Human Decision.
+
+---
+
+# 95. AI Privacy Boundary
+
+AI processor يستقبل فقط data المسموح بها حسب:
+
+```text
+AI Access Policy
+Case Classification
+Data Masking
+User Permission
+```
+
+مثلاً يمكن Mask:
+
+```text
+Ahmed Mohamed
+→ Employee-001
+
+Mariam Hassan
+→ Witness-002
+```
+
+---
+
+# 96. Suggested Physical Tables
+
+الـCluster بالكامل سيكون تقريبًا:
+
+```text
+hr_service_category
+hr_service_catalog
+service_form_definition
+
+employee_request
+employee_request_participant
+employee_request_comment
+employee_request_attachment
+request_case_conversion
+
+hr_case
+hr_case_type
+hr_case_category
+hr_case_party
+case_relationship
+case_activity
+case_task
+case_communication
+case_notification
+
+grievance
+
+hr_incident_report
+case_allegation
+
+investigation
+investigation_member
+investigation_plan_item
+
+investigation_interview
+investigation_interview_question
+case_statement
+
+evidence_item
+evidence_source_link
+evidence_snapshot
+evidence_custody_event
+
+investigation_finding
+
+disciplinary_rule
+disciplinary_action
+disciplinary_payroll_instruction
+
+disciplinary_appeal
+
+case_decision
+case_policy_reference
+case_legal_review
+
+case_corrective_action
+case_root_cause
+
+case_risk_assessment
+case_protection_measure
+case_conflict_declaration
+
+case_access_grant
+confidential_reporter_identity
+
+case_approval_request
+
+case_sla_instance
+
+employee_case_record_link
+
+sensitive_access_audit
+```
+
+نحن نتحدث عن حوالي **40 Table** في Cluster E، لكن كل واحدة لها مسؤولية واضحة.
+
+---
+
+# 97. أهم Business Rules
+
+هذه أهم القواعد التي أوصي بتثبيتها:
+
+1. لا يوجد Investigation بدون Case.
+2. القضية الواحدة يمكن أن تحتوي عدة Allegations.
+3. كل Allegation لها Finding مستقل.
+4. لا يجوز إصدار Disciplinary Action غير مرتبط بقرار/authority معتمد، باستثناء الإجراءات الإدارية البسيطة التي تحددها policy.
+5. Salary deduction لا تنتقل إلى Payroll قبل final approval.
+6. أي Case حساس لديه Case-Level Access.
+7. Evidence لا يتم حذفه أو استبداله.
+8. Evidence modifications تنتج Version/Snapshot جديد.
+9. كل View/Download للأدلة الحساسة Audited.
+10. Anonymous reporter identity منفصلة عن الـCase.
+11. Investigator conflict-of-interest check قبل بدء التحقيق.
+12. Appeal reviewer لا يكون نفس final decision maker إذا كانت policy تتطلب استقلالًا.
+13. Case closure لا تحذف investigation history.
+14. Reopening ينتج lifecycle جديد مرتبط بالقديم.
+15. HR Service Request يمكن تحويله إلى ER Case بدون فقد الـoriginal request.
+16. Manager لا يرى confidential investigation data تلقائيًا.
+17. Payroll لا يرى تفاصيل القضية.
+18. Performance لا يستخدم complaint أو allegation غير المثبت.
+19. Case analytics لا تكشف personal sensitive information افتراضيًا.
+20. كل Decision مرتبط بـpolicy version السارية وقت الواقعة.
+
+---
+
+# 98. أهم State Machine للـHR Case
+
+أقترح:
+
+```text
+Draft
+   ↓
+Reported
+   ↓
+Triage
+   ↓
+Initial Assessment
+   ├──────────────→ Rejected / No Case
+   │
+   ├──────────────→ Informal Resolution
+   │
+   └──────────────→ Formal Case
+                       ↓
+                  Investigation
+                       ↓
+                 Findings Review
+                       ↓
+                  Legal Review
+                    optional
+                       ↓
+                 Decision Pending
+                       ↓
+                 Decision Issued
+                       ↓
+                  Appeal Window
+                   /        \
+             No Appeal     Appeal
+                 │            │
+                 │       Appeal Review
+                 │            │
+                 └──────┬─────┘
+                        ▼
+                Corrective Actions
+                        ↓
+                     Closed
+```
+
+---
+
+# 99. State Machine للـInvestigation
+
+```text
+Created
+↓
+Conflict Check
+↓
+Investigation Approved
+↓
+Planning
+↓
+Evidence Collection
+↓
+Interviews
+↓
+Analysis
+↓
+Findings Draft
+↓
+Legal Review
+↓
+Final Findings
+↓
+Completed
+```
+
+---
+
+# 100. State Machine للـDisciplinary Action
+
+```text
+Draft Recommendation
+↓
+Manager / ER Review
+↓
+Legal Review
+↓
+Approval
+↓
+Approved
+↓
+Employee Notification
+↓
+Acknowledged
+↓
+Appeal Window
+↓
+Effective
+↓
+Expired / Completed
+```
+
+---
+
+# 101. نقطة تصميم أعتبرها شديدة الأهمية
+
+أقترح ألا نطلق على هذا الجزء داخل النظام:
+
+> **Disciplinary Module**
+
+لأن ذلك سيجعل المستخدمين ينظرون له كأداة عقوبات.
+
+الأفضل أن يكون:
+
+# Employee Relations & HR Case Management
+
+وتحته:
+
+```text
+Service Desk
+Requests
+Concerns
+Complaints
+Grievances
+Investigations
+Disciplinary
+Appeals
+Corrective Actions
+```
+
+وهذا يعطي صورة أكثر صحة تشغيليًا.
+
+---
+
+# 102. Cluster E Boundary
+
+بعد هذه المرحلة أصبح لدينا Boundary واضح:
+
+### Cluster E يملك
+
+```text
+HR Requests
+ER Cases
+Grievances
+Incidents
+Allegations
+Investigations
+Statements
+Evidence
+Findings
+Disciplinary Actions
+Appeals
+Case Access
+ER SLA
+```
+
+### ولا يملك
+
+```text
+Employee Master
+Attendance Raw Data
+Payroll Calculation
+Performance Appraisal
+Personnel Documents
+Termination Workflow
+Asset Clearance
+Legal Matter Management
+```
+
+وإنما يرتبط بها.
+
+---
+
+# 103. النتيجة
+
+بهذا Cluster E أصبح لدينا Engine قادر على التعامل مع سيناريو بسيط مثل:
+
+> موظف يريد Salary Certificate
+
+وسيناريو تشغيلي مثل:
+
+> موظف لديه مشكلة مع مدير المشروع
+
+وحتى سيناريو شديد الحساسية:
+
+> Formal complaint → multiple allegations → confidential witnesses → evidence → investigation → legal review → disciplinary decision → payroll impact → appeal → corrective action.
+
+وفي نفس الوقت لا نكسر أهم قاعدة:
+
+> **The Case is not the Punishment. The Allegation is not the Finding. The Finding is not the Decision. And the Decision is not the Payroll Transaction.**
+
+وهذا الفصل هو الذي سيجعل النظام قابلًا للتدقيق، آمنًا، وقابلًا للتوسع بدل أن يتحول إلى مجموعة Forms مرتبطة ببعضها بشكل عشوائي.
+
+**الخطوة التالية المنطقية بعد Cluster E هي Cluster F — Learning, Competency, Certifications, Career, Talent Review, Succession, Internal Mobility & Organization Development ERD**؛ لأنه سيجمع Modules 11 + 12 + 20 في Data Model واحد مع الفصل بين `Skill / Competency / Training / Certification / Career Readiness / Talent Review / Succession / Position Criticality / Organization Design`.

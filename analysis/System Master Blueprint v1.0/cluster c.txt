@@ -1,0 +1,2988 @@
+تمام. الآن نصل إلى **Cluster C**، وهو أخطر جزء ماليًا في النظام لأن أي خلط بين **Compensation Master** و**Payroll Calculations** و**Approved Inputs** و**Payment Execution** سيؤدي إلى أخطاء يصعب تتبعها لاحقًا.
+
+الـManual الحالي يحدد بوضوح أن Payroll يعتمد على employee master data، salary details، grades، employment status، project allocations، deductions/adjustments، taxes، social insurance، bank data، ثم يُرسل إلى Finance للصرف، مع Cost Reporting حسب المشروع.  كما ينص صراحة على أن Payroll لا يُعالج إلا بناءً على validated employee information وapproved project allocations وattendance records وallowances وKPI evaluations وauthorized payroll adjustments. 
+
+# Afro_HR_V2 — Cluster C
+
+## Compensation, Payroll, Allowances, Deductions, KPI, Settlement & Cost Allocation ERD v1.0
+
+أقترح تقسيمه إلى 8 Subdomains:
+
+```text
+1. Compensation Master
+2. Payroll Inputs
+3. Payroll Calculation Engine
+4. Allowances & Variable Earnings
+5. Deductions & Adjustments
+6. KPI / Incentive Payments
+7. Final Settlement
+8. Payroll Cost Allocation & Finance Posting
+```
+
+---
+
+# 1. الصورة الكاملة
+
+```text
+Employee / Employment
+        │
+        ▼
+Current Compensation
+        │
+        ├────────────┐
+        │            │
+        ▼            ▼
+ Fixed Earnings   Recurring Deductions
+        │            │
+        └──────┬─────┘
+               │
+               ▼
+        PAYROLL INPUT HUB
+               │
+     ┌─────────┼───────────┐
+     │         │           │
+ Attendance   Leave    Allowances
+ OT            KPI     Adjustments
+ Loans         Tax     Social Insurance
+     │         │           │
+     └─────────┼───────────┘
+               ▼
+          Payroll Run
+               │
+         Calculation Engine
+               │
+        Validation / Errors
+               │
+          Payroll Review
+               │
+            Approval
+               │
+             LOCK
+               │
+       ┌───────┼─────────┐
+       ▼       ▼         ▼
+    Payslip  Bank File  Cost Allocation
+                         │
+                         ▼
+                    Finance / ERP
+```
+
+---
+
+# 2. أهم قاعدة معمارية
+
+هناك فرق بين:
+
+```text
+Compensation
+```
+
+و:
+
+```text
+Payroll
+```
+
+**Compensation** يقول:
+
+> ماذا يستحق الموظف وفق عقده أو قرار معتمد؟
+
+أما **Payroll** فيقول:
+
+> ماذا يجب دفعه فعليًا في هذه الفترة؟
+
+مثال:
+
+```text
+Basic Salary = 20,000
+```
+
+هذا Compensation.
+
+لكن هذا الشهر:
+
+```text
+Basic              20,000
+OT                   1,500
+Field Allowance      3,000
+KPI Bonus            2,000
+Loan Deduction      -1,000
+Unpaid Leave        -1,333
+Tax                 -2,200
+Social Insurance   -XXXX
+```
+
+هذه Payroll Transactions.
+
+إذن **لا نستخدم payroll table كـsalary master**.
+
+---
+
+# 3. Database Schemas
+
+أقترح:
+
+```text
+compensation.*
+payroll.*
+benefits.*
+finance_bridge.*
+```
+
+مع الاعتماد على:
+
+```text
+core_hr.*
+workforce.*
+time.*
+leave.*
+performance.*
+personnel.*
+```
+
+---
+
+# 4. Compensation Master
+
+الجداول الأساسية:
+
+```text
+compensation.salary_structures
+compensation.salary_components
+
+compensation.grade_salary_ranges
+
+compensation.employee_compensations
+compensation.employee_compensation_components
+
+compensation.compensation_changes
+
+compensation.allowance_types
+compensation.allowance_rules
+
+compensation.deduction_types
+
+compensation.bonus_types
+```
+
+---
+
+# 5. `salary_components`
+
+لا نبني Payroll بالأعمدة:
+
+```text
+basic_salary
+housing
+transport
+mobile
+```
+
+بل Master Components.
+
+```text
+component_id UUID PK
+
+tenant_id
+
+component_code
+
+name_ar
+name_en
+name_fr
+
+component_category
+
+earning_or_deduction
+
+calculation_method
+
+recurring BOOLEAN
+
+taxable_default BOOLEAN
+
+social_insurance_default BOOLEAN
+
+pensionable BOOLEAN
+
+include_in_gross BOOLEAN
+
+include_in_net BOOLEAN
+
+cost_allocation_enabled BOOLEAN
+
+status
+
+effective_from
+effective_to
+```
+
+---
+
+# 6. Component Categories
+
+مثال:
+
+```text
+BASIC
+
+FIXED_ALLOWANCE
+VARIABLE_ALLOWANCE
+
+OVERTIME
+
+BONUS
+KPI_BONUS
+
+COMMISSION
+
+DEDUCTION
+
+TAX
+SOCIAL_INSURANCE
+
+LOAN
+
+EMPLOYER_CONTRIBUTION
+```
+
+---
+
+# 7. Salary Structure
+
+ليس كل الموظفين يستخدمون نفس Payroll Components.
+
+```text
+compensation.salary_structures
+```
+
+مثال:
+
+```text
+Egypt White Collar
+Egypt Field Technician
+Daily Worker
+Project-Based Employee
+Management
+```
+
+و:
+
+```text
+salary_structure_components
+```
+
+تحدد ماذا يدخل لكل Structure.
+
+---
+
+# 8. `employee_compensations`
+
+كما ثبتنا:
+
+```text
+employee_compensation_id
+
+employment_id
+
+salary_structure_id
+
+currency_code
+
+pay_frequency
+
+grade_id
+
+effective_from
+effective_to
+
+reason_code
+
+status
+
+approval_status
+approved_by
+approved_at
+```
+
+---
+
+# 9. Compensation Components
+
+```text
+employee_compensation_components
+
+employee_compensation_id
+component_id
+
+amount
+
+percentage
+
+rate
+
+quantity
+
+calculation_method
+
+effective_from
+effective_to
+```
+
+---
+
+# 10. لا نعدل الراتب القديم
+
+زيادة راتب:
+
+```text
+20,000 → 24,000
+```
+
+لا تكون:
+
+```text
+UPDATE salary = 24000
+```
+
+بل:
+
+```text
+Compensation Package 1
+01-Jan → 31-Jul
+20,000
+
+Compensation Package 2
+01-Aug → Current
+24,000
+```
+
+وهذا ضروري للـretro payroll والتقارير التاريخية.
+
+---
+
+# 11. Salary Change Workflow
+
+أي تغيير Compensation يجب أن يمر:
+
+```text
+Request
+  ↓
+Validation
+  ↓
+Approval
+  ↓
+Effective Date
+  ↓
+New Compensation Version
+```
+
+والـManual نفسه يشترط documented approval لأي salary change أو allowance أو KPI incentive أو deduction قبل processing. 
+
+---
+
+# 12. Payroll Calendar
+
+نحتاج:
+
+```text
+payroll.payroll_calendars
+payroll.payroll_periods
+```
+
+مثال:
+
+```text
+Payroll Calendar:
+Egypt Monthly
+
+Period:
+August 2026
+
+Start:
+01-Aug
+
+End:
+31-Aug
+
+Cutoff:
+23-Aug
+
+Payment:
+28-Aug
+```
+
+---
+
+# 13. Payroll Period State Machine
+
+```text
+PLANNED
+   ↓
+OPEN
+   ↓
+INPUT_COLLECTION
+   ↓
+PROCESSING
+   ↓
+VALIDATION
+   ↓
+REVIEW
+   ↓
+APPROVED
+   ↓
+LOCKED
+   ↓
+PAYMENT_READY
+   ↓
+PAID
+   ↓
+CLOSED
+```
+
+وأحيانًا:
+
+```text
+LOCKED → REOPENED
+```
+
+لكن بصلاحية استثنائية وAudit قوي.
+
+---
+
+# 14. `payroll_runs`
+
+الفترة الواحدة قد يكون لها أكثر من Run.
+
+مثل:
+
+```text
+Regular Payroll
+Off-cycle Payroll
+Correction Payroll
+Final Settlement Run
+Bonus Run
+```
+
+لذلك:
+
+```text
+payroll_runs
+```
+
+```text
+payroll_run_id
+
+tenant_id
+company_id
+
+payroll_period_id
+
+run_type
+
+run_number
+
+status
+
+started_at
+completed_at
+
+initiated_by
+
+approved_by
+approved_at
+
+locked_at
+locked_by
+```
+
+---
+
+# 15. Run Types
+
+```text
+REGULAR
+OFF_CYCLE
+CORRECTION
+BONUS
+KPI
+ALLOWANCE
+FINAL_SETTLEMENT
+RETROACTIVE
+```
+
+وبذلك لا نضطر لإدخال كل شيء داخل Monthly Payroll فقط.
+
+---
+
+# 16. Payroll Input Hub
+
+هذه أهم طبقة في التصميم.
+
+Payroll لا يقرأ Operational Tables أثناء الحساب مباشرة.
+
+نعمل:
+
+```text
+payroll.payroll_inputs
+```
+
+---
+
+# 17. Payroll Input Structure
+
+```text
+payroll_input_id UUID
+
+employee_id
+employment_id
+
+payroll_period_id
+
+input_type
+
+component_id
+
+quantity
+rate
+amount
+
+currency
+
+source_domain
+
+source_entity_type
+source_entity_id
+
+project_id nullable
+cost_center_id nullable
+
+effective_date
+
+validation_status
+approval_status
+
+captured_at
+```
+
+---
+
+# 18. Sources
+
+```text
+COMPENSATION
+ATTENDANCE
+LEAVE
+OVERTIME
+ALLOWANCE
+KPI
+LOAN
+DISCIPLINARY
+MANUAL_ADJUSTMENT
+RETRO
+FINAL_SETTLEMENT
+```
+
+---
+
+# 19. لماذا Input Hub؟
+
+لأن Payroll Engine لا يجب أن يعرف تفاصيل:
+
+```text
+GPS
+Leave workflow
+KPI evaluation screens
+Loan system
+Field visit
+```
+
+هو يستقبل فقط:
+
+```text
+Approved Financial Input
+```
+
+---
+
+# 20. مثال Attendance Input
+
+Time module يرسل:
+
+```text
+Employee = 1002
+Period = Aug-2026
+Component = OT_WEEKDAY
+Quantity = 12 hours
+Rate Basis = Rule
+Source = Attendance Period
+Approved = YES
+```
+
+Payroll لا يحتاج raw punches.
+
+---
+
+# 21. Leave Input
+
+Leave module قد ينتج:
+
+```text
+UNPAID_LEAVE
+2 days
+```
+
+فيتحول إلى Payroll Input.
+
+لكن Leave module لا يحسب بالضرورة المبلغ النهائي.
+
+Payroll Calculation Engine يستطيع حسابه وفق Rule:
+
+```text
+2 days × daily salary basis
+```
+
+---
+
+# 22. Allowance Layer
+
+هنا يجب التفريق بين:
+
+```text
+Allowance Eligibility
+```
+
+و:
+
+```text
+Allowance Payment
+```
+
+Cluster B أنتج:
+
+```text
+Employee eligible for Outside Cairo allowance
+3 days
+```
+
+Cluster C يحولها إلى:
+
+```text
+3 × Rule Rate
+```
+
+---
+
+# 23. `allowance_types`
+
+```text
+allowance_type_id
+
+allowance_code
+allowance_name
+
+category
+
+calculation_basis
+
+taxable
+
+social_insurance_applicable
+
+recurring_or_variable
+
+requires_attendance
+
+requires_project
+
+requires_location
+
+requires_approval
+
+status
+```
+
+---
+
+# 24. Allowance Types Examples
+
+```text
+TRANSPORT
+MOBILE
+
+FIELD
+LOCATION
+OUTSIDE_CAIRO
+
+NIGHT_SHIFT
+MEAL
+
+TRAVEL
+PER_DIEM
+
+PROJECT
+
+HAZARD
+
+ACTING
+
+ON_CALL
+```
+
+---
+
+# 25. Allowance Rule
+
+```text
+allowance_rule_id
+
+allowance_type_id
+
+company_id
+
+employment_type nullable
+worker_category nullable
+
+job_id nullable
+grade_id nullable
+
+project_id nullable
+
+location_category_id nullable
+
+minimum_hours nullable
+minimum_days nullable
+
+calculation_basis
+
+rate
+amount
+
+maximum_per_period nullable
+
+tax_rule_id
+insurance_rule_id
+
+effective_from
+effective_to
+```
+
+---
+
+# 26. Rule Example
+
+```text
+Allowance:
+Outside Cairo Field Allowance
+
+Conditions:
+Employee category = Field Worker
+Location = OUTSIDE_CAIRO
+Worked ≥ 6 hours
+Approved attendance
+
+Amount:
+250 EGP / day
+```
+
+---
+
+# 27. Allowance Request vs Auto-generated
+
+نحتاج دعم الاثنين.
+
+### Automatic
+
+```text
+Attendance → Eligibility → Payroll
+```
+
+### Manual/Project Submitted
+
+الـManual الحالي يقول إن Payroll يطلب monthly allowance data from projects، ثم يجهز sheet ويطبق adjustments and bonuses ويعمل validation قبل Finance submission. 
+
+لذلك نحتاج:
+
+```text
+compensation.allowance_requests
+compensation.allowance_request_lines
+```
+
+للحالات التي يأتي فيها allowance من Project Manager أو عملية خارجية.
+
+---
+
+# 28. Allowance Request
+
+```text
+allowance_request_id
+
+project_id
+period_id
+
+submitted_by
+
+status
+
+submitted_at
+
+approved_by
+approved_at
+```
+
+و:
+
+```text
+allowance_request_lines
+
+employee_id
+allowance_type_id
+
+quantity
+rate
+amount
+
+reason
+
+supporting_document_id
+```
+
+---
+
+# 29. Auto + Manual Duplication Control
+
+لو نفس الموظف حصل على allowance تلقائيًا من Attendance ثم Project أرسله يدويًا، قد ندفع مرتين.
+
+لذلك نحتاج:
+
+```text
+deduplication_key
+```
+
+مثال:
+
+```text
+employee
+allowance_type
+work_date
+project
+```
+
+ويصدر النظام:
+
+```text
+DUPLICATE_ALLOWANCE_WARNING
+```
+
+---
+
+# 30. Deductions
+
+الجداول:
+
+```text
+compensation.deduction_types
+
+payroll.employee_recurring_deductions
+
+payroll.one_time_deductions
+
+payroll.deduction_results
+```
+
+---
+
+# 31. Deduction Types
+
+```text
+LOAN
+ADVANCE
+
+UNPAID_LEAVE
+
+ABSENCE
+
+LATE
+
+DISCIPLINARY
+
+MEDICAL
+
+INSURANCE
+
+ASSET_DAMAGE
+
+OTHER
+```
+
+الـManual يذكر medical deductions وinsurance updates وadvances and loan deductions ضمن مرحلة payroll adjustments. 
+
+---
+
+# 32. لا تجعل disciplinary case يعدل Payroll مباشرة
+
+الصحيح:
+
+```text
+ER Case
+  ↓
+disciplinary.action.approved
+  ↓
+Authorized Payroll Adjustment
+  ↓
+Payroll Input
+```
+
+حتى نحافظ على separation of duties.
+
+---
+
+# 33. Loans & Advances
+
+من الأفضل دعم:
+
+```text
+payroll.employee_loans
+payroll.loan_installments
+```
+
+مثال:
+
+```text
+Loan = 12,000
+Installments = 12
+Monthly = 1,000
+```
+
+Payroll يأخذ installment due فقط.
+
+---
+
+# 34. Loan Model
+
+```text
+loan_id
+
+employee_id
+
+loan_type
+
+principal_amount
+remaining_balance
+
+start_period
+number_of_installments
+
+installment_amount
+
+status
+```
+
+والـinstallments:
+
+```text
+installment_id
+loan_id
+
+period_id
+
+scheduled_amount
+paid_amount
+
+status
+```
+
+---
+
+# 35. KPI Bonus
+
+الـManual الحالي يحدد:
+
+```text
+PMO → KPI Evaluation
+Payroll → Calculate Bonus
+Payroll → Validate
+Finance → Payment
+```
+
+وبشكل Quarterly. 
+
+Architecture المقترحة:
+
+```text
+Performance Module
+      ↓
+Approved KPI Result
+      ↓
+Incentive Calculation
+      ↓
+Payroll Input
+      ↓
+KPI Payroll Run
+```
+
+---
+
+# 36. KPI Results ليست Payroll Data
+
+M10 يملك:
+
+```text
+KPI Score
+Performance Score
+```
+
+مثال:
+
+```text
+87%
+```
+
+Payroll لا يملك الـ87%.
+
+هو يستهلك النتيجة ويحسب:
+
+```text
+Bonus = 4,350 EGP
+```
+
+وفق Bonus Scheme.
+
+---
+
+# 37. KPI Bonus Schemes
+
+```text
+compensation.incentive_schemes
+compensation.incentive_scheme_rules
+```
+
+مثال:
+
+```text
+Score < 70
+Bonus = 0
+
+70–79
+Bonus = 50%
+
+80–89
+Bonus = 75%
+
+90+
+Bonus = 100%
+```
+
+من Target Bonus.
+
+---
+
+# 38. KPI Payment Record
+
+```text
+compensation.incentive_results
+```
+
+```text
+incentive_result_id
+
+employee_id
+
+performance_cycle_id
+
+scheme_id
+
+score
+
+target_bonus
+
+calculated_bonus
+
+adjusted_bonus nullable
+
+final_bonus
+
+status
+
+approved_at
+```
+
+---
+
+# 39. Adjustment
+
+لو Manager يريد تعديل Bonus يدويًا:
+
+لا يغير:
+
+```text
+calculated_bonus
+```
+
+بل:
+
+```text
+adjustment_amount
+adjustment_reason
+approved_by
+```
+
+ثم:
+
+```text
+final_bonus
+```
+
+وهكذا نحافظ على explainability.
+
+---
+
+# 40. Payroll Employee Snapshot
+
+لكل Payroll Run نحتاج Snapshot مستقل:
+
+```text
+payroll.payroll_run_employees
+```
+
+```text
+payroll_run_employee_id
+
+payroll_run_id
+
+employee_id
+employment_id
+
+employee_code_snapshot
+
+company_id
+org_unit_id
+position_id
+grade_id
+
+project_id nullable
+
+currency
+
+employment_status_snapshot
+
+compensation_id
+
+processing_status
+validation_status
+
+gross_amount
+deduction_amount
+tax_amount
+insurance_amount
+net_amount
+```
+
+---
+
+# 41. لماذا Snapshot للOrg data؟
+
+لو بعد صرف Payroll تم نقل الموظف من:
+
+```text
+Huawei
+```
+
+إلى:
+
+```text
+Nokia
+```
+
+Payroll التاريخي لشهر يوليو يجب أن يبقى Huawei.
+
+لذلك نحتفظ بـSnapshot context داخل الـRun.
+
+---
+
+# 42. Payroll Line Items
+
+هذا أهم جدول مالي:
+
+```text
+payroll.payroll_line_items
+```
+
+```text
+payroll_line_item_id
+
+payroll_run_employee_id
+
+component_id
+
+line_type
+
+quantity
+rate
+base_amount
+
+calculated_amount
+adjustment_amount
+
+final_amount
+
+taxable_amount
+insurance_base_amount
+
+source_input_id nullable
+
+project_id nullable
+cost_center_id nullable
+
+calculation_rule_id
+
+sequence
+```
+
+---
+
+# 43. مثال Payslip داخلي
+
+```text
+Basic Salary             20,000
+Transport                 2,000
+Field Allowance           3,000
+OT                         1,200
+KPI                        2,000
+                         -------
+Gross                     28,200
+
+Tax                       -2,300
+Social Insurance          -1,100
+Loan                      -1,000
+Unpaid Leave                -667
+                         -------
+Net                       23,133
+```
+
+كل سطر = `payroll_line_item`.
+
+---
+
+# 44. Calculation Engine
+
+لا أريد Formula داخل React أو Backend code لكل Component.
+
+نعمل:
+
+```text
+payroll.calculation_rules
+payroll.formulas
+```
+
+---
+
+# 45. Calculation Methods
+
+```text
+FIXED_AMOUNT
+PERCENTAGE
+
+QUANTITY_X_RATE
+
+DAILY_RATE
+HOURLY_RATE
+
+BRACKET
+
+PROGRESSIVE
+
+FORMULA
+
+LOOKUP_TABLE
+```
+
+---
+
+# 46. Calculation Context
+
+Engine يمكن أن يستخدم Variables:
+
+```text
+BASIC
+GROSS
+
+WORK_DAYS
+WORKED_DAYS
+
+OT_HOURS
+
+UNPAID_LEAVE_DAYS
+
+GRADE
+
+EMPLOYMENT_TYPE
+
+LOCATION_DAYS
+
+KPI_SCORE
+```
+
+لكن variables تأتي من Approved Input Snapshot.
+
+---
+
+# 47. Rule Versioning
+
+مهم جدًا.
+
+Tax rule قد يتغير يومًا ما.
+
+لا نفعل:
+
+```text
+tax_rule = current
+```
+
+لكل التاريخ.
+
+بل:
+
+```text
+Rule Version 1
+effective until X
+
+Rule Version 2
+effective from Y
+```
+
+وكل Payroll Line يحتفظ:
+
+```text
+calculation_rule_id
+rule_version
+```
+
+---
+
+# 48. Tax & Social Insurance
+
+الـManual يذكر حساب taxes and social insurance أثناء Payroll Processing. 
+
+لكن قيم الشرائح القانونية نفسها لا يحددها الـManual، ولذلك **لا أثبت أرقامًا أو نسبًا داخل التصميم الآن**.
+
+نصمم Configuration:
+
+```text
+payroll.statutory_rule_sets
+
+payroll.tax_brackets
+
+payroll.social_insurance_rules
+
+payroll.employee_statutory_profiles
+```
+
+ويتم تعبئتها وفق القانون والسياسة الفعلية وقت التنفيذ.
+
+---
+
+# 49. Statutory Profile
+
+```text
+employee_statutory_profile
+
+employee_id
+
+country_code
+
+tax_status
+
+social_insurance_status
+
+social_insurance_number
+
+tax_exemption_profile
+
+effective_from
+effective_to
+```
+
+---
+
+# 50. Payroll Validation Engine
+
+قبل الحساب:
+
+```text
+Employee active?
+Compensation exists?
+Payroll eligible?
+Bank information valid?
+Project allocation approved?
+Attendance period closed?
+No unresolved blocking exceptions?
+Required tax profile exists?
+Insurance profile valid?
+```
+
+النتيجة:
+
+```text
+READY
+WARNING
+BLOCKED
+```
+
+---
+
+# 51. Validation Errors
+
+```text
+payroll.validation_issues
+```
+
+```text
+issue_id
+
+payroll_run_id
+employee_id
+
+issue_code
+severity
+
+message
+
+blocking
+
+source_entity
+
+resolved_at
+resolved_by
+```
+
+مثال:
+
+```text
+MISSING_BANK_ACCOUNT
+
+NO_ACTIVE_COMPENSATION
+
+UNAPPROVED_OT
+
+INVALID_PROJECT_ALLOCATION
+
+UNRESOLVED_ATTENDANCE
+
+MISSING_TAX_PROFILE
+```
+
+---
+
+# 52. Payroll Recalculation
+
+قبل Lock:
+
+يمكن:
+
+```text
+INPUT_CHANGED
+        ↓
+employee marked dirty
+        ↓
+recalculate employee
+```
+
+لا نحتاج إعادة تشغيل كل الشركة عند كل تعديل صغير.
+
+---
+
+# 53. Payroll Approval Layers
+
+مثال:
+
+```text
+Payroll Specialist
+      ↓
+Payroll Section Head
+      ↓
+HR / P&C Approval
+      ↓
+Finance Review
+```
+
+ولكن لا نثبت الأشخاص داخل الجدول.
+
+Shared Workflow Engine يدير approval matrix.
+
+---
+
+# 54. Payroll Lock
+
+عند Approval النهائي:
+
+```text
+payroll_run.status = LOCKED
+```
+
+بعدها:
+
+**ممنوع تعديل:**
+
+```text
+Inputs
+Line Items
+Net Salary
+Tax
+Allowance
+Deduction
+Cost Allocation
+```
+
+---
+
+# 55. لماذا Lock؟
+
+لأن Bank File وFinance Posting يجب أن يطابقا بالضبط Payroll approved.
+
+لا يجوز:
+
+```text
+Approved Net = 23,133
+
+ثم user يعدل allowance
+
+Bank File = 23,383
+```
+
+بدون Audit.
+
+---
+
+# 56. Hash
+
+يمكن إضافة:
+
+```text
+payroll_run_hash
+```
+
+أو hash لكل Employee Result.
+
+للكشف عن أي تغيير بعد approval.
+
+---
+
+# 57. Post-Lock Correction
+
+بعد Lock:
+
+```text
+NO EDIT
+```
+
+بل:
+
+```text
+Payroll Adjustment
+```
+
+أو:
+
+```text
+Retro Run
+```
+
+أو:
+
+```text
+Off-cycle Correction
+```
+
+وهذه قاعدة سأثبتها رسميًا.
+
+---
+
+# 58. Retro Adjustments
+
+مثال:
+
+في أغسطس اكتشفنا أن موظف كان له:
+
+```text
+2 OT hours
+```
+
+في يوليو ولم تُصرف.
+
+لا نفتح July payroll.
+
+نعمل:
+
+```text
+retro_adjustment
+```
+
+```text
+Original Period: July
+Pay Period: August
+Component: OT
+Difference: +500
+```
+
+---
+
+# 59. Retro Tables
+
+```text
+payroll.retro_cases
+payroll.retro_adjustments
+```
+
+```text
+retro_case_id
+
+employee_id
+
+source_period_id
+target_period_id
+
+reason
+
+status
+```
+
+والتفاصيل:
+
+```text
+component_id
+old_amount
+correct_amount
+difference_amount
+```
+
+---
+
+# 60. Negative Retro
+
+نفس الشيء لو دفعنا زيادة:
+
+```text
+Correct = 500
+Paid = 800
+
+Retro = -300
+```
+
+مع Rule هل يسمح deduction كاملة أو spread over periods.
+
+---
+
+# 61. Payroll Cutoff
+
+الـManual يحدد sequence زمني شهري حاليًا: new hire submission في 18، validation/register update في 18–19، project allocation وadjustments وprocessing في 20–23، payroll submission حتى 25، والدفع من 28 حتى نهاية الشهر. 
+
+لكن لا أنصح Hard Coding هذه التواريخ.
+
+نحولها إلى:
+
+```text
+payroll_calendar_rules
+```
+
+فتستطيع الشركة تغيير cutoff بدون deployment.
+
+---
+
+# 62. Project Allocation
+
+هذا جزء محوري جدًا.
+
+الـManual يحدد Project Allocation Review ثم Payroll Cost Reports by Project. 
+
+لكن هناك فرق بين:
+
+```text
+Employee Assignment %
+```
+
+و:
+
+```text
+Actual Payroll Cost Allocation
+```
+
+---
+
+# 63. Cost Allocation Sources
+
+قد نستخدم:
+
+```text
+Primary Assignment
+
+Project Allocation %
+
+Timesheet
+
+Attendance Site
+
+Explicit Payroll Allocation
+```
+
+حسب نوع الموظف.
+
+---
+
+# 64. Cost Allocation Policy
+
+نحتاج:
+
+```text
+payroll.cost_allocation_policies
+```
+
+مثال:
+
+### Office Employee
+
+```text
+Allocation Source =
+Primary Cost Center
+```
+
+### Project Manager
+
+```text
+Allocation Source =
+Approved Project Allocation %
+```
+
+### Technician
+
+```text
+Allocation Source =
+Actual Timesheet / Field Attendance
+```
+
+---
+
+# 65. Payroll Cost Allocations
+
+```text
+payroll.payroll_cost_allocations
+```
+
+```text
+allocation_id
+
+payroll_line_item_id
+
+employee_id
+
+project_id nullable
+cost_center_id nullable
+
+allocation_percentage
+allocated_amount
+
+allocation_source
+source_reference_id
+```
+
+---
+
+# 66. Example
+
+Employee cost:
+
+```text
+30,000
+```
+
+Allocation:
+
+```text
+Huawei  60% = 18,000
+Nokia   30% = 9,000
+Internal 10% = 3,000
+```
+
+يجب أن يتحقق:
+
+```text
+SUM(allocation_percentage) = 100%
+```
+
+و:
+
+```text
+SUM(allocated_amount) = payroll cost
+```
+
+مع قواعد rounding.
+
+---
+
+# 67. Component-level Allocation
+
+ليس شرطًا أن يكون كل Salary على نفس المشروع.
+
+مثال:
+
+```text
+Basic:
+Huawei 60%
+Nokia 40%
+
+Site Allowance:
+Huawei 100%
+```
+
+لذلك Cost Allocation يجب أن يكون على:
+
+```text
+payroll_line_item
+```
+
+وليس Payroll Employee Header فقط.
+
+---
+
+# 68. Employer Cost
+
+لا نكتفي Net Salary.
+
+نحتاج:
+
+```text
+Employee Earnings
++
+Employer Social Contributions
++
+Employer Benefits
++
+Other Employer Costs
+```
+
+للوصول إلى:
+
+```text
+Total Employment Cost
+```
+
+وهذا مهم جدًا لـProject Profitability.
+
+---
+
+# 69. Employer Contribution Components
+
+نفس Component Engine يدعم:
+
+```text
+component_category =
+EMPLOYER_CONTRIBUTION
+```
+
+لا تظهر بالضرورة كخصم على Payslip لكنها تدخل Cost Allocation.
+
+---
+
+# 70. Payroll Totals
+
+لكل Employee:
+
+```text
+Gross Earnings
+
+Employee Deductions
+
+Tax
+
+Employee Social Insurance
+
+Net Pay
+
+Employer Contributions
+
+Total Employer Cost
+```
+
+هذه مقاييس مختلفة ولا يجب خلطها.
+
+---
+
+# 71. Bank Accounts
+
+Bank data Source of Truth يبقى:
+
+```text
+core_hr.employee_bank_accounts
+```
+
+لكن عند payroll finalization نعمل Snapshot:
+
+```text
+payroll.payment_instructions
+```
+
+حتى لو غير الموظف حسابه بعد ذلك لا يتغير ملف الدفع القديم.
+
+---
+
+# 72. Payment Instruction
+
+```text
+payment_instruction_id
+
+payroll_run_employee_id
+
+bank_name_snapshot
+bank_account_snapshot_encrypted
+iban_snapshot_encrypted
+
+amount
+
+currency
+
+payment_method
+
+status
+```
+
+بيانات البنك يجب أن تعامل كـHighly Restricted.
+
+---
+
+# 73. Bank Batch
+
+```text
+payroll.bank_batches
+payroll.bank_batch_lines
+```
+
+---
+
+# 74. Bank Batch State
+
+```text
+DRAFT
+ ↓
+VALIDATED
+ ↓
+APPROVED
+ ↓
+EXPORTED
+ ↓
+SUBMITTED
+ ↓
+CONFIRMED
+```
+
+---
+
+# 75. Payment Methods
+
+```text
+BANK_TRANSFER
+CASH
+WALLET
+CHEQUE
+OTHER
+```
+
+حسب إعداد الشركة.
+
+---
+
+# 76. Bank File
+
+يتم إنشاؤه من:
+
+```text
+LOCKED PAYROLL
+```
+
+وليس من Current Employee Data.
+
+قاعدة مهمة جدًا.
+
+---
+
+# 77. Payment Failure
+
+لو البنك رفض موظفًا:
+
+```text
+PAYROLL ≠ UNPAID
+```
+
+Payroll calculation يظل Approved.
+
+Payment Line يصبح:
+
+```text
+FAILED
+```
+
+ويحتاج:
+
+```text
+RETRY
+```
+
+أو حساب بديل.
+
+---
+
+# 78. Payslip
+
+```text
+payroll.payslips
+```
+
+يحتوي metadata:
+
+```text
+payslip_id
+
+payroll_run_employee_id
+
+document_id
+
+generated_at
+
+published_at
+
+acknowledged_at nullable
+```
+
+المحتوى يأتي من Document/Template Engine.
+
+---
+
+# 79. Payslip Security
+
+الموظف يرى Payslip نفسه.
+
+Manager لا يفترض أن يرى رواتب فريقه تلقائيًا.
+
+Payroll يرى حسب scope.
+
+هذا سنثبته بالتفصيل في Permission Matrix لاحقًا.
+
+---
+
+# 80. Finance Submission
+
+الـManual الحالي يقول إن Payroll يجهز payroll reports ويرسل payroll package إلى Finance، وFinance ينفذ salary transfer. 
+
+إذًا Owner:
+
+```text
+Payroll = Calculation / Approval Package
+
+Finance = Payment Execution / Accounting
+```
+
+---
+
+# 81. Finance Bridge
+
+```text
+finance_bridge.payroll_journal_batches
+finance_bridge.payroll_journal_lines
+
+finance_bridge.payment_requests
+
+finance_bridge.erp_posting_logs
+```
+
+---
+
+# 82. Journal Entry Example
+
+بدون افتراض Chart of Accounts:
+
+```text
+Salary Expense        Debit
+Allowance Expense     Debit
+Employer Costs        Debit
+
+Tax Payable           Credit
+SI Payable            Credit
+Employee Payable      Credit
+```
+
+لكن GL Accounts تأتي من ERP/Finance Configuration، وليس HR Hard Coding.
+
+---
+
+# 83. Finance Mapping
+
+```text
+finance_bridge.component_account_mappings
+```
+
+```text
+component_id
+
+company_id
+
+project/category conditions
+
+debit_account_external_id
+credit_account_external_id
+
+effective_from
+effective_to
+```
+
+---
+
+# 84. Project Cost Report
+
+من:
+
+```text
+Payroll Cost Allocation
+```
+
+نستطيع إنتاج:
+
+```text
+Project
+Headcount
+Basic Cost
+OT Cost
+Allowance Cost
+KPI Cost
+Employer Cost
+Total Payroll Cost
+```
+
+وهذا يطابق هدف الـManual في توزيع payroll/allowance/KPI cost reporting حسب المشروع.  
+
+---
+
+# 85. Final Settlement
+
+هنا يجب ألا نبني Payroll Engine ثانيًا داخل Offboarding.
+
+M16 يطلب:
+
+```text
+Final Settlement
+```
+
+M09/Cluster C يحسبه.
+
+---
+
+# 86. Final Settlement Sources
+
+```text
+Final Salary
+
+Unused Leave
+
+Unpaid Leave
+
+Allowances Due
+
+OT Due
+
+KPI Due if eligible
+
+Loans
+
+Advances
+
+Deductions
+
+Asset Liabilities
+
+End-of-Service Entitlements
+
+Other Approved Entitlements
+```
+
+الـManual الحالي يذكر Final Salary وUnused Leave Balance وDeductions وOther Entitlements ضمن legal & financial closure. 
+
+---
+
+# 87. Final Settlement Case
+
+```text
+payroll.final_settlements
+```
+
+```text
+settlement_id
+
+employee_id
+employment_id
+offboarding_case_id
+
+last_working_day
+
+settlement_date
+
+status
+
+payroll_run_id nullable
+
+gross_settlement
+total_deductions
+net_settlement
+
+approved_at
+paid_at
+```
+
+---
+
+# 88. Final Settlement Lines
+
+```text
+payroll.final_settlement_lines
+```
+
+```text
+settlement_line_id
+
+settlement_id
+
+component_id
+
+quantity
+rate
+amount
+
+source_type
+source_id
+
+calculation_rule_id
+```
+
+نفس philosophy للـPayroll Line Items.
+
+---
+
+# 89. Final Settlement State
+
+```text
+REQUESTED
+ ↓
+WAITING_FOR_CLEARANCE
+ ↓
+INPUT_READY
+ ↓
+CALCULATED
+ ↓
+REVIEWED
+ ↓
+APPROVED
+ ↓
+PAYMENT_READY
+ ↓
+PAID
+ ↓
+CLOSED
+```
+
+---
+
+# 90. Clearance Dependency
+
+قد تكون هناك deductions ناشئة عن:
+
+```text
+Missing laptop
+Advance not cleared
+Company asset
+```
+
+لكن Offboarding Module هو الذي يحدد liability.
+
+ثم يرسل:
+
+```text
+approved financial liability
+```
+
+إلى Payroll.
+
+Payroll لا يقرر أن Laptop مفقود.
+
+---
+
+# 91. Final Settlement Lock
+
+نفس Payroll rules:
+
+بعد:
+
+```text
+APPROVED
+```
+
+لا يتم تعديل Settlement.
+
+أي تغيير:
+
+```text
+Settlement Adjustment
+```
+
+مع reapproval.
+
+---
+
+# 92. Payroll Run Lock vs Payment Lock
+
+هناك حالتان مختلفتان:
+
+```text
+Calculation Locked
+```
+
+و:
+
+```text
+Payment Completed
+```
+
+يجب الفصل بينهما.
+
+قد يكون Payroll locked لكن البنك لم يصرف بعد.
+
+---
+
+# 93. Payroll Run Header Totals
+
+```text
+employee_count
+
+gross_total
+
+deduction_total
+
+tax_total
+
+insurance_total
+
+net_pay_total
+
+employer_cost_total
+```
+
+هذه Derived totals، لكن تخزن Snapshot للتحقق.
+
+---
+
+# 94. Control Totals
+
+قبل الدفع:
+
+```text
+SUM employee gross = run gross total
+
+SUM employee net = run net total
+
+SUM bank lines = approved net pay
+
+SUM project allocation = allocatable payroll cost
+
+SUM GL posting = financial control total
+```
+
+أي فرق:
+
+```text
+BLOCK PAYMENT
+```
+
+---
+
+# 95. Maker-Checker Control
+
+في Payroll يجب تطبيق:
+
+> الشخص الذي يغيّر payroll input لا يعتمد نفس التغيير.
+
+مثال:
+
+```text
+Maker = Payroll Specialist
+
+Checker = Payroll Section Head
+```
+
+ويمكن أن تختلف حسب Amount/Transaction Type.
+
+---
+
+# 96. Segregation of Duties
+
+لا أنصح بأن يملك User واحد كل:
+
+```text
+Change Salary
+Run Payroll
+Approve Payroll
+Generate Bank File
+Mark Payment Paid
+```
+
+حتى لو Super Admin تقني.
+
+نحتاج Business SoD.
+
+---
+
+# 97. Payroll Access Data Classification
+
+| Data                   | Classification    |
+| ---------------------- | ----------------- |
+| Salary                 | Highly Restricted |
+| Bank Account           | Highly Restricted |
+| Tax                    | Highly Restricted |
+| Deductions             | Highly Restricted |
+| Payslip                | Employee-private  |
+| Project Aggregate Cost | Confidential      |
+| Payroll Run Total      | Restricted        |
+| KPI Payment            | Restricted        |
+
+---
+
+# 98. Audit Requirements
+
+لكل Compensation/Payroll action:
+
+```text
+Who
+When
+
+Old Value
+New Value
+
+Reason
+
+Approval Reference
+
+Effective Date
+
+Source
+
+IP / Session
+
+Correlation ID
+```
+
+والـManual نفسه يتطلب traceability وسجلات قابلة للتدقيق. 
+
+---
+
+# 99. Payroll Events
+
+أقترح Event Catalog:
+
+```text
+compensation.changed
+compensation.approved
+
+payroll.period.opened
+
+payroll.input.received
+payroll.input.rejected
+
+payroll.run.started
+payroll.calculated
+
+payroll.validation.failed
+payroll.validation.passed
+
+payroll.review.completed
+
+payroll.approved
+payroll.locked
+
+payslip.generated
+
+bank.batch.generated
+bank.batch.submitted
+
+salary.payment.confirmed
+salary.payment.failed
+
+payroll.posted_to_finance
+
+retro.adjustment.created
+
+final_settlement.requested
+final_settlement.calculated
+final_settlement.approved
+final_settlement.paid
+```
+
+---
+
+# 100. Cluster C Logical ERD
+
+```text
+EMPLOYEE
+   │
+EMPLOYMENT
+   │
+   ├─────────────── COMPENSATION PACKAGE
+   │                         │
+   │                         ▼
+   │                  COMPENSATION COMPONENT
+   │
+   ├──────── Attendance Payroll Inputs
+   │
+   ├──────── Leave Inputs
+   │
+   ├──────── OT Inputs
+   │
+   ├──────── Allowance Results
+   │
+   ├──────── KPI Results
+   │
+   ├──────── Deductions
+   │
+   └──────── Retro Adjustments
+                     │
+                     ▼
+                PAYROLL INPUT
+                     │
+                     ▼
+                  PAYROLL RUN
+                     │
+                     ▼
+             PAYROLL RUN EMPLOYEE
+                     │
+                     ▼
+              PAYROLL LINE ITEMS
+                 ┌───┼────┐
+                 │   │    │
+                 ▼   ▼    ▼
+                TAX  SI  NET PAY
+                          │
+             ┌────────────┼──────────┐
+             ▼            ▼          ▼
+         PAYSLIP      BANK BATCH  COST ALLOCATION
+                                      │
+                                      ▼
+                                  PROJECT
+                                      │
+                                      ▼
+                                  FINANCE
+```
+
+---
+
+# 101. Final Settlement ERD
+
+```text
+OFFBOARDING CASE
+      │
+      ▼
+FINAL SETTLEMENT REQUEST
+      │
+      ├── Final Salary
+      ├── Leave Balance
+      ├── OT
+      ├── Allowances
+      ├── KPI
+      ├── Loan
+      ├── Advance
+      ├── Asset Liability
+      └── Other Entitlement
+                │
+                ▼
+        Settlement Calculation
+                │
+                ▼
+             Approval
+                │
+                ▼
+           Payroll Run
+                │
+                ▼
+             Payment
+```
+
+---
+
+# 102. Source of Truth Matrix
+
+| Entity                       | Owner                                   |
+| ---------------------------- | --------------------------------------- |
+| Compensation Package         | Compensation                            |
+| Salary Component             | Compensation                            |
+| Attendance Payable Result    | Time                                    |
+| Leave Balance                | Leave                                   |
+| OT Approval                  | Time                                    |
+| Allowance Rule               | Compensation                            |
+| KPI Score                    | Performance                             |
+| KPI Bonus Result             | Compensation/Payroll                    |
+| Loan                         | Payroll/Finance depending configuration |
+| Payroll Input Snapshot       | Payroll                                 |
+| Payroll Run                  | Payroll                                 |
+| Payroll Line Item            | Payroll                                 |
+| Tax Calculation              | Payroll Statutory Engine                |
+| Social Insurance Calculation | Payroll Statutory Engine                |
+| Bank Account Master          | Core HR                                 |
+| Payment Execution            | Finance                                 |
+| Project                      | ERP/Project System                      |
+| Payroll Cost Allocation      | Payroll                                 |
+| Final Settlement Calculation | Payroll                                 |
+| Offboarding Case             | Offboarding                             |
+
+---
+
+# 103. أهم Data Integrity Rules
+
+أثبت القواعد التالية:
+
+**Rule 1 — No Payroll Without Active Eligibility**
+
+```text
+employee eligible_for_payroll = true
+```
+
+وذلك يتفق مع الـManual الذي يمنع inclusion in payroll قبل استكمال متطلبات الـonboarding اللازمة. 
+
+**Rule 2 — No Unapproved Inputs**
+
+أي allowance أو KPI أو deduction أو salary change غير Approved:
+
+```text
+NOT PAYROLL ELIGIBLE
+```
+
+**Rule 3 — No Overlapping Compensation**
+
+لا يوجد packageان Active للفترة نفسها بدون valid override model.
+
+**Rule 4 — No Direct Editing After Lock**
+
+```text
+LOCKED = IMMUTABLE
+```
+
+**Rule 5 — Historical Correction Via Adjustment**
+
+```text
+old payroll ≠ edited
+```
+
+بل:
+
+```text
+retro/off-cycle adjustment
+```
+
+**Rule 6 — Financial Reconciliation Required**
+
+Bank + Payslip + Payroll + Finance totals يجب أن تتطابق وفق reconciliation rules.
+
+---
+
+# 104. Payroll Processing Pipeline النهائي
+
+```text
+1. Open Payroll Period
+
+2. Freeze Eligible Employee Population
+
+3. Snapshot Compensation
+
+4. Collect Approved Inputs
+
+5. Validate Inputs
+
+6. Calculate Gross
+
+7. Apply Variable Earnings
+
+8. Apply Deductions
+
+9. Calculate Statutory Items
+
+10. Calculate Net Pay
+
+11. Allocate Costs
+
+12. Run Validation Controls
+
+13. Payroll Review
+
+14. Approval Workflow
+
+15. Lock Payroll
+
+16. Generate Payslips
+
+17. Generate Bank Batch
+
+18. Create Finance Posting Package
+
+19. Confirm Payment
+
+20. Close Payroll Period
+```
+
+---
+
+# 105. Payroll Control Dashboard
+
+أقترح أن يكون لدى Payroll Team قبل approval Dashboard تعرض:
+
+```text
+Employees expected
+Employees processed
+Employees blocked
+
+Gross Payroll
+Net Payroll
+
+Variance vs Previous Month
+
+New Hires
+Terminated Employees
+
+Salary Changes
+
+OT Value
+
+Allowance Value
+
+KPI Value
+
+Deductions
+
+Retro Adjustments
+
+Employees without bank account
+
+Employees without project allocation
+
+Unresolved attendance cases
+```
+
+وهذا ليس Dashboard شكليًا؛ سيكون **Control Dashboard** يمنع payroll risk.
+
+---
+
+# 106. Variance Engine
+
+هذه إضافة أعتبرها مهمة جدًا.
+
+لو موظف كان Net Salary:
+
+```text
+25,000
+```
+
+وأصبح هذا الشهر:
+
+```text
+55,000
+```
+
+يصدر النظام:
+
+```text
+PAYROLL_VARIANCE_ALERT
+```
+
+حسب threshold configurable.
+
+مثال:
+
+```text
+>20%
+or
+>10,000 EGP
+```
+
+---
+
+# 107. Duplicate Payment Detection
+
+قبل Bank Batch:
+
+```text
+Employee duplicate?
+Bank account shared?
+Multiple payroll runs?
+Same component paid twice?
+Same allowance duplicated?
+Final settlement + regular payroll overlap?
+```
+
+كلها control checks.
+
+---
+
+# 108. Payroll Simulation
+
+أنصح جدًا بإضافة:
+
+```text
+SIMULATION RUN
+```
+
+غير مالي.
+
+مثلًا عند تغيير:
+
+```text
+Allowance Rate
+Salary Increase
+Tax Rule
+```
+
+يمكن تشغيل:
+
+```text
+What-if Payroll
+```
+
+بدون إنشاء payable transaction.
+
+هذا سيكون مهمًا جدًا لاحقًا لـWorkforce Planning.
+
+---
+
+# 109. Payroll Reconciliation
+
+نحتاج جدول:
+
+```text
+payroll.reconciliations
+```
+
+يقارن:
+
+```text
+Payroll Approved
+vs
+Bank Submitted
+vs
+Bank Confirmed
+vs
+ERP Posted
+```
+
+الحالات:
+
+```text
+MATCHED
+PARTIAL
+MISMATCH
+```
+
+---
+
+# 110. Payroll Processing Independence
+
+وأثبت قرارًا معماريًا مهمًا:
+
+حتى لو كانت Nama ERP أو Finance System موجودة، **Afro_HR يمكنه تشغيل Payroll Engine داخليًا أو استخدام External Payroll حسب Tenant Configuration**.
+
+Configuration:
+
+```text
+payroll_mode =
+INTERNAL
+EXTERNAL
+HYBRID
+```
+
+### INTERNAL
+
+Afro_HR يحسب ويصدر Finance Package.
+
+### EXTERNAL
+
+Afro_HR يجهز approved inputs ويرسلها لنظام Payroll خارجي.
+
+### HYBRID
+
+بعض الحسابات داخل HR وبعض statutory/payment processing في ERP.
+
+وهذا يجعل SaaS قابلًا للعمل مع شركات مختلفة.
+
+---
+
+# 111. Cluster C Architecture Layers
+
+يمكن تلخيصها في خمس طبقات:
+
+```text
+Layer 1 — Entitlement
+Compensation / Allowance Rules / KPI Schemes
+
+Layer 2 — Operational Evidence
+Attendance / Leave / OT / Project / KPI Results
+
+Layer 3 — Financial Inputs
+Approved Payroll Inputs
+
+Layer 4 — Calculation
+Payroll Engine / Taxes / SI / Deductions / Retro
+
+Layer 5 — Financial Output
+Payslip / Bank / Project Cost / Finance Posting
+```
+
+وهذا الفصل هو ما سيجعل النظام قابلًا للتدقيق والتوسع.
+
+# القرار المعماري النهائي لـCluster C
+
+أوصي بتثبيت القاعدة التالية:
+
+> **Payroll Engine must never calculate directly from mutable operational data. All variable payroll data must enter through approved, traceable, period-bound Payroll Inputs. Compensation is effective-dated master data; Payroll Run is an immutable financial snapshot once approved and locked; historical corrections are handled only through retro/off-cycle adjustments.**
+
+وهذه القاعدة متوافقة جدًا مع ما يطلبه الـManual من validated employee information، approved project allocation، attendance، allowances، KPI evaluation وauthorized adjustments قبل processing. 
+
+وبذلك أصبح لدينا حتى الآن:
+
+```text
+Core ERD
+   ↓
+Cluster A
+Recruitment → Onboarding → Activation
+
+   ↓
+Cluster B
+Time → Attendance → Leave → Availability
+
+   ↓
+Cluster C
+Compensation → Payroll → Cost → Finance
+```
+
+**الخطوة التالية المنطقية هي Cluster D — Performance Management, KPI, Learning, Competencies, Certifications, Career Management, Talent Review, Succession, Promotions & Internal Mobility ERD.**
+
+وهذا Cluster مهم لأننا سنبني فيه لأول مرة **Talent Intelligence Chain** كاملة:
+
+```text
+Position
+→ Required Competencies
+→ Employee Skills
+→ Objectives/KPIs
+→ Performance Review
+→ Skill Gaps
+→ Development Plan
+→ Training
+→ Certification
+→ Talent Review
+→ Nine Box
+→ Succession
+→ Promotion
+→ Internal Mobility
+→ New Assignment
+→ Compensation Change
+```
+
+مع فصل واضح بين **facts** مثل Performance Score وSkill Assessment وبين **decisions** مثل Promotion وSuccession Nomination، حتى لا يتحول النظام إلى ترقية الموظف تلقائيًا بناءً على Score فقط.

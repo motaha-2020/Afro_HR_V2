@@ -1,0 +1,1544 @@
+بالضبط، و**Module 08** فعلاً هو الامتداد الطبيعي بعد Module 07، لأن الإجازة والغياب والعطلات ليست بيانات HR منفصلة؛ هي جزء مباشر من **Employee Availability** وتؤثر على الـRoster، الـAttendance، الـProject Manpower، ثم الـPayroll.
+
+والـOperations Manual الحالي يدعم هذا الاتجاه صراحةً؛ ففي HR Operations، مرحلة Workforce Management تشمل **employee schedules, attendance, leave requests, shift plans, manpower planning**، كما أن Payroll يعتمد على attendance records والبيانات المعتمدة قبل المعالجة. 
+
+# Module 08 — Leave, Absence, Holidays & Employee Availability Management
+
+## 08.1 الهدف الرئيسي
+
+النظام يجب أن يستطيع في أي وقت أن يجيب:
+
+**هل الموظف متاح للعمل أم لا؟ ولماذا؟ ومتى سيعود؟ وهل الغياب مدفوع أم غير مدفوع؟ ومن يتحمل أثره على المشروع؟**
+
+بمعنى أن حالة الموظف اليومية لا تكون فقط:
+
+`Present / Absent`
+
+بل:
+
+`Available / Assigned / On Leave / Sick / Mission / Training / Off / Suspended / Unavailable`
+
+---
+
+# 08.2 Employee Availability Engine
+
+هذا هو قلب Module 08.
+
+لكل موظف نحسب:
+
+```text
+Employee Availability Status
+```
+
+بناءً على:
+
+* Work Calendar
+* Shift
+* Roster
+* Approved Leave
+* Sick Leave
+* Business Mission
+* Training
+* Public Holiday
+* Rest Day
+* Suspension
+* Temporary Assignment
+* Project Assignment
+* Offboarding Status
+
+مثلاً:
+
+Ahmed
+
+10-Aug-2026
+
+Roster:
+
+08:00–17:00
+
+Leave:
+
+Annual Leave
+
+إذن:
+
+`Availability = Unavailable — Annual Leave`
+
+ولا يظهر كـAbsent في Attendance.
+
+---
+
+# 08.3 Leave Types
+
+النظام لا يثبت أنواع الإجازات داخل الكود.
+
+كل Company تنشئ أنواعها.
+
+مثلاً:
+
+* Annual Leave
+* Sick Leave
+* Casual Leave
+* Emergency Leave
+* Unpaid Leave
+* Maternity Leave
+* Paternity Leave
+* Marriage Leave
+* Bereavement Leave
+* Study Leave
+* Hajj / Religious Leave
+* Compensatory Leave
+* Business Leave
+* Medical Leave
+* Special Leave
+* Project Leave
+
+وكل Leave Type له Rules مختلفة.
+
+---
+
+# 08.4 Leave Policy Engine
+
+كل Leave Policy تحتوي مثلاً على:
+
+```text
+Leave Type
+Employee Category
+Contract Type
+Grade
+Department
+Project
+Country
+Entitlement
+Accrual Method
+Eligibility
+Minimum Service
+Maximum Consecutive Days
+Carry Forward
+Expiry
+Paid / Unpaid
+Attachment Required
+Approval Workflow
+Notice Period
+Negative Balance Allowed
+Half Day Allowed
+Hourly Leave Allowed
+Payroll Treatment
+```
+
+---
+
+# 08.5 Leave Entitlement
+
+طرق الاستحقاق:
+
+### Annual Fixed
+
+مثلاً:
+
+`21 days/year`
+
+### Monthly Accrual
+
+مثلاً:
+
+`1.75 days/month`
+
+### Service-Based
+
+مثلاً:
+
+0–1 year:
+
+`15 days`
+
+1–5 years:
+
+`21 days`
+
+> 5 years:
+
+`30 days`
+
+لكن كلها Configuration وليست Hardcoded.
+
+---
+
+# 08.6 Pro-Rata Calculation
+
+لو الموظف انضم منتصف السنة:
+
+Joining Date:
+
+1-Jul
+
+Annual Entitlement:
+
+21 days
+
+النظام يحسب:
+
+`10.5 days`
+
+أو حسب Policy.
+
+---
+
+# 08.7 Leave Balance Ledger
+
+لا أفضّل أن نخزن Balance فقط.
+
+نحتاج:
+
+## Leave Ledger
+
+مثلاً:
+
+```text
+Opening Balance        +5
+Annual Entitlement     +21
+Leave Taken            -3
+Adjustment             +1
+Carry Forward          +2
+Expired                -1
+-------------------------
+Current Balance         25
+```
+
+وبهذا نعرف سبب أي رقم.
+
+---
+
+# 08.8 Carry Forward Rules
+
+مثلاً:
+
+Annual Leave:
+
+Maximum Carry Forward:
+
+`5 days`
+
+Expiry:
+
+`31-Mar next year`
+
+أو:
+
+No Expiry
+
+أو:
+
+Requires Manager Approval.
+
+---
+
+# 08.9 Negative Leave Balance
+
+Policy يمكن تسمح:
+
+`Negative Balance = Yes`
+
+Maximum:
+
+`-3 days`
+
+وممكن تحتاج Approval أعلى.
+
+---
+
+# 08.10 Leave Request
+
+الموظف يدخل:
+
+```text
+Leave Type
+From Date
+To Date
+Half Day / Full Day
+Reason
+Attachment
+Contact During Leave
+Handover Person
+```
+
+النظام يحسب تلقائيًا:
+
+* Calendar Days
+* Working Days
+* Holidays
+* Weekends
+* Chargeable Days
+
+---
+
+# 08.11 Half-Day Leave
+
+يدعم:
+
+* First Half
+* Second Half
+
+مثلاً:
+
+Shift:
+
+08:00–17:00
+
+Employee يأخذ:
+
+Second Half Leave
+
+Attendance المتوقع:
+
+08:00–12:30
+
+ثم Leave.
+
+---
+
+# 08.12 Hourly Permission
+
+نحتاج أيضًا:
+
+## Short Permission
+
+مثلاً:
+
+2 Hours Permission
+
+من:
+
+13:00
+
+إلى:
+
+15:00
+
+وهذه تختلف عن Full Leave.
+
+يمكن استخدامها لـ:
+
+* Personal Permission
+* Medical Permission
+* Official Permission
+
+---
+
+# 08.13 Leave Approval Workflow
+
+يمكن أن يكون:
+
+Employee
+
+↓
+
+Direct Manager
+
+↓
+
+Project Manager
+
+↓
+
+HR Operations
+
+أو حسب النوع.
+
+مثلاً Annual Leave:
+
+Direct Manager فقط
+
+لكن Unpaid Leave:
+
+Manager
+
+→ HR
+
+→ Department Head
+
+→ Management Approval
+
+---
+
+# 08.14 Dynamic Approval Matrix
+
+Approval يعتمد على:
+
+* Leave Type
+* Number of Days
+* Employee Grade
+* Project
+* Department
+* Current Manpower Availability
+
+مثلاً:
+
+Annual Leave ≤ 3 days
+
+Direct Manager
+
+لكن:
+
+> 10 days
+
+Direct Manager
+
+→ Department Manager
+
+→ HR.
+
+---
+
+# 08.15 Workforce Availability Validation
+
+قبل الموافقة، النظام يفحص:
+
+```text
+Required Workforce
+vs
+Available Workforce
+```
+
+مثلاً Project يحتاج:
+
+20 Technicians
+
+حالياً Available:
+
+21
+
+Ahmed طلب Leave
+
+لو تمت الموافقة:
+
+20
+
+إذن:
+
+Safe.
+
+لكن لو المتاح أصلاً:
+
+20
+
+سيظهر:
+
+> Approval will create a manpower shortage.
+
+ولا يمنعها بالضرورة، لكنه يعطي Warning.
+
+---
+
+# 08.16 Critical Role Coverage
+
+بعض الوظائف لا يجوز أن تختفي من الموقع.
+
+مثلاً:
+
+* Site Supervisor
+* HSE Officer
+* Rigger Team Leader
+* Driver
+* Fiber Splicer
+
+يمكن تحديد:
+
+**Minimum Coverage Rule**
+
+مثلاً:
+
+`At least 1 HSE Officer per active site`
+
+لو الإجازة ستجعل العدد صفر:
+
+Alert.
+
+---
+
+# 08.17 Team Leave Conflict
+
+لو 4 أعضاء من نفس الفريق طلبوا إجازة نفس اليوم:
+
+النظام يظهر:
+
+`Team Leave Conflict`
+
+مثلاً:
+
+Team 07:
+
+7 employees
+
+Leave Requests:
+
+4
+
+Remaining:
+
+3
+
+Required:
+
+5
+
+Gap:
+
+-2
+
+---
+
+# 08.18 Blackout Periods
+
+يمكن تحديد:
+
+**Leave Blackout**
+
+مثلاً:
+
+Project Go-Live Week
+
+No Annual Leave
+
+From:
+
+1-Sep
+
+To:
+
+10-Sep
+
+إلا Emergency Approval.
+
+---
+
+# 08.19 Peak Period Rules
+
+بدلاً من منع كامل:
+
+مثلاً:
+
+Maximum Leave:
+
+`10% of Team`
+
+في نفس اليوم.
+
+---
+
+# 08.20 Sick Leave
+
+Sick Leave لها Workflow مختلف.
+
+يمكن أن تتطلب:
+
+* Medical Certificate
+* Hospital Report
+* Doctor Note
+* Medical Approval
+
+حسب عدد الأيام.
+
+مثلاً:
+
+1 day:
+
+No document
+
+2–3 days:
+
+Medical certificate
+
+> 3 days:
+
+Medical review.
+
+---
+
+# 08.21 Sick Leave Case
+
+نحتاج Record مستقل:
+
+```text
+Sick Leave Case
+Employee
+Start
+End
+Diagnosis Category
+Attachment
+Medical Review
+Approved Days
+Payroll Treatment
+```
+
+مع تقييد صلاحيات البيانات الطبية.
+
+---
+
+# 08.22 Unpaid Leave
+
+عند اعتماد Unpaid Leave:
+
+النظام يرسل:
+
+```text
+Unpaid Days
+```
+
+إلى Payroll.
+
+لكن Module 08 لا يحسب القيمة المالية النهائية.
+
+نفس المبدأ الذي وضعناه في Attendance.
+
+---
+
+# 08.23 Public Holidays
+
+كل Company لها:
+
+**Holiday Calendar**
+
+يدعم:
+
+* Country Holiday
+* Company Holiday
+* Project Holiday
+* Site Holiday
+* Customer Holiday
+
+مثلاً شركة في مصر ومشروع في دولة أخرى يمكن أن يختلف Calendar.
+
+---
+
+# 08.24 Holiday Scope
+
+Holiday يمكن تطبيقها على:
+
+```text
+Company
+Branch
+Country
+Department
+Project
+Site
+Employee Group
+```
+
+---
+
+# 08.25 Holiday Working
+
+لو الموظف يعمل في Holiday:
+
+Module 08 يحدد:
+
+`Holiday Worked`
+
+ثم Module 07 يسجل Working Hours.
+
+وبعدها Payroll Rule يقرر:
+
+* OT
+* Compensatory Day
+* Holiday Allowance
+* Multiplier
+
+---
+
+# 08.26 Compensatory Leave
+
+مثلاً موظف اشتغل الجمعة.
+
+النظام يولد:
+
+`Comp-Off Credit = 1 Day`
+
+ثم الموظف يستطيع استخدامه لاحقًا.
+
+مع:
+
+Expiry:
+
+60 days
+
+مثلاً.
+
+---
+
+# 08.27 Rest Days
+
+Rest Day ليس Leave.
+
+مثلاً Rotation:
+
+14 Work / 7 Off
+
+الأيام السبعة:
+
+`Rest Day`
+
+ولا تخصم من Leave Balance.
+
+وهنا التكامل مع Module 07 مهم جدًا.
+
+---
+
+# 08.28 Rotation Leave
+
+لبعض الـField Projects:
+
+Employee يعمل:
+
+21 Days On
+
+7 Days Off
+
+النظام يولد Off Days تلقائيًا من Roster.
+
+---
+
+# 08.29 Business Mission
+
+Business Mission لا تعتبر Leave ولا Absence.
+
+بل:
+
+`Available — Working Outside Base Location`
+
+وتربط مع Module 07 Allowance Engine.
+
+مثلاً:
+
+Employee:
+
+Cairo Base
+
+Mission:
+
+Suez
+
+Status:
+
+Business Mission
+
+Attendance:
+
+GPS at Suez Site
+
+Allowance:
+
+Outside Location Allowance.
+
+---
+
+# 08.30 Training
+
+Training Day:
+
+لا يظهر الموظف Absent.
+
+Status:
+
+`Training`
+
+يمكن أن يكون:
+
+* Internal Training
+* External Training
+* Mandatory HSE
+* Customer Certification
+
+---
+
+# 08.31 Suspension / Administrative Hold
+
+يمكن وجود:
+
+```text
+Employee Availability = Suspended
+```
+
+من تاريخ إلى تاريخ.
+
+وتمنع:
+
+* Roster Assignment
+* Field Deployment
+
+حسب Policy.
+
+---
+
+# 08.32 No-Show / Unplanned Absence
+
+إذا:
+
+Employee Scheduled
+
+ولا يوجد:
+
+Attendance
+
+ولا Leave
+
+ولا Mission
+
+ولا Training
+
+النظام يولد:
+
+`Unexplained Absence`
+
+ثم Workflow:
+
+Supervisor Review
+
+↓
+
+Employee Explanation
+
+↓
+
+HR Operations
+
+↓
+
+Final Classification.
+
+---
+
+# 08.33 Absence Classification
+
+بعد التحقيق قد تتحول إلى:
+
+* Unexcused Absence
+* Sick Leave
+* Emergency Leave
+* Attendance Error
+* Authorized Absence
+* Unpaid Absence
+
+ولا يتم تعديل التاريخ بدون Audit Trail.
+
+---
+
+# 08.34 Consecutive Absence Detection
+
+مثلاً:
+
+Employee absent:
+
+3 consecutive working days.
+
+النظام يرسل:
+
+**Absence Alert**
+
+ويمكن رفعه إلى HR / Employee Relations.
+
+وهذا يتكامل لاحقًا مع disciplinary workflow الموجود أصلًا في HR Operations Manual. 
+
+---
+
+# 08.35 Return-to-Work
+
+لبعض أنواع Leave:
+
+يحتاج:
+
+**Return to Work Confirmation**
+
+خصوصًا:
+
+* Long Sick Leave
+* Maternity
+* Long Unpaid Leave
+* Suspension
+
+Manager أو HR يؤكد:
+
+`Returned`
+
+ثم يصبح Available.
+
+---
+
+# 08.36 Leave Handover
+
+للإجازات الطويلة:
+
+Employee يحدد:
+
+* Backup Employee
+* Open Tasks
+* Projects
+* Critical Actions
+* Handover Notes
+
+ثم Manager يؤكد.
+
+---
+
+# 08.37 Delegation of Authority
+
+أثناء الإجازة:
+
+Manager يمكن أن يعمل:
+
+**Temporary Delegation**
+
+مثلاً:
+
+From:
+
+10-Aug
+
+To:
+
+20-Aug
+
+Approvals Delegated To:
+
+Mohamed.
+
+ولكن يجب ألا ينقل Permissions الدائمة.
+
+---
+
+# 08.38 Employee Availability Calendar
+
+Manager يرى Calendar:
+
+| Employee | 10 Aug   | 11 Aug   | 12 Aug |
+| -------- | -------- | -------- | ------ |
+| Ahmed    | Work     | Work     | Leave  |
+| Ali      | Leave    | Leave    | Work   |
+| Omar     | Training | Training | Work   |
+
+Color-coded في الواجهة، مع النص والحالة أيضًا حتى لا نعتمد على اللون فقط.
+
+---
+
+# 08.39 Team Availability Dashboard
+
+مثلاً:
+
+FTTH Team 01
+
+Total:
+
+20
+
+Available:
+
+16
+
+Annual Leave:
+
+2
+
+Sick:
+
+1
+
+Training:
+
+1
+
+Availability:
+
+`80%`
+
+---
+
+# 08.40 Project Availability Dashboard
+
+Project:
+
+Ericsson Cairo
+
+Required:
+
+150
+
+Available:
+
+137
+
+Leave:
+
+7
+
+Sick:
+
+3
+
+Training:
+
+3
+
+Gap:
+
+`-13`
+
+هذا رقم مهم جدًا للـPM.
+
+---
+
+# 08.41 Future Availability Forecast
+
+النظام لا يعرض اليوم فقط.
+
+مثلاً:
+
+### Next 14 Days
+
+| Date   | Required | Available | Gap |
+| ------ | -------: | --------: | --: |
+| 12 Aug |      120 |       124 |  +4 |
+| 13 Aug |      120 |       116 |  -4 |
+| 14 Aug |      100 |        82 | -18 |
+
+وهذا يساعد قبل حدوث المشكلة.
+
+---
+
+# 08.42 Leave Planner
+
+الموظف يرى:
+
+My Team Leave Calendar
+
+لكن بدون معلومات حساسة.
+
+مثلاً:
+
+Ahmed — Unavailable
+
+وليس بالضرورة:
+
+Sick Leave
+
+لو Policy تمنع إظهار نوع الإجازة.
+
+---
+
+# 08.43 Leave Request Collision
+
+إذا الموظف لديه:
+
+Training
+
+في نفس تاريخ Leave Request
+
+النظام يمنع:
+
+`Conflicting Availability Record`
+
+ونفس الشيء مع:
+
+* Mission
+* Existing Leave
+* Offboarding
+* Suspension
+
+---
+
+# 08.44 Project Transfer During Leave
+
+لو الموظف سيتم نقله Project آخر أثناء Leave:
+
+النظام يحتفظ بالـEffective Dates.
+
+ولا يلغي الإجازة.
+
+---
+
+# 08.45 Leave During Notice Period
+
+Policy يمكن تحديد:
+
+Annual Leave During Notice Period:
+
+Allowed / Not Allowed / Approval Required.
+
+---
+
+# 08.46 Leave During Probation
+
+مثلاً:
+
+Annual Leave:
+
+Not eligible before 3 months
+
+أو Accrued but Restricted.
+
+Configuration.
+
+---
+
+# 08.47 Leave Encashment
+
+بعض السياسات تسمح بتحويل جزء من Leave Balance لمقابل مالي.
+
+النظام ينشئ:
+
+`Leave Encashment Request`
+
+ويحدد:
+
+Days Approved
+
+ثم Payroll يحسب القيمة.
+
+---
+
+# 08.48 Leave Expiry Alerts
+
+النظام يرسل:
+
+> 5 leave days will expire on 31 December.
+
+للموظف وManager.
+
+---
+
+# 08.49 Manager Capacity Alerts
+
+مثلاً:
+
+> 32% of your team is scheduled to be unavailable next Monday.
+
+مهم في تخطيط المشروعات.
+
+---
+
+# 08.50 Leave Cancellation
+
+Employee يستطيع:
+
+Cancel Leave
+
+قبل بدايتها.
+
+Workflow يعتمد على Policy.
+
+لو Payroll Period مغلق:
+
+نحتاج Adjustment Workflow.
+
+---
+
+# 08.51 Early Return
+
+مثلاً Leave حتى 20-Aug.
+
+Employee رجع 18-Aug.
+
+نقوم:
+
+`Early Return`
+
+ويعاد:
+
+2 days
+
+للBalance إذا كانت Policy تسمح.
+
+---
+
+# 08.52 Leave Extension
+
+Employee يطلب:
+
+Extend Leave
+
+From:
+
+21-Aug
+
+To:
+
+23-Aug
+
+ويرتبط بالطلب الأصلي.
+
+---
+
+# 08.53 Attachment Management
+
+لكل Leave Type يمكن تحديد:
+
+Attachment:
+
+* Optional
+* Mandatory
+* Mandatory after X days
+
+مع:
+
+Document Type
+
+Expiry
+
+Verification.
+
+---
+
+# 08.54 Leave Payroll Output
+
+Module 08 يرسل Payroll:
+
+```text
+Employee
+Period
+Paid Leave Days
+Unpaid Leave Days
+Sick Leave Days
+Comp-Off Days
+Holiday Worked
+Authorized Absence
+Unexcused Absence
+```
+
+والـPayroll Engine يطبق الأثر المالي.
+
+---
+
+# 08.55 Attendance Integration
+
+الأولوية المقترحة لتحديد الحالة:
+
+```text
+Approved Leave
+↓
+Business Mission / Training
+↓
+Holiday / Rest Day
+↓
+Roster
+↓
+Attendance
+↓
+Absence
+```
+
+يعني لا نقول Absent قبل فحص الإجازات والـCalendar والـAssignment.
+
+---
+
+# 08.56 Allowance Integration
+
+لو الموظف:
+
+Annual Leave
+
+فلا يستحق:
+
+Field Allowance
+
+في نفس اليوم.
+
+إلا لو Policy استثنائية.
+
+أما Business Mission:
+
+يمكن أن يستحق:
+
+Travel / Field / Outside Location Allowance.
+
+---
+
+# 08.57 Timesheet Integration
+
+Annual Leave:
+
+Timesheet Auto Entry:
+
+`8h — Annual Leave`
+
+حسب Standard Working Hours.
+
+لكن لا تسجل كـProject Productive Hours.
+
+---
+
+# 08.58 Cost Allocation
+
+Paid Leave Cost يمكن:
+
+* General HR Cost
+* Employee Home Cost Center
+* Project Cost
+* Shared Cost
+
+حسب Company Policy.
+
+---
+
+# 08.59 Leave Rule Builder
+
+نفس فلسفة Allowance Rule Builder.
+
+مثلاً:
+
+```text
+IF
+
+Leave Type = Annual Leave
+
+AND
+Employee Type = Permanent
+
+AND
+Service >= 12 Months
+
+THEN
+
+Entitlement = 21 Days
+Carry Forward = 5 Days
+Expiry = 31-Mar Next Year
+Negative Balance = No
+```
+
+---
+
+# 08.60 Availability Rule Builder
+
+مثلاً:
+
+```text
+IF
+
+Employee has Approved Leave
+OR
+Suspension
+OR
+Rest Day
+
+THEN
+
+Available for Deployment = No
+```
+
+لكن:
+
+```text
+IF Status = Business Mission
+THEN
+Available for Assigned Mission = Yes
+Available for Home Project = No
+```
+
+وهنا نفرق بين:
+
+**Company Availability**
+
+و:
+
+**Project Availability**
+
+---
+
+# 08.61 Availability Status Model
+
+أقترح 3 مستويات:
+
+### Employment Availability
+
+هل الموظف Active أصلًا؟
+
+### Work Availability
+
+هل متاح للعمل اليوم؟
+
+### Project Availability
+
+هل متاح لهذا المشروع تحديدًا؟
+
+مثلاً:
+
+Ahmed:
+
+Employment:
+
+`Active`
+
+Work:
+
+`Available`
+
+Project A:
+
+`Unavailable`
+
+Project B:
+
+`Assigned`
+
+هذا مهم جدًا عند Multi-Project Employees.
+
+---
+
+# 08.62 Core Database Objects
+
+```text
+LeaveType
+LeavePolicy
+LeavePolicyRule
+LeaveEntitlement
+LeaveBalance
+LeaveLedger
+LeaveRequest
+LeaveApproval
+LeaveAttachment
+LeaveAdjustment
+LeaveEncashment
+CompOffBalance
+CompOffTransaction
+HolidayCalendar
+Holiday
+EmployeeCalendarAssignment
+AvailabilityRecord
+AvailabilityException
+BusinessMission
+TrainingAssignment
+RestDay
+SuspensionPeriod
+AbsenceCase
+ReturnToWork
+LeaveDelegation
+BlackoutPeriod
+CoverageRule
+```
+
+---
+
+# 08.63 Permissions
+
+### Employee
+
+My Leave / My Balance / Team Availability limited.
+
+### Supervisor
+
+Team Requests / Team Availability.
+
+### Project Manager
+
+Project Availability / Project Leave Approvals.
+
+### HR Operations
+
+Leave Cases / Absence / Exceptions / Policies within scope.
+
+### Payroll
+
+Approved payroll-impacting outputs only.
+
+### HR Manager
+
+Company-wide control.
+
+---
+
+# 08.64 Audit Trail
+
+خصوصًا:
+
+* Leave balance adjustment
+* Leave approval
+* Cancellation
+* Absence classification
+* Comp-Off creation
+* Encashment
+* Policy changes
+
+نسجل:
+
+```text
+Old Value
+New Value
+User
+Date
+Reason
+Approval
+Source
+```
+
+---
+
+# 08.65 أفضل شاشة إدارية
+
+## Workforce Availability Control Room
+
+مثلاً:
+
+```text
+Total Active Employees        4,850
+Available Today               4,012
+Annual Leave                    312
+Sick Leave                       89
+Rest Day                        174
+Training                         71
+Business Mission                108
+Unexplained Absence              34
+
+Workforce Availability        82.7%
+```
+
+ثم:
+
+**By Company → Business Unit → Project → Region → Site → Team → Job**
+
+---
+
+# 08.66 الربط الكامل بين Module 07 و08
+
+```text
+Work Calendar
+      ↓
+Shift / Roster
+      ↓
+Leave & Availability
+      ↓
+Expected Attendance
+      ↓
+Actual Attendance
+      ↓
+Exception
+      ↓
+Timesheet
+      ↓
+Allowances
+      ↓
+Payroll Input
+```
+
+وده يمنع مشكلة شائعة جدًا:
+
+> الموظف مأخوذ إجازة معتمدة لكن Attendance System يسجله Absent ثم Payroll يعمل deduction.
+
+في التصميم ده، **Leave هو Input للAttendance Engine قبل احتساب Absence**.
+
+---
+
+## نقطة معمارية مهمة
+
+أقترح ألا نسمي Module 08 مجرد **Leave Management**.
+
+الأفضل:
+
+# **Leave, Absence, Holidays & Workforce Availability**
+
+لأن القيمة الحقيقية ليست فقط إدارة طلب إجازة.
+
+القيمة هي أن النظام يعرف لحظيًا ومستقبليًا:
+
+> **كم فردًا متاحًا فعليًا لكل مشروع، موقع، Team، Skill وShift؟**
+
+وده يجعل Module 08 جزءًا أساسيًا من Project Manpower Planning وليس مجرد HR Self-Service.
+
+والترتيب بعده يصبح منطقيًا جدًا أن ننتقل إلى **Module 09 — Payroll, Compensation, Earnings, Deductions & Payroll Processing Engine**، لأن Modules 07 و08 أصبحا جاهزين لتغذيته بساعات العمل، الغياب، الإجازات، OT، الـField/Location Allowances، والـproject cost allocation.

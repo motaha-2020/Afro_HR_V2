@@ -1,0 +1,2664 @@
+تمام. **Cluster J** سيكون **Occupational Health & Employee Safety Readiness Layer** داخل HR، مع خط فاصل واضح جدًا:
+
+> نحن لا نبني HSE Management System كامل داخل الـHR.
+
+يعني النظام لن يحاول إدارة كل شيء مثل:
+
+* Site Risk Assessments
+* Permit to Work
+* Tool Box Talks
+* Environmental incidents
+* Equipment inspections
+* Full CAPA
+* Safety observations
+* ISO 45001 system بالكامل
+
+لكن سيملك ما يخص **الموظف نفسه** من زاوية الجاهزية الصحية والسلامة، وما يجب أن ينعكس على:
+
+* هل يمكن نشره في الموقع؟
+* هل يحتاج فحصًا طبيًا دوريًا؟
+* هل لديه قيود عمل؟
+* هل أصيب في حادث؟
+* هل يمكنه العودة للعمل؟
+* هل يحتاج rehabilitation أو temporary restriction؟
+* هل PPE المطلوبة متوفرة؟
+* هل هناك أثر على attendance / leave / deployment / insurance / case management؟
+
+والـManual الحالي يدعم هذا الاتجاه جزئيًا فقط: يذكر **medical examinations** لبعض الأدوار الحساسة، ويذكر HSE courses مثل Fire Fighting وFirst Aid وElectrical Safety وRisk Assessment وWorking at Heights، ويشترط عدم نشر الموظف في safety-sensitive positions قبل استكمال medical exams وHSE training وcertifications ومتطلبات العميل. لكنه لا يقدم lifecycle متكاملًا للحوادث أو medical surveillance أو return-to-work؛ لذلك هذا الجزء توسعة تصميمية مقترحة فوق ما هو موجود بالفعل. 
+
+# Cluster J
+
+## Occupational Health, HSE Incidents Interface, Employee Safety Readiness, Medical Surveillance, PPE Compliance, Work Restrictions, Incident Employee Impact & Return-to-Work ERD
+
+أهم فصل هنا:
+
+> **Medical Insurance ≠ Occupational Health ≠ Medical Fitness ≠ HSE Training ≠ Incident ≠ Injury ≠ Work Restriction ≠ Return-to-Work**
+
+كل واحدة لها ownership وlifecycle مختلف.
+
+---
+
+# 1. Position داخل Architecture
+
+```text
+EMPLOYEE
+   │
+   ▼
+SAFETY / HEALTH PROFILE
+   │
+   ├── Medical Surveillance
+   ├── Fitness for Work
+   ├── Work Restrictions
+   ├── PPE Compliance
+   ├── HSE Readiness
+   ├── Incident Exposure
+   ├── Injury / Health Impact
+   └── Return-to-Work
+          │
+          ▼
+   DEPLOYMENT ELIGIBILITY
+          │
+   ┌──────┼─────────┐
+   ▼      ▼         ▼
+Project  Attendance Leave
+   │
+   ▼
+Payroll / Insurance / HSE
+```
+
+---
+
+# 2. Cluster J Domains
+
+أقسمه إلى:
+
+```text
+J01 Occupational Health Profile
+J02 Job Health Risk Profile
+J03 Medical Surveillance Program
+J04 Fitness for Work
+J05 Work Restrictions
+J06 HSE Readiness
+J07 PPE Requirement & Compliance
+J08 HSE Incident Interface
+J09 Employee Incident Involvement
+J10 Injury / Occupational Health Impact
+J11 Treatment / Recovery Tracking
+J12 Return-to-Work
+J13 Safety Deployment Gate
+J14 Exposure Monitoring
+J15 Safety Alerts, Expiry & Audit
+```
+
+---
+
+# 3. Boundary مع Cluster G
+
+Cluster G يملك:
+
+```text
+Official Personnel Record
+Occupational Medical Examination Record
+Legal medical compliance
+Medical Insurance
+Employment document
+```
+
+Cluster J يملك:
+
+```text
+Operational health surveillance
+Incident impact
+Work restrictions
+Safety readiness
+Return-to-work
+Employee exposure
+Deployment decision
+```
+
+مثال:
+
+```text
+Cluster G
+Employee Medical Exam:
+Fit with Restrictions
+
+↓
+
+Cluster J
+Restriction:
+No Working at Height
+Valid until 30-Sep-2026
+
+↓
+
+Deployment:
+Blocked from Rigger Assignment
+```
+
+---
+
+# 4. Boundary مع Cluster F
+
+Cluster F يملك:
+
+```text
+Training
+HSE Certification
+Skill Certificate
+Course Completion
+```
+
+Cluster J يستخدمها لتقييم readiness فقط.
+
+لا يكرر:
+
+```text
+Working at Heights Certificate
+First Aid Certificate
+Electrical Safety Certificate
+```
+
+---
+
+# 5. Boundary مع HSE System
+
+إذا كان عند الشركة HSE platform مستقل:
+
+```text
+HSE System
+owns
+Incident
+Hazard
+Root Cause
+Corrective Action
+Site Safety
+```
+
+Cluster J يحتفظ فقط بـ:
+
+```text
+HSE Incident Reference
+Employee Involvement
+Employee Injury
+Fitness Impact
+Restriction
+Return to Work
+```
+
+أما إذا لم يوجد HSE system، يمكن Cluster J تشغيل **limited incident employee interface**، وليس HSE system كامل.
+
+---
+
+# 6. J01 — Occupational Health Profile
+
+## employee_occupational_health_profile
+
+```text
+employee_occupational_health_profile
+------------------------------------
+occupational_health_profile_id PK
+
+tenant_id FK
+company_id FK
+
+employee_id FK UNIQUE
+
+health_risk_class
+
+fitness_status
+
+medical_surveillance_required_flag
+
+high_risk_role_flag
+
+active_restriction_flag
+
+last_medical_review_at
+
+next_medical_review_at
+
+current_readiness_status
+
+occupational_health_owner_id FK nullable
+
+created_at
+created_by
+updated_at
+```
+
+---
+
+# 7. Health Risk Classes
+
+مثلاً:
+
+```text
+Low
+Moderate
+High
+Critical
+```
+
+لكن لا تعتمد فقط على employee.
+
+بل يجب أن تأتي من:
+
+```text
+Job
+Activities
+Site
+Exposure
+Customer
+```
+
+---
+
+# 8. J02 — Job Health Risk Profile
+
+## job_health_risk_profile
+
+```text
+job_health_risk_profile_id PK
+
+job_id FK
+
+risk_profile_version
+
+effective_from
+effective_to
+
+risk_level
+
+medical_surveillance_required
+
+fitness_assessment_required
+
+hse_readiness_required
+
+approved_by
+```
+
+---
+
+# 9. Job Health Hazard
+
+## job_health_hazard
+
+```text
+job_health_hazard_id PK
+
+job_health_risk_profile_id FK
+
+hazard_type
+
+hazard_category
+
+risk_level
+
+exposure_frequency
+
+exposure_duration
+
+control_requirement
+
+medical_monitoring_required_flag
+```
+
+---
+
+# 10. Hazard Types
+
+مثلاً:
+
+```text
+Working at Height
+Electrical Work
+Manual Handling
+Driving
+Heat Exposure
+Noise
+Dust
+Chemical Exposure
+Confined Space
+Night Shift
+Heavy Equipment
+Remote Site
+High Physical Demand
+Screen / Office Ergonomic
+```
+
+---
+
+# 11. Position / Project Override
+
+Job واحد قد يختلف حسب assignment.
+
+نعمل:
+
+## assignment_health_requirement
+
+```text
+assignment_health_requirement_id PK
+
+job_id FK nullable
+position_id FK nullable
+project_id FK nullable
+customer_id FK nullable
+location_id FK nullable
+
+requirement_type
+
+medical_surveillance_program_id FK nullable
+fitness_type_id FK nullable
+ppe_type_id FK nullable
+
+mandatory_flag
+
+effective_from
+effective_to
+```
+
+---
+
+# 12. مثال
+
+```text
+Job:
+Field Engineer
+
+HQ Assignment:
+Low Risk
+
+Tower Project:
+Working at Height
+High Risk
+Medical Fitness Required
+WAH Certification Required
+Harness PPE Required
+```
+
+---
+
+# 13. J03 — Medical Surveillance Program
+
+هذه تختلف عن medical exam واحد.
+
+## medical_surveillance_program
+
+```text
+medical_surveillance_program_id PK
+
+program_code
+
+program_name
+
+hazard_type
+
+target_population
+
+review_frequency_months
+
+baseline_exam_required
+
+periodic_exam_required
+
+exit_exam_required
+
+return_to_work_exam_required
+
+active_flag
+```
+
+---
+
+# 14. Examples
+
+```text
+Working at Height Surveillance
+Noise Exposure
+Driver Fitness
+Electrical Work
+Respiratory Exposure
+Rigger Fitness
+Heat Stress
+Manual Handling
+```
+
+---
+
+# 15. Employee Enrollment
+
+## employee_surveillance_enrollment
+
+```text
+employee_surveillance_enrollment_id PK
+
+employee_id FK
+medical_surveillance_program_id FK
+
+enrollment_reason
+
+enrollment_start_date
+enrollment_end_date nullable
+
+source_assignment_id FK nullable
+
+surveillance_status
+
+next_due_date
+```
+
+---
+
+# 16. Surveillance Status
+
+```text
+Active
+Pending Baseline
+Up to Date
+Due Soon
+Overdue
+Suspended
+Ended
+```
+
+---
+
+# 17. Medical Surveillance Event
+
+## medical_surveillance_event
+
+```text
+medical_surveillance_event_id PK
+
+employee_surveillance_enrollment_id FK
+
+event_type
+
+scheduled_date
+completed_date nullable
+
+provider_id FK nullable
+
+result_category
+
+followup_required
+
+next_due_date nullable
+
+occupational_exam_id FK nullable
+
+status
+```
+
+---
+
+# 18. Event Types
+
+```text
+Baseline
+Periodic
+Post-Incident
+Post-Exposure
+Return-to-Work
+Exit Examination
+Follow-Up
+```
+
+---
+
+# 19. Health Data Minimization
+
+Cluster J لا يحتاج full diagnosis.
+
+Operation layer يحتفظ بـ:
+
+```text
+Fit
+Fit with Restrictions
+Temporarily Unfit
+Review Required
+```
+
+أما detailed clinical data فيكون منفصلًا ومقيّدًا جدًا.
+
+---
+
+# 20. J04 — Fitness for Work
+
+## fitness_for_work_assessment
+
+```text
+fitness_for_work_assessment_id PK
+
+employee_id FK
+
+assessment_type
+
+assessment_reason
+
+job_id FK nullable
+position_id FK nullable
+project_id FK nullable
+
+assessment_date
+
+fitness_result
+
+valid_from
+valid_until nullable
+
+restriction_required_flag
+
+medical_exam_reference_id FK nullable
+
+assessed_by_provider_id FK nullable
+
+status
+```
+
+---
+
+# 21. Fitness Types
+
+```text
+Pre-Employment
+Role Fitness
+Project Fitness
+Working at Height
+Driver Fitness
+Post-Incident
+Return-to-Work
+Periodic Review
+Customer-Specific
+```
+
+---
+
+# 22. Fitness Result
+
+```text
+Fit
+Fit with Restrictions
+Temporarily Unfit
+Permanently Unfit for Role
+Further Assessment Required
+Pending
+```
+
+---
+
+# 23. Fit ≠ Ready
+
+مثال:
+
+```text
+Medical Fit = Yes
+
+Working at Heights Certification = Expired
+
+PPE = Missing
+
+Result:
+Safety Readiness = Not Ready
+```
+
+---
+
+# 24. J05 — Work Restrictions
+
+## employee_work_restriction
+
+```text
+employee_work_restriction_id PK
+
+employee_id FK
+
+restriction_type
+
+restriction_reason_category
+
+source_assessment_id FK nullable
+source_incident_id FK nullable
+
+effective_from
+effective_to nullable
+
+restriction_severity
+
+restriction_scope
+
+operational_instruction
+
+manager_visibility_level
+
+status
+
+review_due_date nullable
+```
+
+---
+
+# 25. Restriction Types
+
+```text
+No Working at Height
+No Driving
+No Night Shift
+No Heavy Lifting
+No Electrical Work
+No Field Deployment
+Indoor Work Only
+Reduced Hours
+Temporary Office Duty
+No Remote Site
+Limited Travel
+Other
+```
+
+---
+
+# 26. Restriction Scope
+
+```text
+All Work
+Specific Job
+Specific Activity
+Specific Project
+Specific Location
+Specific Shift
+```
+
+---
+
+# 27. Manager Visibility
+
+Manager يرى:
+
+```text
+No Working at Height
+Valid until 30-Sep
+```
+
+ولا يرى:
+
+```text
+Diagnosis
+Medical test
+Treatment details
+```
+
+---
+
+# 28. Restriction Review
+
+## work_restriction_review
+
+```text
+work_restriction_review_id PK
+
+employee_work_restriction_id FK
+
+review_date
+
+review_result
+
+new_effective_to nullable
+
+restriction_changed_flag
+
+new_restriction_id FK nullable
+
+reviewed_by
+```
+
+---
+
+# 29. J06 — HSE Readiness
+
+## employee_hse_readiness
+
+```text
+employee_hse_readiness_id PK
+
+employee_id FK
+
+job_id FK
+position_id FK nullable
+project_id FK nullable
+location_id FK nullable
+
+assessment_date
+
+medical_ready_flag
+certification_ready_flag
+training_ready_flag
+ppe_ready_flag
+restriction_clear_flag
+customer_ready_flag
+
+overall_readiness
+
+blocking_requirement_count
+
+valid_until nullable
+
+calculated_at
+```
+
+---
+
+# 30. Readiness States
+
+```text
+Ready
+Ready with Conditions
+Not Ready
+Temporarily Restricted
+Expired Requirements
+Pending Verification
+```
+
+---
+
+# 31. HSE Requirement
+
+## safety_readiness_requirement
+
+```text
+safety_readiness_requirement_id PK
+
+scope_type
+
+job_id FK nullable
+position_id FK nullable
+project_id FK nullable
+customer_id FK nullable
+location_id FK nullable
+
+requirement_type
+
+source_entity_type
+source_entity_id
+
+mandatory_flag
+
+blocking_flag
+
+minimum_validity_days
+
+effective_from
+effective_to
+```
+
+---
+
+# 32. Requirement Types
+
+```text
+Medical Fitness
+HSE Certification
+HSE Training
+PPE
+Customer Induction
+Work License
+Site Access
+Medical Surveillance
+Work Restriction Clearance
+```
+
+---
+
+# 33. J07 — PPE
+
+لا نبني inventory هنا.
+
+Asset/Warehouse owns stock.
+
+Cluster J يملك compliance.
+
+## ppe_type
+
+```text
+ppe_type_id PK
+
+ppe_code
+ppe_name
+
+ppe_category
+
+inspection_required_flag
+
+replacement_interval_days nullable
+
+expiry_required_flag
+
+active_flag
+```
+
+---
+
+# 34. PPE Examples
+
+```text
+Helmet
+Safety Shoes
+Safety Glasses
+Gloves
+High Visibility Vest
+Harness
+Lanyard
+Respirator
+Hearing Protection
+Arc Flash PPE
+```
+
+---
+
+# 35. PPE Requirement
+
+## role_ppe_requirement
+
+```text
+role_ppe_requirement_id PK
+
+job_id FK nullable
+project_id FK nullable
+activity_type nullable
+location_id FK nullable
+
+ppe_type_id FK
+
+mandatory_flag
+
+quantity_required
+
+replacement_interval_days nullable
+
+effective_from
+effective_to
+```
+
+---
+
+# 36. Employee PPE Compliance
+
+## employee_ppe_compliance
+
+```text
+employee_ppe_compliance_id PK
+
+employee_id FK
+ppe_type_id FK
+
+assignment_id FK nullable
+
+asset_issue_reference_id FK nullable
+
+issue_date nullable
+
+inspection_status nullable
+
+expiry_date nullable
+
+replacement_due_date nullable
+
+compliance_status
+```
+
+---
+
+# 37. Compliance Status
+
+```text
+Compliant
+Missing
+Expired
+Damaged
+Replacement Due
+Inspection Required
+Not Applicable
+```
+
+---
+
+# 38. PPE Damage
+
+إذا harness damaged:
+
+Asset system يعالج:
+
+```text
+Asset Condition
+Replacement
+Warehouse issue
+```
+
+Cluster J يحدث فقط:
+
+```text
+PPE Compliance = Not Ready
+```
+
+---
+
+# 39. J08 — HSE Incident Interface
+
+إذا HSE system موجود:
+
+## hse_incident_reference
+
+```text
+hse_incident_reference_id PK
+
+external_hse_system
+
+external_incident_id
+
+incident_number
+
+incident_datetime
+
+project_id FK nullable
+location_id FK nullable
+
+incident_category
+
+severity
+
+incident_status
+
+synced_at
+```
+
+---
+
+# 40. لو HSE System غير موجود
+
+يمكن إضافة minimal:
+
+## employee_safety_incident
+
+```text
+employee_safety_incident_id PK
+
+incident_number
+
+incident_datetime
+
+project_id FK
+location_id FK
+
+incident_type
+
+brief_description
+
+immediate_action
+
+severity
+
+hse_owner_user_id FK
+
+status
+```
+
+لكن لا ندخل full HSE investigation داخل HR.
+
+---
+
+# 41. Incident Types
+
+```text
+Injury
+Near Miss
+Occupational Illness
+Exposure
+Vehicle Incident
+Fall
+Electrical
+Manual Handling
+Heat Stress
+PPE Failure
+Other
+```
+
+---
+
+# 42. J09 — Employee Incident Involvement
+
+حادث واحد قد يشمل أكثر من شخص.
+
+## incident_employee_involvement
+
+```text
+incident_employee_involvement_id PK
+
+incident_reference_id FK
+
+employee_id FK
+
+involvement_type
+
+employee_role
+
+injury_flag
+
+medical_attention_required_flag
+
+work_restriction_required_flag
+
+lost_time_flag
+
+hospitalization_flag
+
+fatality_flag
+
+status
+```
+
+---
+
+# 43. Involvement Types
+
+```text
+Injured Employee
+Exposed Employee
+Witness
+Supervisor
+First Responder
+Driver
+Operator
+Affected Employee
+```
+
+---
+
+# 44. لماذا لا نستخدم hr_case_party؟
+
+Cluster E يمثل HR/legal cases.
+
+Cluster J incident involvement هو health/safety operational relationship.
+
+قد يرتبطان لو ظهر misconduct:
+
+```text
+Safety Incident
+↓
+Possible Policy Violation
+↓
+Cluster E Case
+```
+
+لكن لا نخلط الاثنين.
+
+---
+
+# 45. J10 — Employee Injury Impact
+
+## employee_injury_record
+
+```text
+employee_injury_record_id PK
+
+incident_employee_involvement_id FK
+
+employee_id FK
+
+injury_category
+
+body_region nullable
+
+injury_severity
+
+first_aid_flag
+
+medical_treatment_flag
+
+hospitalization_flag
+
+lost_time_flag
+
+restricted_work_flag
+
+initial_fitness_status
+
+record_status
+```
+
+---
+
+# 46. Privacy Rule
+
+Body region أو high-level injury type يمكن استخدامه إذا مطلوب تشغيليًا.
+
+لكن detailed diagnosis يذهب إلى medical restricted record.
+
+---
+
+# 47. Injury Severity
+
+```text
+First Aid
+Medical Treatment
+Restricted Work
+Lost Time
+Serious Injury
+Fatal
+```
+
+هذه قابلة للتهيئة حسب HSE policy.
+
+---
+
+# 48. Occupational Illness
+
+## occupational_health_case
+
+```text
+occupational_health_case_id PK
+
+employee_id FK
+
+source_type
+
+source_incident_id FK nullable
+source_exposure_id FK nullable
+
+case_category
+
+identified_date
+
+work_related_status
+
+medical_review_required
+
+restriction_required
+
+case_status
+
+confidentiality_level
+```
+
+---
+
+# 49. Work-Related Status
+
+```text
+Confirmed Work-Related
+Potentially Work-Related
+Not Work-Related
+Under Review
+```
+
+لكن decision قد يأتي من authorized HSE/medical/legal authority.
+
+---
+
+# 50. J11 — Treatment / Recovery
+
+نحن لا نبني EMR.
+
+فقط operational recovery.
+
+## employee_recovery_plan
+
+```text
+employee_recovery_plan_id PK
+
+employee_id FK
+
+source_injury_record_id FK nullable
+source_health_case_id FK nullable
+
+recovery_start_date
+
+expected_return_date nullable
+
+actual_return_date nullable
+
+recovery_status
+
+restriction_required
+
+rehabilitation_required_flag
+
+followup_required_flag
+```
+
+---
+
+# 51. Recovery Status
+
+```text
+Under Treatment
+Recovering
+Restricted Work
+Fit for Review
+Return-to-Work Assessment
+Returned
+Extended Absence
+Closed
+```
+
+---
+
+# 52. Treatment Event
+
+لو مطلوب tracking بسيط:
+
+## occupational_health_followup
+
+```text
+occupational_health_followup_id PK
+
+employee_recovery_plan_id FK
+
+followup_date
+
+followup_type
+
+fitness_status
+
+next_followup_date nullable
+
+work_recommendation
+
+provider_reference nullable
+```
+
+بدون تخزين medical notes بالتفصيل.
+
+---
+
+# 53. J12 — Return-to-Work
+
+هذا sub-domain مهم جدًا.
+
+## return_to_work_case
+
+```text
+return_to_work_case_id PK
+
+employee_id FK
+
+source_type
+
+source_incident_id FK nullable
+source_leave_id FK nullable
+source_medical_case_id FK nullable
+
+absence_start_date
+
+planned_return_date
+
+actual_return_date nullable
+
+rtw_assessment_required
+
+temporary_restriction_required
+
+phased_return_required
+
+case_status
+
+owner_user_id FK
+```
+
+---
+
+# 54. Return-to-Work Triggers
+
+```text
+Work Injury
+Occupational Illness
+Long Medical Leave
+Hospitalization
+Extended Absence
+Post-Surgery
+Post-Incident
+Medical Restriction Expiry
+```
+
+---
+
+# 55. RTW Assessment
+
+## return_to_work_assessment
+
+```text
+return_to_work_assessment_id PK
+
+return_to_work_case_id FK
+
+assessment_date
+
+fitness_result
+
+recommended_work_status
+
+restriction_id FK nullable
+
+phased_return_required
+
+review_date nullable
+
+assessment_reference_id FK nullable
+
+status
+```
+
+---
+
+# 56. Recommended Work Status
+
+```text
+Full Duty
+Modified Duty
+Restricted Duty
+Reduced Hours
+Temporary Office Assignment
+No Return Yet
+```
+
+---
+
+# 57. Phased Return
+
+## phased_return_plan
+
+```text
+phased_return_plan_id PK
+
+return_to_work_case_id FK
+
+start_date
+end_date
+
+plan_status
+
+approved_by
+```
+
+---
+
+# 58. Phased Return Stage
+
+```text
+phased_return_stage_id PK
+
+phased_return_plan_id FK
+
+stage_number
+
+start_date
+end_date
+
+working_hours_per_day
+
+allowed_activity_scope
+
+restriction_summary
+```
+
+مثال:
+
+```text
+Week 1 → 4 hours/day
+Week 2 → 6 hours/day
+Week 3 → Full duty
+```
+
+---
+
+# 59. Modified Duty
+
+## temporary_work_assignment
+
+```text
+temporary_work_assignment_id PK
+
+return_to_work_case_id FK
+
+employee_id FK
+
+temporary_position_id FK nullable
+temporary_department_id FK nullable
+temporary_location_id FK nullable
+
+start_date
+end_date
+
+assignment_reason
+
+approved_by
+
+status
+```
+
+---
+
+# 60. Attendance Integration
+
+RTW case يرسل:
+
+```text
+Modified Hours
+Reduced Hours
+Temporary Restriction
+```
+
+إلى Cluster B.
+
+لكن Cluster J لا يعدل attendance punches.
+
+---
+
+# 61. Leave Integration
+
+إذا الموظف غير Fit:
+
+```text
+Cluster J
+Medical / RTW status
+↓
+Cluster Leave
+Medical Leave / Absence status
+```
+
+لكن leave entitlement calculation يبقى Cluster 08.
+
+---
+
+# 62. Payroll Integration
+
+مثلاً:
+
+```text
+Lost Time
+Modified Duty
+Medical Absence
+```
+
+قد تؤثر على Payroll حسب policy.
+
+Cluster J لا يحسب القيمة.
+
+بل يرسل approved status/event.
+
+---
+
+# 63. J13 — Safety Deployment Gate
+
+هذه من أقوى أجزاء Cluster J.
+
+## safety_deployment_assessment
+
+```text
+safety_deployment_assessment_id PK
+
+employee_id FK
+
+assignment_id FK
+project_id FK
+job_id FK
+location_id FK
+
+assessment_datetime
+
+medical_fitness_status
+surveillance_status
+hse_training_status
+certification_status
+ppe_status
+restriction_status
+customer_requirement_status
+
+overall_status
+
+blocking_reason_count
+
+valid_until nullable
+```
+
+---
+
+# 64. Deployment Result
+
+```text
+Eligible
+Eligible with Conditions
+Not Eligible
+Temporary Hold
+Review Required
+```
+
+---
+
+# 65. Example
+
+Employee:
+
+```text
+Medical Fitness = Valid
+Working at Height = Valid
+Harness = Issued
+Helmet = Issued
+Customer Induction = Valid
+Restriction = No Night Shift
+```
+
+Assignment:
+
+```text
+Tower Maintenance
+Night Shift
+```
+
+Result:
+
+```text
+Not Eligible
+
+Blocking reason:
+Active Work Restriction — No Night Shift
+```
+
+---
+
+# 66. Assignment Change Recalculation
+
+أي تغيير في:
+
+```text
+Project
+Location
+Job
+Shift
+Activity
+```
+
+يعيد حساب readiness.
+
+---
+
+# 67. Expiry Recalculation
+
+لو certificate expires اليوم:
+
+```text
+employee_hse_readiness
+Ready
+↓
+Not Ready
+```
+
+automatically calculated.
+
+لكن historical assignments لا تتغير retroactively.
+
+---
+
+# 68. Readiness Snapshot
+
+نحتاج snapshot وقت deployment:
+
+## deployment_readiness_snapshot
+
+```text
+deployment_readiness_snapshot_id PK
+
+assignment_id FK
+employee_id FK
+
+snapshot_datetime
+
+medical_status
+certification_status
+ppe_status
+restriction_status
+
+overall_status
+
+rule_version
+```
+
+لأغراض Audit.
+
+---
+
+# 69. J14 — Exposure Monitoring
+
+مهم للfield workforce.
+
+## occupational_exposure_type
+
+```text
+occupational_exposure_type_id PK
+
+exposure_code
+exposure_name
+
+hazard_category
+
+measurement_unit nullable
+
+surveillance_required_flag
+
+threshold_rule_id FK nullable
+```
+
+---
+
+# 70. Exposure Examples
+
+```text
+Noise
+Heat
+Dust
+Chemical
+Radiation
+Vibration
+Driving Hours
+Manual Handling
+High Altitude
+Confined Space
+```
+
+---
+
+# 71. Employee Exposure Record
+
+## employee_exposure_record
+
+```text
+employee_exposure_record_id PK
+
+employee_id FK
+
+exposure_type_id FK
+
+project_id FK
+location_id FK
+
+exposure_date
+
+exposure_value nullable
+exposure_duration_minutes nullable
+
+measurement_source
+
+threshold_exceeded_flag
+
+medical_followup_required
+
+incident_reference_id FK nullable
+```
+
+---
+
+# 72. Exposure Summary
+
+## employee_exposure_summary
+
+```text
+employee_exposure_summary_id PK
+
+employee_id FK
+exposure_type_id FK
+
+period_start
+period_end
+
+total_exposure
+maximum_exposure
+threshold_exceedance_count
+
+risk_status
+
+generated_at
+```
+
+---
+
+# 73. Trigger Medical Surveillance
+
+مثلاً:
+
+```text
+Noise exposure > threshold
+↓
+Medical Surveillance Event
+```
+
+أو:
+
+```text
+Heat exposure incident
+↓
+Occupational Health Review
+```
+
+---
+
+# 74. J15 — Safety Exception
+
+أحيانًا requirement ناقص ولكن يوجد approved exception.
+
+لكن safety exception يجب أن يكون أكثر تشددًا من HR compliance exception.
+
+## safety_readiness_exception
+
+```text
+safety_readiness_exception_id PK
+
+employee_id FK
+
+requirement_id FK
+
+assignment_id FK
+
+exception_reason
+
+risk_assessment_reference
+
+mitigation
+
+valid_from
+valid_until
+
+requested_by
+
+approved_by
+
+approval_status
+
+status
+```
+
+---
+
+# 75. Hard-Block Requirements
+
+بعض requirements لا يجب أن تسمح exception بسهولة:
+
+```text
+Medical Unfit
+Critical PPE Missing
+Required Legal License Missing
+Serious Active Restriction
+```
+
+هذه policy-configurable.
+
+---
+
+# 76. Safety Hold
+
+## employee_safety_hold
+
+```text
+employee_safety_hold_id PK
+
+employee_id FK
+
+hold_type
+
+source_type
+source_entity_id
+
+hold_reason
+
+blocks_deployment
+blocks_specific_activity
+blocks_specific_location
+
+start_at
+end_at nullable
+
+status
+
+released_by nullable
+```
+
+---
+
+# 77. Hold Types
+
+```text
+Medical
+Incident
+PPE
+Certification
+Exposure
+Investigation
+Regulatory
+Customer
+```
+
+---
+
+# 78. Incident → HR Case
+
+إذا incident يشير إلى:
+
+```text
+Safety misconduct
+Negligence
+Policy violation
+Intentional bypass
+```
+
+Cluster J يرسل:
+
+```text
+hse_employee_violation.referral
+```
+
+إلى Cluster E.
+
+Cluster E يحقق.
+
+Cluster J لا يصدر disciplinary action.
+
+---
+
+# 79. Incident → Insurance
+
+لو injury:
+
+```text
+Cluster J
+Employee Injury
+↓
+Cluster G
+Insurance / Benefits
+```
+
+قد ينتج:
+
+```text
+Medical Insurance Claim
+Life / Accident Insurance
+```
+
+لكن claim administration إذا موجود في benefits module يكون هناك.
+
+---
+
+# 80. Incident → Final Settlement
+
+في حالة fatality أو separation:
+
+```text
+Cluster J
+Incident / Fatality
+↓
+Cluster H
+Special Offboarding
+```
+
+كما اتفقنا في death case.
+
+---
+
+# 81. Fatality Handling
+
+Cluster J يحتفظ:
+
+```text
+fatality_flag
+incident_reference
+employee impact
+```
+
+Cluster H يدير:
+
+```text
+Death Separation Case
+Next of Kin
+Settlement
+Insurance
+Archive
+```
+
+---
+
+# 82. PPE Inspection
+
+إذا بعض PPE تحتاج inspection:
+
+## ppe_inspection_record
+
+```text
+ppe_inspection_record_id PK
+
+employee_ppe_compliance_id FK
+
+inspection_date
+
+inspection_result
+
+inspected_by
+
+next_inspection_date nullable
+
+asset_reference_id FK nullable
+```
+
+---
+
+# 83. Inspection Result
+
+```text
+Pass
+Pass with Observation
+Fail
+Replace
+Repair
+```
+
+---
+
+# 84. Training Readiness
+
+Cluster J يقرأ من F:
+
+```text
+Required Training
+Completion
+Validity
+```
+
+وينتج:
+
+```text
+training_ready_flag
+```
+
+---
+
+# 85. Safety Competency
+
+مهم التفريق:
+
+```text
+Course Completed
+≠
+Safety Competent
+```
+
+إذا policy تتطلب practical assessment:
+
+Cluster F يملك assessment.
+
+Cluster J يستخدم النتيجة.
+
+---
+
+# 86. Customer-Specific Readiness
+
+بعض العملاء قد يطلبون:
+
+```text
+Medical
+Site Induction
+Customer ID
+Safety Pass
+Working at Heights
+Specific PPE
+```
+
+نربطها بـ:
+
+```text
+customer_id
+project_id
+```
+
+---
+
+# 87. Shift Readiness
+
+Night shift قد يتطلب قيودًا مختلفة.
+
+نعمل assignment context:
+
+```text
+shift_type
+```
+
+في deployment assessment.
+
+---
+
+# 88. Remote Site Readiness
+
+Remote Site قد يطلب:
+
+```text
+Medical Fit
+Emergency Response Training
+First Aid
+Travel Clearance
+Accommodation Fitness
+```
+
+يمكن تمثيلها كrequirement profile.
+
+---
+
+# 89. Safety Requirement Profile
+
+## safety_requirement_profile
+
+```text
+safety_requirement_profile_id PK
+
+profile_code
+profile_name
+
+profile_scope
+
+active_flag
+```
+
+ثم:
+
+## safety_requirement_profile_item
+
+```text
+safety_requirement_profile_item_id PK
+
+safety_requirement_profile_id FK
+
+requirement_type
+
+source_entity_id
+
+mandatory_flag
+
+blocking_flag
+```
+
+مثلاً:
+
+```text
+Tower Worker Profile
+Remote Site Engineer Profile
+Driver Profile
+Electrical Technician Profile
+```
+
+---
+
+# 90. Health / Safety Case Timeline
+
+يمكن بناء Timeline:
+
+```text
+01-Aug Incident
+01-Aug First Aid
+02-Aug Medical Assessment
+02-Aug Temporarily Unfit
+05-Aug Fit with Restrictions
+05-Aug Modified Duty
+15-Aug RTW Review
+20-Aug Full Duty
+```
+
+---
+
+# 91. Dashboard — Occupational Health
+
+```text
+Employees Under Surveillance
+Medical Reviews Due
+Overdue Medical Surveillance
+
+Fit
+Fit with Restrictions
+Temporarily Unfit
+
+Active Work Restrictions
+Restrictions Expiring Soon
+
+Return-to-Work Cases
+Long Recovery Cases
+```
+
+---
+
+# 92. Dashboard — Safety Readiness
+
+```text
+Employees Ready for Deployment
+Not Ready
+Ready with Conditions
+
+Missing PPE
+Expired Certifications
+Medical Expired
+Active Restrictions
+Customer Requirements Missing
+
+Readiness by:
+Project
+Customer
+Job
+Location
+```
+
+---
+
+# 93. Dashboard — Incident Employee Impact
+
+```text
+Employees Involved in Incidents
+Injured Employees
+Lost-Time Cases
+Restricted Work Cases
+
+Return-to-Work Duration
+Open Recovery Cases
+
+Incident Impact by:
+Project
+Job
+Activity
+Location
+```
+
+---
+
+# 94. Dashboard — PPE
+
+```text
+Required PPE
+Issued PPE
+Missing PPE
+Expired PPE
+Replacement Due
+Failed Inspection
+
+PPE Compliance %
+```
+
+---
+
+# 95. Dashboard — Exposure
+
+```text
+Employees Exposed
+High Exposure
+Threshold Exceedance
+
+Noise Exposure
+Heat Exposure
+Driving Exposure
+
+Medical Follow-Up Required
+```
+
+---
+
+# 96. Analytics Privacy
+
+P&C Manager قد يرى:
+
+```text
+12 employees on restricted duty
+```
+
+ولا يرى necessarily:
+
+```text
+diagnosis
+medical detail
+```
+
+---
+
+# 97. Security Layers
+
+أقترح:
+
+```text
+S0 Operational Safety
+S1 HSE Internal
+S2 Occupational Health Restricted
+S3 Medical Confidential
+S4 Legal / Incident Restricted
+```
+
+---
+
+# 98. Role Access
+
+### Manager
+
+يرى:
+
+```text
+Ready / Not Ready
+Applicable work restrictions
+PPE gaps
+Deployment eligibility
+RTW work status
+```
+
+---
+
+### HSE
+
+يرى:
+
+```text
+Safety readiness
+Incident involvement
+PPE
+Exposure
+Operational restriction
+```
+
+---
+
+### Occupational Health
+
+يرى:
+
+```text
+Fitness
+Medical surveillance
+Health restrictions
+RTW
+```
+
+---
+
+### HR Operations
+
+يرى:
+
+```text
+Operational readiness
+Absence impact
+Deployment hold
+RTW status
+```
+
+---
+
+### Payroll
+
+يرى فقط approved employment/payroll impact.
+
+---
+
+# 99. Medical Confidentiality
+
+حتى HSE لا يحتاج full medical record.
+
+يفضل:
+
+```text
+Medical Provider
+↓
+Fitness Decision
+↓
+Operational Restriction
+```
+
+بدون كشف clinical details.
+
+---
+
+# 100. AI Layer — Useful
+
+AI يمكن أن يساعد في:
+
+```text
+Identify upcoming safety expiry
+Summarize employee readiness blockers
+Detect missing PPE combinations
+Summarize RTW history
+Detect repeated exposure patterns
+Recommend surveillance review
+Summarize incident employee impact
+Identify project readiness risk
+```
+
+---
+
+# 101. AI Layer — ممنوع
+
+AI لا:
+
+```text
+Declare medical fitness
+Diagnose employee
+Decide permanent work restriction
+Approve exception to critical safety rule
+Determine legal work-related illness
+```
+
+---
+
+# 102. Main ERD
+
+```text
+                        EMPLOYEE
+                           │
+          ┌────────────────┼──────────────────┐
+          ▼                ▼                  ▼
+ OCC HEALTH PROFILE   HSE READINESS       PPE COMPLIANCE
+          │                │                  │
+          ▼                │                  │
+MEDICAL SURVEILLANCE       │                  │
+          │                │                  │
+          ▼                │                  │
+ FITNESS FOR WORK───────────┼──────────────────┘
+          │                 │
+          ▼                 ▼
+ WORK RESTRICTION     DEPLOYMENT GATE
+          │                 │
+          └────────────┬────┘
+                       ▼
+                    PROJECT
+
+HSE INCIDENT
+     │
+     ▼
+EMPLOYEE INVOLVEMENT
+     │
+     ├── Injury
+     ├── Exposure
+     └── Restriction
+             │
+             ▼
+        RECOVERY PLAN
+             │
+             ▼
+        RETURN TO WORK
+             │
+             ▼
+       FULL / MODIFIED DUTY
+```
+
+---
+
+# 103. Core Tables
+
+تقريبًا:
+
+```text
+employee_occupational_health_profile
+
+job_health_risk_profile
+job_health_hazard
+assignment_health_requirement
+
+medical_surveillance_program
+employee_surveillance_enrollment
+medical_surveillance_event
+
+fitness_for_work_assessment
+
+employee_work_restriction
+work_restriction_review
+
+safety_requirement_profile
+safety_requirement_profile_item
+safety_readiness_requirement
+employee_hse_readiness
+
+ppe_type
+role_ppe_requirement
+employee_ppe_compliance
+ppe_inspection_record
+
+hse_incident_reference
+employee_safety_incident
+incident_employee_involvement
+
+employee_injury_record
+occupational_health_case
+
+employee_recovery_plan
+occupational_health_followup
+
+return_to_work_case
+return_to_work_assessment
+phased_return_plan
+phased_return_stage
+temporary_work_assignment
+
+safety_deployment_assessment
+deployment_readiness_snapshot
+
+occupational_exposure_type
+employee_exposure_record
+employee_exposure_summary
+
+safety_readiness_exception
+employee_safety_hold
+```
+
+حوالي **35–40 Table**.
+
+---
+
+# 104. أهم Business Rules
+
+أثبت هذه القواعد:
+
+1. Medical Insurance لا يساوي Occupational Health.
+2. Fitness لا يساوي Safety Readiness.
+3. Course completion لا يساوي operational readiness.
+4. PPE stock ownership ليس داخل Cluster J.
+5. Cluster J يملك PPE compliance فقط.
+6. HSE Incident لا يساوي HR disciplinary case.
+7. Safety misconduct يمكن أن يُحال لـCluster E.
+8. Full clinical data لا تعرض للManager.
+9. Manager يرى restriction المطلوبة فقط.
+10. Work restriction يمكن أن يكون activity-specific.
+11. Assignment change يعيد تقييم readiness.
+12. Expiry يعيد حساب readiness تلقائيًا.
+13. Historical readiness تحفظ snapshot.
+14. Medical surveillance تختلف عن one-time medical exam.
+15. Exposure يمكن أن يطلق medical follow-up.
+16. Employee incident involvement يدعم عدة موظفين للحادث الواحد.
+17. Injury record لا يحول Cluster J إلى medical EMR.
+18. Return-to-work عملية مستقلة عن leave closure.
+19. Fit to return لا يعني necessarily full duty.
+20. Phased return يجب أن يكون effective-dated.
+21. Modified duty يرسل assignment instruction ولا يغير job master.
+22. Lost time لا يحسب payroll impact داخل J.
+23. Safety hold يمكن أن يمنع deployment.
+24. Critical safety requirement يمكن أن يكون non-waivable.
+25. Exceptions لها expiry وموافقة.
+26. AI لا يقرر medical fitness.
+27. HSE system إن وجد يبقى master للحادث.
+28. Cluster J يحتفظ employee-impact projection فقط.
+29. Fatal incident يرتبط بـCluster H.
+30. Certifications remain mastered in Cluster F.
+
+---
+
+# 105. State Machine — Safety Readiness
+
+```text
+Requirements Generated
+↓
+Validation
+↓
+Ready?
+├── Yes
+│    ↓
+│   Ready
+│
+├── Conditional
+│    ↓
+│ Ready with Conditions
+│
+└── No
+     ↓
+ Safety Hold
+     ↓
+ Requirement Completed
+     ↓
+ Reassessment
+```
+
+---
+
+# 106. State Machine — Work Restriction
+
+```text
+Restriction Issued
+↓
+Active
+↓
+Periodic Review
+├── Continue
+├── Modify
+└── Release
+       ↓
+     Closed
+```
+
+---
+
+# 107. State Machine — Incident Employee Impact
+
+```text
+Incident
+↓
+Employee Identified
+↓
+Initial Assessment
+├── No Injury
+├── First Aid
+├── Medical Treatment
+└── Lost / Restricted Time
+         ↓
+   Recovery / Follow-Up
+         ↓
+     RTW Assessment
+         ↓
+      Return to Work
+```
+
+---
+
+# 108. State Machine — Return-to-Work
+
+```text
+RTW Case Created
+↓
+Assessment Required
+↓
+Fitness Review
+├── Not Fit
+│     ↓
+│ Continue Recovery
+│
+├── Fit with Restrictions
+│     ↓
+│ Modified Duty
+│     ↓
+│ Review
+│
+└── Full Fit
+      ↓
+   Full Duty
+      ↓
+    Closed
+```
+
+---
+
+# 109. أهم Architectural Principle
+
+أريد تثبيت السلسلة التالية:
+
+> **Hazard ≠ Exposure ≠ Incident ≠ Injury ≠ Medical Condition ≠ Work Restriction ≠ Fitness ≠ Safety Readiness**
+
+هذه مفاهيم مختلفة ويجب ألا تختزل في:
+
+```text
+employee_hse_status
+```
+
+واحدة فقط.
+
+---
+
+# 110. النتيجة بعد Cluster J
+
+أصبح النظام يستطيع الإجابة عن سيناريو مثل:
+
+```text
+Employee:
+Field Supervisor
+
+Project:
+Remote FTTH site
+
+Requirements:
+Medical fitness
+Working at Height
+Customer induction
+Helmet
+Safety shoes
+Harness
+
+Current:
+Medical = Valid
+WAH = Valid
+Customer = Valid
+Helmet = Valid
+Safety shoes = Valid
+Harness = Missing
+
+Result:
+Not Ready for Deployment
+```
+
+وبمجرد إصدار Harness:
+
+```text
+Asset Event
+↓
+PPE Compliance Updated
+↓
+Safety Readiness Recalculated
+↓
+Ready
+```
+
+وسيناريو آخر:
+
+```text
+Employee injured at site
+↓
+Incident
+↓
+Temporarily Unfit
+↓
+Medical Leave
+↓
+RTW Assessment
+↓
+Fit with No Height Work
+↓
+Temporary Office Assignment
+↓
+Follow-Up
+↓
+Full Duty
+```
+
+وهنا لدينا lifecycle كامل بدون أن نحول HR إلى HSE platform ضخم.
+
+**الخطوة التالية المنطقية الآن هي Cluster K — HR Master Data Migration, External Integrations, Interface Management, Data Quality, Reconciliation, Import/Export, Integration Monitoring & System-of-Record Governance ERD**؛ لأن معظم الـbusiness domains الأساسية أصبحت موجودة، وبالتالي يجب أن نبني الطبقة التي تربط `ERP / Finance / Banks / Attendance Devices / Customer Platforms / HSE / Insurance Providers / Active Directory / Email / Project Systems` وتمنع ظهور نسخ متضاربة من نفس البيانات داخل النظام.

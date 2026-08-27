@@ -1,0 +1,2964 @@
+بالضبط. **Cluster N** هو الـruntime backbone الذي يمنع النظام من التحول إلى مجموعة Modules مرتبطة ببعضها بشكل مباشر ومعقد.
+
+الفكرة الأساسية هنا:
+
+> **كل Domain يملك بياناته ومنطقه، ويتعامل مع بقية النظام عبر Contracts واضحة: APIs + Events + Commands + Background Jobs، وليس من خلال القراءة أو الكتابة المباشرة في جداول Domain آخر.**
+
+وده مهم جدًا عندنا لأن العمليات الحالية نفسها cross-functional بطبيعتها: onboarding مثلًا ينتقل بين Talent Acquisition وPersonnel وIT وHSE وOperations، وoffboarding يحتاج Personnel وIT وFinance وDirect Manager، بينما Payroll يعتمد على بيانات معتمدة من عدة مصادر. 
+
+# Cluster N — Enterprise Runtime & Integration Backbone
+
+أقسمه إلى **17 Sub-Domains**:
+
+```text
+N1   API Gateway & API Registry
+N2   Service / Domain Registry
+N3   API Contracts & Versioning
+N4   Authentication & Service Identity
+N5   API Authorization & Scope Management
+N6   Rate Limiting / Quotas / Throttling
+N7   Domain Events
+N8   Event Bus / Topics / Subscriptions
+N9   Outbox / Inbox Pattern
+N10  Idempotency & Duplicate Protection
+N11  Webhooks
+N12  Background Processing & Job Queues
+N13  Workflow / Saga Orchestration
+N14  Distributed Transaction Compensation
+N15  Retry / Dead Letter / Failure Handling
+N16  Integration Security
+N17  Technical Observability & Runtime Governance
+```
+
+---
+
+# 1. Architectural Boundary
+
+أهم قاعدة في Cluster N:
+
+```text
+Attendance Module
+      ❌
+SELECT *
+FROM PayrollTables
+```
+
+ممنوع.
+
+الصحيح:
+
+```text
+Attendance Domain
+      |
+      | AttendanceApproved Event
+      v
+Event Bus
+      |
+      v
+Payroll Domain
+```
+
+أو:
+
+```text
+Payroll
+   |
+   | Employee Compensation API
+   v
+Compensation Domain
+```
+
+---
+
+# 2. أنواع الاتصال داخل النظام
+
+لا نستخدم نوعًا واحدًا لكل شيء.
+
+نحتاج 4 أنماط:
+
+```text
+Synchronous API
+Asynchronous Event
+Command / Queue
+Scheduled Job
+```
+
+## Synchronous API
+
+عندما نحتاج إجابة الآن:
+
+```text
+Get Employee
+Get Leave Balance
+Validate Project
+Check Permission
+```
+
+## Event
+
+عندما حدث شيء بالفعل:
+
+```text
+EmployeeActivated
+LeaveApproved
+PayrollCompleted
+EmployeeSeparated
+```
+
+## Command
+
+عندما نطلب من Domain تنفيذ شيء:
+
+```text
+GeneratePayslip
+DeactivateEmployeeAccess
+CreateBankBatch
+SendNotification
+```
+
+## Scheduled Job
+
+للمعالجة الزمنية:
+
+```text
+Leave Accrual
+Document Expiry Scan
+Payroll Validation
+Integration Reconciliation
+```
+
+---
+
+# N1. Domain / Service Registry
+
+حتى لو بدأنا Modular Monolith، أنصح من الآن بتسجيل الحدود المنطقية للـservices.
+
+### `service_definition`
+
+```text
+service_definition
+------------------
+service_id PK
+
+service_code UNIQUE
+service_name
+
+domain_code
+
+service_type
+  DOMAIN_SERVICE
+  PLATFORM_SERVICE
+  INTEGRATION_SERVICE
+  ANALYTICS_SERVICE
+
+deployment_mode
+  MODULE
+  MICROSERVICE
+  EXTERNAL
+
+owner_team
+
+criticality
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+
+base_path
+
+health_endpoint
+
+status
+
+created_at
+updated_at
+```
+
+مثال:
+
+```text
+EMPLOYEE_CORE
+ATTENDANCE
+LEAVE
+PAYROLL
+RECRUITMENT
+NOTIFICATIONS
+WORKFLOW
+INTEGRATION
+ANALYTICS
+IDENTITY
+```
+
+---
+
+# N2. Service Environment
+
+### `service_environment`
+
+```text
+service_environment
+-------------------
+service_environment_id PK
+
+service_id FK
+environment_id FK
+
+endpoint_url
+
+version
+
+deployment_status
+
+instance_count
+
+region
+
+status
+```
+
+---
+
+# 3. API Gateway
+
+كل External وMobile وFrontend access يجب أن يمر من Gateway.
+
+```text
+Web App
+Mobile App
+External ERP
+Customer Platform
+       |
+       v
+   API Gateway
+       |
+       +---- Identity
+       +---- Employee
+       +---- Attendance
+       +---- Payroll
+       +---- Expense
+       +---- Reporting
+```
+
+---
+
+# N3. API Definition
+
+### `api_definition`
+
+```text
+api_definition
+--------------
+api_id PK
+
+service_id FK
+
+api_code
+api_name
+
+api_type
+  REST
+  GRAPHQL
+  GRPC
+
+base_route
+
+visibility
+  INTERNAL
+  PARTNER
+  PUBLIC
+
+authentication_required
+
+status
+```
+
+---
+
+# N4. API Endpoint
+
+### `api_endpoint`
+
+```text
+api_endpoint
+------------
+api_endpoint_id PK
+
+api_id FK
+
+http_method
+
+route_template
+
+operation_code
+
+description
+
+request_schema_id FK NULL
+response_schema_id FK NULL
+
+required_scope
+
+timeout_ms
+
+cache_policy_id FK NULL
+
+status
+```
+
+مثال:
+
+```text
+GET /employees/{id}
+
+POST /leave-requests
+
+POST /payroll-runs/{id}/approve
+```
+
+---
+
+# 4. Contract First
+
+لا أنصح أن تكون الـAPI مجرد Controller code.
+
+نحتاج Contract registry.
+
+### `contract_definition`
+
+```text
+contract_definition
+-------------------
+contract_id PK
+
+contract_code
+
+contract_type
+  API_REQUEST
+  API_RESPONSE
+  EVENT
+  COMMAND
+  WEBHOOK
+
+domain_code
+
+schema_format
+  JSON_SCHEMA
+  OPENAPI
+  PROTOBUF
+
+current_version
+
+status
+```
+
+---
+
+# N5. Contract Version
+
+### `contract_version`
+
+```text
+contract_version
+----------------
+contract_version_id PK
+
+contract_id FK
+
+version
+
+schema_definition
+
+compatibility_mode
+  BACKWARD
+  FORWARD
+  FULL
+  NONE
+
+effective_from
+
+deprecated_at NULL
+sunset_at NULL
+
+status
+
+approved_by
+```
+
+---
+
+# أهم Rule
+
+إذا عدلنا Event:
+
+```text
+EmployeeActivated
+```
+
+من:
+
+```json
+{
+  "employeeId": 1001,
+  "companyId": 5
+}
+```
+
+إلى:
+
+```json
+{
+  "employeeId": 1001,
+  "companyId": 5,
+  "projectId": 70
+}
+```
+
+لا نكسر consumers القديمة.
+
+---
+
+# 5. API Versioning
+
+ندعم:
+
+```text
+/api/v1/employees
+/api/v2/employees
+```
+
+لكن لا نحتفظ بـ20 version للأبد.
+
+### `api_version`
+
+```text
+api_version
+-----------
+api_version_id PK
+
+api_id FK
+
+version
+
+released_at
+deprecated_at
+sunset_at
+
+compatibility_notes
+
+status
+```
+
+---
+
+# N6. API Consumer
+
+### `api_consumer`
+
+```text
+api_consumer
+------------
+api_consumer_id PK
+
+tenant_id NULL
+
+consumer_name
+
+consumer_type
+  FRONTEND
+  MOBILE
+  INTERNAL_SERVICE
+  ERP
+  BANK
+  CUSTOMER
+  PARTNER
+
+client_id
+
+owner
+
+status
+```
+
+---
+
+# 6. Machine-to-Machine Identity
+
+User authentication وحده غير كافٍ.
+
+نحتاج Service Identity.
+
+### `service_identity`
+
+```text
+service_identity
+----------------
+service_identity_id PK
+
+service_id FK
+
+client_id
+
+credential_type
+  CLIENT_SECRET
+  CERTIFICATE
+  MANAGED_IDENTITY
+  JWT
+
+secret_reference
+
+certificate_thumbprint NULL
+
+valid_from
+valid_to
+
+status
+```
+
+ولا نخزن secret نفسه.
+
+---
+
+# N7. Service Scope
+
+### `service_scope`
+
+```text
+service_scope
+-------------
+scope_id PK
+
+scope_code
+
+scope_name
+
+resource_domain
+
+risk_level
+
+status
+```
+
+مثال:
+
+```text
+employee.read
+employee.write
+payroll.read
+payroll.execute
+payroll.approve
+integration.write
+```
+
+---
+
+### `service_scope_assignment`
+
+```text
+service_scope_assignment
+------------------------
+assignment_id PK
+
+service_identity_id FK
+scope_id FK
+
+environment_id
+
+effective_from
+effective_to
+
+status
+```
+
+---
+
+# 7. API Rate Limiting
+
+### `api_rate_limit_policy`
+
+```text
+api_rate_limit_policy
+---------------------
+rate_limit_policy_id PK
+
+api_consumer_id FK NULL
+api_endpoint_id FK NULL
+
+limit_count
+window_seconds
+
+burst_limit
+
+action_on_exceed
+  REJECT
+  THROTTLE
+
+status
+```
+
+---
+
+# N8. API Request Log
+
+لا نسجل sensitive payload كاملًا.
+
+### `api_request_log`
+
+```text
+api_request_log
+---------------
+request_log_id PK
+
+correlation_id
+trace_id
+
+api_endpoint_id
+
+consumer_id
+
+tenant_id
+
+request_timestamp
+
+response_timestamp
+
+duration_ms
+
+http_status
+
+request_size
+response_size
+
+client_ip
+
+error_code NULL
+```
+
+---
+
+# 8. Domain Events
+
+هذه من أهم مناطق Cluster N.
+
+الـEvent ليس:
+
+> أمر لشيء أن يحدث.
+
+الـEvent يعني:
+
+> شيء حدث بالفعل.
+
+---
+
+# N9. Domain Event Definition
+
+### `event_definition`
+
+```text
+event_definition
+----------------
+event_definition_id PK
+
+event_code UNIQUE
+
+event_name
+
+producer_service_id FK
+
+domain_code
+
+contract_id FK
+
+delivery_guarantee
+  AT_LEAST_ONCE
+  AT_MOST_ONCE
+
+ordering_required
+
+contains_sensitive_data
+
+retention_hours
+
+status
+```
+
+---
+
+# Event Naming
+
+أفضل:
+
+```text
+Employee.Created
+Employee.Activated
+Employee.AssignmentChanged
+
+Attendance.DayApproved
+
+Leave.RequestApproved
+
+Payroll.RunCompleted
+
+Employee.SeparationCompleted
+```
+
+وليس:
+
+```text
+UpdateEmployeeEvent
+ProcessPayrollEvent
+```
+
+---
+
+# N10. Event Topic
+
+### `event_topic`
+
+```text
+event_topic
+-----------
+topic_id PK
+
+topic_code
+
+topic_name
+
+partition_strategy
+
+partition_count
+
+retention_hours
+
+dead_letter_topic_id FK NULL
+
+status
+```
+
+---
+
+# N11. Event Publication Mapping
+
+```text
+event_publication
+-----------------
+event_publication_id PK
+
+event_definition_id FK
+topic_id FK
+
+routing_key
+
+partition_key_expression
+
+status
+```
+
+---
+
+# N12. Event Subscription
+
+```text
+event_subscription
+------------------
+subscription_id PK
+
+topic_id FK
+
+consumer_service_id FK
+
+event_definition_id FK NULL
+
+consumer_group
+
+filter_expression NULL
+
+max_concurrency
+
+retry_policy_id FK
+
+dead_letter_enabled
+
+status
+```
+
+---
+
+# Example
+
+```text
+Employee.Activated
+        |
+        v
+employee-events
+        |
+        +---- Payroll
+        +---- Attendance
+        +---- Benefits
+        +---- Identity
+        +---- Analytics
+```
+
+وهذا أفضل من:
+
+```text
+Employee Service
+calls
+Payroll
+Attendance
+Benefits
+Identity
+Analytics
+```
+
+خمس calls متتابعة.
+
+---
+
+# 9. Event Envelope
+
+كل event يجب أن يحمل Metadata موحدة.
+
+```json
+{
+  "eventId": "uuid",
+  "eventType": "Employee.Activated",
+  "eventVersion": "1.0",
+  "occurredAt": "...",
+  "tenantId": "...",
+  "companyId": "...",
+  "correlationId": "...",
+  "causationId": "...",
+  "producer": "employee-service",
+  "data": {}
+}
+```
+
+---
+
+# N13. Event Message Registry
+
+### `event_message`
+
+```text
+event_message
+-------------
+event_message_id PK
+
+event_id UNIQUE
+
+event_definition_id FK
+
+topic_id FK
+
+tenant_id
+
+correlation_id
+causation_id
+
+partition_key
+
+published_at
+
+payload_reference
+
+status
+```
+
+عادة لن نخزن bus بالكامل في DB للأبد، لكن metadata مفيدة للـtraceability.
+
+---
+
+# 10. Transactional Outbox
+
+هذه نقطة critical.
+
+مثال:
+
+الموظف أصبح Active.
+
+لو نفذنا:
+
+```text
+1 Update Employee = ACTIVE
+2 Send Event
+```
+
+قد يحدث:
+
+```text
+DB succeeded
+Bus failed
+```
+
+فتصبح البيانات active لكن Payroll لا يعرف.
+
+الحل:
+
+```text
+Employee Transaction
+   |
+   +--- Update Employee
+   +
+   +--- Insert Outbox Event
+           SAME DB TRANSACTION
+```
+
+---
+
+# N14. Outbox Message
+
+### `outbox_message`
+
+```text
+outbox_message
+--------------
+outbox_message_id PK
+
+event_id UNIQUE
+
+aggregate_type
+aggregate_id
+
+event_type
+event_version
+
+tenant_id
+
+payload_json
+
+occurred_at
+
+published_at NULL
+
+publish_attempts
+
+status
+  PENDING
+  PUBLISHED
+  FAILED
+```
+
+---
+
+# 11. Consumer Inbox
+
+ولأن delivery عادة:
+
+```text
+At Least Once
+```
+
+قد يصل نفس Event مرتين.
+
+الحل:
+
+### `inbox_message`
+
+```text
+inbox_message
+-------------
+inbox_message_id PK
+
+consumer_service_id
+
+event_id
+
+received_at
+processed_at
+
+processing_status
+
+attempt_count
+
+error_details
+
+UNIQUE(
+ consumer_service_id,
+ event_id
+)
+```
+
+---
+
+# 12. Idempotency
+
+خصوصًا POST APIs.
+
+مثال:
+
+```text
+POST /expense/payments
+```
+
+الـnetwork timeout يحدث.
+
+العميل يعيد الطلب.
+
+بدون idempotency قد يتم الدفع مرتين.
+
+---
+
+# N15. Idempotency Record
+
+### `idempotency_record`
+
+```text
+idempotency_record
+------------------
+idempotency_record_id PK
+
+consumer_id
+
+idempotency_key
+
+operation_code
+
+request_hash
+
+response_status
+response_reference
+
+created_at
+expires_at
+
+status
+
+UNIQUE(
+ consumer_id,
+ idempotency_key
+)
+```
+
+---
+
+# Idempotent operations مهمة في:
+
+```text
+Payroll Posting
+Bank Transfer
+Expense Reimbursement
+Benefit Enrollment
+Employee Creation
+Invoice/ERP Posting
+```
+
+---
+
+# 13. Commands
+
+Event:
+
+```text
+EmployeeSeparated
+```
+
+Command:
+
+```text
+DeactivateEmployeeAccess
+```
+
+### `command_definition`
+
+```text
+command_definition
+------------------
+command_definition_id PK
+
+command_code
+
+producer_domain
+consumer_service_id
+
+contract_id FK
+
+timeout_seconds
+
+status
+```
+
+---
+
+# N16. Command Queue
+
+```text
+command_queue_definition
+------------------------
+queue_id PK
+
+queue_code
+
+queue_name
+
+consumer_service_id
+
+max_delivery_count
+
+visibility_timeout_seconds
+
+dead_letter_queue_id FK
+
+status
+```
+
+---
+
+# N17. Command Message
+
+```text
+command_message
+---------------
+command_message_id PK
+
+command_id
+
+command_definition_id
+
+queue_id
+
+tenant_id
+
+correlation_id
+
+payload_reference
+
+created_at
+processed_at
+
+status
+```
+
+---
+
+# 14. Webhooks
+
+للأنظمة الخارجية.
+
+مثال:
+
+```text
+Customer system wants EmployeeActivated
+Bank wants PayrollBatchReady
+ERP wants ProjectCostPosted
+```
+
+---
+
+# N18. Webhook Endpoint
+
+### `webhook_endpoint`
+
+```text
+webhook_endpoint
+----------------
+webhook_endpoint_id PK
+
+tenant_id
+
+consumer_name
+
+endpoint_url
+
+authentication_type
+
+secret_reference
+
+signing_algorithm
+
+status
+```
+
+---
+
+# N19. Webhook Subscription
+
+```text
+webhook_subscription
+--------------------
+webhook_subscription_id PK
+
+webhook_endpoint_id FK
+event_definition_id FK
+
+filter_expression
+
+contract_version
+
+status
+```
+
+---
+
+# N20. Webhook Delivery
+
+```text
+webhook_delivery
+----------------
+webhook_delivery_id PK
+
+subscription_id
+
+event_id
+
+delivery_attempt
+
+requested_at
+responded_at
+
+http_status
+
+duration_ms
+
+next_retry_at
+
+status
+  PENDING
+  DELIVERED
+  RETRY
+  FAILED
+  DEAD
+```
+
+---
+
+# Webhook Security
+
+يجب دعم:
+
+```text
+HTTPS only
+HMAC Signature
+Timestamp
+Nonce
+Replay Protection
+Secret Rotation
+IP Allow List optional
+```
+
+---
+
+# 15. Webhook Signature
+
+مثال:
+
+```text
+X-HR-Signature
+X-HR-Timestamp
+X-HR-Event-ID
+```
+
+الطرف الآخر يتحقق من:
+
+```text
+HMAC_SHA256(
+ timestamp + "." + payload,
+ secret
+)
+```
+
+---
+
+# 16. Background Job Architecture
+
+الـjobs نوعان مختلفان:
+
+```text
+Scheduled Job
+Queued Background Task
+```
+
+لا نخلطهما.
+
+---
+
+# N21. Background Job Definition
+
+### `background_job_definition`
+
+```text
+background_job_definition
+-------------------------
+background_job_definition_id PK
+
+job_code
+
+service_id
+
+execution_type
+  SCHEDULED
+  QUEUED
+  EVENT_TRIGGERED
+
+handler_name
+
+priority
+
+timeout_seconds
+
+max_retry_count
+
+concurrency_limit
+
+status
+```
+
+---
+
+# N22. Background Job Instance
+
+```text
+background_job_instance
+-----------------------
+job_instance_id PK
+
+background_job_definition_id
+
+tenant_id
+
+correlation_id
+
+payload_reference
+
+queued_at
+started_at
+completed_at
+
+attempt_count
+
+status
+
+error_reference
+```
+
+---
+
+# Important Jobs
+
+```text
+Leave Accrual Calculation
+Attendance Daily Aggregation
+Payroll Pre-validation
+Payslip Generation
+Document Expiry Scan
+Notification Dispatch
+Bank File Generation
+Analytics Extraction
+Integration Reconciliation
+```
+
+---
+
+# 17. Long-Running Processes
+
+Onboarding لا يحدث في transaction واحدة.
+
+قد يستغرق:
+
+```text
+20+ days
+```
+
+كما يظهر في الـManual في بعض HSE/orientation timelines. 
+
+لذلك لا نستخدم distributed DB transaction.
+
+نستخدم:
+
+> **Saga / Process Manager**
+
+---
+
+# N23. Saga Definition
+
+### `saga_definition`
+
+```text
+saga_definition
+---------------
+saga_definition_id PK
+
+saga_code
+
+saga_name
+
+business_process
+
+version
+
+orchestration_mode
+  ORCHESTRATED
+  CHOREOGRAPHED
+
+status
+```
+
+---
+
+# N24. Saga Step
+
+```text
+saga_step_definition
+--------------------
+saga_step_id PK
+
+saga_definition_id
+
+sequence_no
+
+step_code
+step_name
+
+action_type
+  COMMAND
+  API
+  WAIT_EVENT
+
+action_reference
+
+compensation_action_reference
+
+timeout_seconds
+
+retry_policy_id
+
+status
+```
+
+---
+
+# N25. Saga Instance
+
+```text
+saga_instance
+-------------
+saga_instance_id PK
+
+saga_definition_id
+
+tenant_id
+
+business_object_type
+business_object_id
+
+correlation_id
+
+current_step
+
+started_at
+completed_at
+
+status
+  RUNNING
+  COMPLETED
+  COMPENSATING
+  FAILED
+```
+
+---
+
+# N26. Saga Execution
+
+```text
+saga_step_execution
+-------------------
+saga_step_execution_id PK
+
+saga_instance_id
+saga_step_id
+
+attempt_no
+
+started_at
+completed_at
+
+status
+
+result_reference
+error_reference
+```
+
+---
+
+# Example — Employee Activation Saga
+
+```text
+Offer Accepted
+      ↓
+Create Personnel Record
+      ↓
+Generate HR Code
+      ↓
+Create User Identity
+      ↓
+Register Payroll
+      ↓
+Register Benefits
+      ↓
+Request IT Access
+      ↓
+Verify HSE Clearance
+      ↓
+Employee Activated
+```
+
+لكن لو:
+
+```text
+HSE Clearance = FAILED
+```
+
+لا نحاول rollback لكل شيء كأنها SQL transaction.
+
+ننفذ business compensation:
+
+```text
+Employee status = PENDING_CLEARANCE
+Disable deployment
+Keep HR record
+Do not include in payroll
+```
+
+وهذا يتماشى مع قاعدة الـManual بأن safety-sensitive roles لا يتم deployment لها قبل اكتمال medical/HSE/certifications. 
+
+---
+
+# 18. Compensation Pattern
+
+### `compensation_action`
+
+```text
+compensation_action
+-------------------
+compensation_action_id PK
+
+saga_step_id
+
+action_code
+
+handler_reference
+
+compensation_order
+
+requires_manual_approval
+
+status
+```
+
+---
+
+# 19. Retry Policy
+
+ليس كل failure يُعالج بنفس الطريقة.
+
+### `retry_policy`
+
+```text
+retry_policy
+------------
+retry_policy_id PK
+
+policy_code
+
+max_attempts
+
+initial_delay_ms
+
+backoff_strategy
+  FIXED
+  LINEAR
+  EXPONENTIAL
+
+backoff_multiplier
+
+max_delay_ms
+
+jitter_enabled
+
+retryable_errors_json
+
+status
+```
+
+---
+
+# Example
+
+Database timeout:
+
+```text
+Retry
+```
+
+Invalid employee:
+
+```text
+Do NOT retry
+```
+
+401 authentication failure:
+
+```text
+Credential refresh
+then retry
+```
+
+---
+
+# 20. Dead Letter Queue
+
+### `dead_letter_message`
+
+```text
+dead_letter_message
+-------------------
+dead_letter_message_id PK
+
+source_type
+  EVENT
+  COMMAND
+  WEBHOOK
+  JOB
+
+source_reference_id
+
+tenant_id
+
+original_message_reference
+
+failure_reason
+
+attempt_count
+
+moved_at
+
+resolution_status
+  OPEN
+  REPLAYED
+  DISCARDED
+  MANUAL_RESOLUTION
+
+resolved_by
+resolved_at
+```
+
+---
+
+# 21. Replay Governance
+
+إعادة event قد تكون خطيرة.
+
+مثلاً:
+
+```text
+PayrollPaid
+```
+
+لا نريد replay فيتكرر posting.
+
+### `message_replay_request`
+
+```text
+message_replay_request
+----------------------
+replay_request_id PK
+
+message_type
+message_reference
+
+reason
+
+requested_by
+
+risk_level
+
+approval_required
+approved_by
+
+replayed_at
+
+status
+```
+
+---
+
+# 22. Correlation & Causation
+
+من أهم الأشياء في نظام بهذا الحجم.
+
+مثال:
+
+```text
+Hiring Request
+   |
+   v
+Offer
+   |
+   v
+Employee
+   |
+   v
+Activation
+```
+
+كلهم يجب أن يحملوا:
+
+```text
+correlation_id
+```
+
+ولو Event تسبب في Event آخر:
+
+```text
+causation_id
+```
+
+---
+
+# Example
+
+```text
+Correlation ID:
+HRFLOW-8FA291
+
+HiringApproved
+      |
+      v
+OfferCreated
+      |
+      v
+OfferAccepted
+      |
+      v
+OnboardingStarted
+```
+
+يمكننا رؤية الرحلة كاملة.
+
+---
+
+# 23. Distributed Lock
+
+بعض العمليات تحتاج locking منطقي.
+
+مثال:
+
+```text
+Payroll run
+Leave accrual
+Sequence generation
+Employee activation
+```
+
+### `distributed_lock`
+
+```text
+distributed_lock
+----------------
+lock_key PK
+
+owner_instance
+
+acquired_at
+expires_at
+
+fencing_token
+
+status
+```
+
+---
+
+# 24. Integration Security Policy
+
+### `integration_security_policy`
+
+```text
+integration_security_policy
+---------------------------
+security_policy_id PK
+
+consumer_id
+
+authentication_method
+
+mTLS_required
+
+ip_allowlist_required
+
+payload_encryption_required
+
+signature_required
+
+max_token_lifetime_minutes
+
+certificate_rotation_days
+
+status
+```
+
+---
+
+# 25. Secret Reference
+
+Cluster L يدير configuration، لكن N يحتاج runtime secret reference.
+
+### `secret_reference`
+
+```text
+secret_reference
+----------------
+secret_reference_id PK
+
+secret_code
+
+secret_provider
+  VAULT
+  CLOUD_SECRET_MANAGER
+  HSM
+
+provider_reference
+
+rotation_policy
+
+last_rotated_at
+
+next_rotation_due
+
+status
+```
+
+ولا:
+
+```text
+api_password = "123456"
+```
+
+داخل Database.
+
+---
+
+# 26. Certificate Registry
+
+### `integration_certificate`
+
+```text
+integration_certificate
+-----------------------
+certificate_id PK
+
+owner_type
+owner_id
+
+thumbprint
+
+issuer
+
+valid_from
+valid_to
+
+secret_reference_id
+
+rotation_status
+
+status
+```
+
+---
+
+# 27. Observability Architecture
+
+نحتاج 3 أنواع أساسية:
+
+```text
+Logs
+Metrics
+Traces
+```
+
+ثم فوقهم:
+
+```text
+Alerts
+SLO
+Incident Management
+```
+
+---
+
+# N27. Technical Service Metric
+
+### `service_metric_definition`
+
+```text
+service_metric_definition
+-------------------------
+metric_definition_id PK
+
+service_id
+
+metric_code
+
+metric_type
+  COUNTER
+  GAUGE
+  HISTOGRAM
+
+unit
+
+description
+
+status
+```
+
+أمثلة:
+
+```text
+request_count
+request_duration_ms
+error_rate
+queue_depth
+consumer_lag
+job_failures
+```
+
+---
+
+# N28. Service Health Snapshot
+
+### `service_health_snapshot`
+
+```text
+service_health_snapshot
+-----------------------
+health_snapshot_id PK
+
+service_id
+environment_id
+
+health_status
+  HEALTHY
+  DEGRADED
+  UNAVAILABLE
+
+latency_ms
+
+error_rate
+
+queue_lag
+
+checked_at
+
+details_json
+```
+
+---
+
+# 28. Distributed Trace
+
+### `trace_registry`
+
+```text
+trace_registry
+--------------
+trace_record_id PK
+
+trace_id
+correlation_id
+
+tenant_id
+
+root_service
+
+started_at
+ended_at
+
+duration_ms
+
+status
+```
+
+---
+
+### `trace_span`
+
+```text
+trace_span
+----------
+span_id PK
+
+trace_id
+
+parent_span_id NULL
+
+service_id
+
+operation_name
+
+started_at
+ended_at
+
+duration_ms
+
+status
+
+error_code NULL
+```
+
+---
+
+# Example Trace
+
+```text
+POST Leave Request
+      ↓ 25ms
+Leave Service
+      ↓ 8ms
+Workflow Service
+      ↓ 5ms
+Notification Queue
+```
+
+فنستطيع اكتشاف أين المشكلة.
+
+---
+
+# 29. Service-Level Objective
+
+### `service_slo`
+
+```text
+service_slo
+-----------
+slo_id PK
+
+service_id
+
+slo_type
+  AVAILABILITY
+  LATENCY
+  ERROR_RATE
+  PROCESSING_DELAY
+
+target_value
+
+measurement_window
+
+status
+```
+
+مثال:
+
+```text
+API Availability ≥ 99.9%
+
+P95 latency < 500ms
+
+Payroll event processing < 30 sec
+```
+
+---
+
+# N29. SLO Measurement
+
+```text
+slo_measurement
+---------------
+measurement_id PK
+
+slo_id
+
+period_start
+period_end
+
+actual_value
+
+target_value
+
+compliance_status
+
+error_budget_consumed
+```
+
+---
+
+# 30. Technical Alert
+
+### `runtime_alert_rule`
+
+```text
+runtime_alert_rule
+------------------
+alert_rule_id PK
+
+service_id NULL
+
+metric_reference
+
+operator
+
+threshold
+
+duration_seconds
+
+severity
+
+notification_policy_id
+
+status
+```
+
+---
+
+# N30. Runtime Incident
+
+```text
+runtime_incident
+----------------
+runtime_incident_id PK
+
+incident_code
+
+severity
+
+service_id NULL
+
+detected_at
+acknowledged_at
+resolved_at
+
+root_cause_category
+
+correlation_reference
+
+status
+```
+
+---
+
+# 31. Error Catalog
+
+بدل رسائل عشوائية.
+
+### `error_definition`
+
+```text
+error_definition
+----------------
+error_code PK
+
+domain_code
+
+error_category
+  VALIDATION
+  AUTHORIZATION
+  BUSINESS
+  INTEGRATION
+  TECHNICAL
+
+http_status NULL
+
+retryable
+
+user_message_key
+
+technical_description
+
+status
+```
+
+مثال:
+
+```text
+PAYROLL_001
+Payroll period is locked
+
+LEAVE_014
+Insufficient leave balance
+
+AUTH_008
+Scope not permitted
+```
+
+---
+
+# 32. Circuit Breaker
+
+لو ERP وقع:
+
+لا نسمح لكل requests بالانتظار حتى timeout.
+
+### `circuit_breaker_policy`
+
+```text
+circuit_breaker_policy
+----------------------
+circuit_breaker_policy_id PK
+
+target_service_id
+
+failure_threshold
+
+sampling_window_seconds
+
+break_duration_seconds
+
+half_open_request_limit
+
+status
+```
+
+---
+
+# 33. API Cache Policy
+
+### `api_cache_policy`
+
+```text
+api_cache_policy
+----------------
+cache_policy_id PK
+
+policy_code
+
+ttl_seconds
+
+cache_scope
+  GLOBAL
+  TENANT
+  USER
+
+cache_key_expression
+
+invalidate_on_events_json
+
+sensitive_data_allowed
+
+status
+```
+
+مثل:
+
+```text
+Country List
+Job Grades
+Public Holidays
+```
+
+وليس:
+
+```text
+Payslip
+Investigation Details
+```
+
+---
+
+# 34. Tenant Context Propagation
+
+كل request/event يجب أن يحمل:
+
+```text
+tenant_id
+company_id
+user_id / service_id
+correlation_id
+```
+
+والمهم جدًا:
+
+> لا نثق في tenant_id الذي يرسله Frontend مباشرة.
+
+يجب اشتقاقه من verified identity/security context.
+
+---
+
+# 35. Event Ordering
+
+بعض Events تحتاج ordering.
+
+مثال:
+
+```text
+Employee.Created
+Employee.Activated
+Employee.Terminated
+```
+
+لا نريد Terminated تصل قبل Activated.
+
+الحل:
+
+```text
+Partition Key = employee_id
+```
+
+لكن لا نطبق ordering global لأنه يقلل scalability.
+
+---
+
+# 36. Exactly Once — لا أنصح بالاعتماد عليه
+
+أفضل تصميم عملي:
+
+```text
+At-Least-Once Delivery
++
+Idempotent Consumers
++
+Inbox
++
+Outbox
+```
+
+بدل محاولة بناء distributed exactly-once illusion.
+
+---
+
+# 37. Eventual Consistency
+
+لازم النظام يقبل أن بعض البيانات ليست متزامنة في نفس millisecond.
+
+مثال:
+
+```text
+Employee Activated
+```
+
+ثم بعد ثانيتين:
+
+```text
+Payroll Employee Registered
+```
+
+هذا طبيعي.
+
+لكن يجب تعريف:
+
+```text
+Consistency SLA
+```
+
+---
+
+# N31. Consistency Policy
+
+### `consistency_policy`
+
+```text
+consistency_policy
+------------------
+consistency_policy_id PK
+
+producer_domain
+consumer_domain
+
+event_definition_id
+
+expected_latency_seconds
+
+max_latency_seconds
+
+business_criticality
+
+alert_on_breach
+
+status
+```
+
+---
+
+# 38. Runtime Dependency Registry
+
+### `service_dependency`
+
+```text
+service_dependency
+------------------
+service_dependency_id PK
+
+source_service_id
+target_service_id
+
+dependency_type
+  SYNC_API
+  EVENT
+  COMMAND
+  DATA_FEED
+
+criticality
+
+fallback_available
+
+status
+```
+
+هذا يسمح بعمل dependency map.
+
+---
+
+# Example
+
+```text
+Payroll
+ |
+ +--> Employee Core
+ |
+ +--> Compensation
+ |
+ +--> Attendance Inputs
+ |
+ +--> Finance Integration
+```
+
+---
+
+# 39. Health-aware Dependency
+
+إذا Finance ERP غير متاح:
+
+```text
+Payroll Calculation
+✅ يستمر
+
+Finance Posting
+⏸ ينتظر queue
+
+Salary calculation
+❌ لا ينهار
+```
+
+وهذا فرق أساسي بين loose coupling وdirect integration.
+
+---
+
+# 40. API Gateway Policy
+
+### `api_gateway_policy`
+
+```text
+api_gateway_policy
+------------------
+gateway_policy_id PK
+
+api_id NULL
+api_endpoint_id NULL
+
+policy_type
+  AUTHENTICATION
+  AUTHORIZATION
+  RATE_LIMIT
+  IP_FILTER
+  REQUEST_SIZE
+  RESPONSE_CACHE
+  CORS
+  TRANSFORMATION
+
+policy_config_json
+
+priority
+
+status
+```
+
+---
+
+# 41. Request Size / File Security
+
+خصوصًا:
+
+```text
+Employee Documents
+CV
+Expense Receipt
+Investigation Evidence
+```
+
+لا تمر الملفات الكبيرة مباشرة في Events.
+
+الـEvent يحمل:
+
+```text
+document_id
+secure_object_reference
+```
+
+وليس Binary.
+
+---
+
+# 42. Payload Classification
+
+### `message_data_classification`
+
+```text
+message_data_classification
+---------------------------
+classification_id PK
+
+contract_id
+
+classification_level
+  PUBLIC
+  INTERNAL
+  CONFIDENTIAL
+  RESTRICTED
+
+contains_pii
+contains_financial
+contains_medical
+contains_legal
+
+encryption_required
+
+logging_policy
+
+status
+```
+
+---
+
+# 43. PII Logging Rule
+
+Logs يجب ألا تحتوي:
+
+```text
+National ID
+Full salary
+Bank Account
+Medical diagnosis
+Passwords
+Tokens
+```
+
+حتى لو request فشل.
+
+---
+
+# 44. Technical Audit vs Business Audit
+
+نفصل بينهما.
+
+### Business Audit
+
+```text
+Ahmed changed employee salary
+```
+
+Cluster L / Security.
+
+### Technical Trace
+
+```text
+Payroll Service called Compensation API
+Duration 142 ms
+```
+
+Cluster N.
+
+الخلط بين الاثنين سيخلق audit store غير قابل للإدارة.
+
+---
+
+# 45. Operational Dashboard
+
+أقترح Runtime Control Center يحتوي:
+
+```text
+Platform Health
+API Traffic
+API Error Rate
+P95 Latency
+
+Event Bus
+Messages / Minute
+Consumer Lag
+Failed Events
+Dead Letters
+
+Jobs
+Queued
+Running
+Failed
+
+Integrations
+ERP
+Banks
+Attendance Devices
+Customer Systems
+
+Webhooks
+Delivered
+Retrying
+Failed
+
+Sagas
+Running
+Stuck
+Failed
+```
+
+---
+
+# 46. Cluster N High-Level ERD
+
+```text
+                      SERVICE_DEFINITION
+                             |
+          +------------------+-------------------+
+          |                  |                   |
+          v                  v                   v
+      API_DEFINITION   EVENT_DEFINITION   COMMAND_DEFINITION
+          |                  |                   |
+          v                  v                   v
+      API_ENDPOINT       EVENT_TOPIC       COMMAND_QUEUE
+          |                  |                   |
+          v                  v                   v
+      API_VERSION       SUBSCRIPTION       COMMAND_MESSAGE
+
+
+CONTRACT_DEFINITION
+        |
+        v
+ CONTRACT_VERSION
+        |
+  +-----+------+----------------+
+  |            |                |
+ API         EVENT           WEBHOOK
+```
+
+ثم:
+
+```text
+DOMAIN TRANSACTION
+       |
+       v
+ OUTBOX_MESSAGE
+       |
+       v
+ EVENT BUS
+       |
+       v
+ INBOX_MESSAGE
+       |
+       v
+ CONSUMER DOMAIN
+```
+
+والـlong running processes:
+
+```text
+SAGA_DEFINITION
+      |
+      v
+SAGA_STEP_DEFINITION
+      |
+      v
+SAGA_INSTANCE
+      |
+      v
+SAGA_STEP_EXECUTION
+      |
+      +---- Compensation Action
+```
+
+---
+
+# 47. أهم Domain Events للنظام
+
+أقترح Event Catalog أولي:
+
+### Employee
+
+```text
+Employee.Created
+Employee.Activated
+Employee.ProfileUpdated
+Employee.AssignmentChanged
+Employee.ManagerChanged
+Employee.StatusChanged
+Employee.Separated
+```
+
+### Recruitment
+
+```text
+HiringRequest.Created
+HiringRequest.Approved
+Candidate.Selected
+Offer.Issued
+Offer.Accepted
+```
+
+### Attendance
+
+```text
+Attendance.Recorded
+Attendance.ExceptionRaised
+Attendance.DayApproved
+Attendance.PeriodClosed
+```
+
+### Leave
+
+```text
+Leave.Requested
+Leave.Approved
+Leave.Rejected
+Leave.Cancelled
+```
+
+### Payroll
+
+```text
+Payroll.RunCreated
+Payroll.RunValidated
+Payroll.RunApproved
+Payroll.RunLocked
+Payroll.BankBatchCreated
+Payroll.PaymentConfirmed
+Payroll.RunPosted
+```
+
+### Performance
+
+```text
+Performance.CycleStarted
+Performance.ReviewCompleted
+KPI.ResultApproved
+Bonus.Approved
+```
+
+### Documents
+
+```text
+Document.Added
+Document.Verified
+Document.Expiring
+Document.Expired
+```
+
+### HSE
+
+```text
+MedicalFitness.Updated
+Certification.Expiring
+WorkRestriction.Created
+HSE.EmployeeImpactRecorded
+```
+
+### Expense
+
+```text
+Expense.Submitted
+Expense.Approved
+Expense.PaymentRequested
+Expense.Paid
+```
+
+### Offboarding
+
+```text
+Separation.Initiated
+Clearance.TaskCompleted
+Access.DeactivationRequested
+FinalSettlement.Approved
+Employee.Separated
+```
+
+---
+
+# 48. Core Production Tables
+
+لو اختصرنا Cluster N إلى الجداول الأساسية:
+
+```text
+01 service_definition
+02 service_environment
+03 service_dependency
+
+04 api_definition
+05 api_endpoint
+06 api_version
+07 api_consumer
+08 api_gateway_policy
+09 api_rate_limit_policy
+10 api_request_log
+
+11 contract_definition
+12 contract_version
+
+13 service_identity
+14 service_scope
+15 service_scope_assignment
+
+16 event_definition
+17 event_topic
+18 event_publication
+19 event_subscription
+20 event_message
+
+21 outbox_message
+22 inbox_message
+23 idempotency_record
+
+24 command_definition
+25 command_queue_definition
+26 command_message
+
+27 webhook_endpoint
+28 webhook_subscription
+29 webhook_delivery
+
+30 background_job_definition
+31 background_job_instance
+
+32 saga_definition
+33 saga_step_definition
+34 saga_instance
+35 saga_step_execution
+36 compensation_action
+
+37 retry_policy
+38 dead_letter_message
+39 message_replay_request
+
+40 distributed_lock
+41 consistency_policy
+
+42 integration_security_policy
+43 secret_reference
+44 integration_certificate
+
+45 circuit_breaker_policy
+46 api_cache_policy
+
+47 error_definition
+
+48 service_metric_definition
+49 service_health_snapshot
+50 trace_registry
+51 trace_span
+
+52 service_slo
+53 slo_measurement
+
+54 runtime_alert_rule
+55 runtime_incident
+
+56 message_data_classification
+```
+
+إذن تقريبًا **56 technical runtime entities**.
+
+---
+
+# 49. قرار معماري مهم: Microservices الآن أم لا؟
+
+هنا أريد أن أحذر من افتراض شائع:
+
+> وجود Event Bus وAPI Gateway لا يعني أننا يجب أن نحول كل Module إلى Microservice الآن.
+
+بالنسبة لهذا النظام، أوصي مبدئيًا بـ:
+
+```text
+Modular Monolith
++
+Clear Domain Boundaries
++
+Internal Event Bus
++
+Outbox Pattern
++
+API Contracts
+```
+
+ثم نفصل Microservices فقط عندما يوجد سبب حقيقي مثل:
+
+```text
+Independent scaling
+Independent deployment
+Different security boundary
+High throughput
+External integration isolation
+Different release cycle
+```
+
+أول Services قد تستحق الفصل مستقبلًا:
+
+```text
+Identity
+Notifications
+Integration Gateway
+Document Processing
+Analytics
+AI
+```
+
+بينما تقسيم:
+
+```text
+Employee
+Position
+Assignment
+Leave
+Attendance
+```
+
+إلى عشرات microservices من البداية غالبًا سيزيد التعقيد أكثر مما يحله.
+
+---
+
+# 50. Runtime Golden Rules
+
+أعتبر هذه القواعد إلزامية:
+
+1. **No cross-domain database writes.**
+2. No service reads another domain database directly.
+3. Every event has a schema and version.
+4. Financial write operations require idempotency.
+5. Transactional state change + event publication use Outbox.
+6. Consumers use Inbox/Deduplication where duplication matters.
+7. Long-running business processes use Saga, not distributed DB transactions.
+8. External webhooks are signed and replay-protected.
+9. Secrets never live in source code or plaintext configuration.
+10. Every request/event/job has correlation ID.
+11. Retry only retryable failures.
+12. Poison messages go to DLQ.
+13. Replaying financial/business-critical events requires governance.
+14. Logs must not expose sensitive HR data.
+15. Runtime observability must include Logs + Metrics + Traces.
+16. Tenant context must propagate securely through every async message.
+17. Integration outages must degrade gracefully where the business permits.
+
+---
+
+# وضع النظام بعد Cluster N
+
+الـarchitecture أصبحت الآن:
+
+```text
+                 HR SaaS Platform
+
+Business Domains
+A → J
+        |
+        v
+Integration & Data Governance
+K
+        |
+        v
+Platform Configuration / Control Plane
+L
+        |
+        v
+Analytics / BI / AI Intelligence
+M
+        |
+        v
+Enterprise Runtime Backbone
+N
+```
+
+وبهذا نكون أغلقنا فجوة كبيرة جدًا: أصبح لدينا ليس فقط **ماذا يفعل النظام**، وإنما أيضًا **كيف تتواصل مكوناته وتفشل وتتعافى وتتتبع بعضها بطريقة منظمة**.
+
+**الخطوة التالية المنطقية الآن هي Cluster O — Enterprise Document, File, Evidence, e-Signature, Template Rendering, Records Management, Document Classification, Versioning, Retention, Legal Hold, OCR/Extraction, Virus Scanning, Secure Sharing & Digital Personnel File ERD**؛ لأن تقريبًا كل Domains من Recruitment إلى Personnel وER/HSE/Expense/Offboarding تنتج ملفات ووثائق وأدلة، وحتى الآن لدينا `Document Template` وreferences متفرقة فقط، لكن لم نبنِ بعد **Document Platform موحدة** تمنع كل Module من إنشاء file-storage logic خاص به.

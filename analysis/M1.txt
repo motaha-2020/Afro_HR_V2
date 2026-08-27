@@ -1,0 +1,936 @@
+تمام، نبدأ بالـ **Module 01 — Platform, Multi-Company & Tenant Management** لأنه الأساس الذي سيبنى عليه كل شيء بعده.
+
+## الهدف من الموديول
+
+الموديول مسؤول عن فصل الشركات عن بعضها بالكامل داخل نفس المنصة، مع إمكانية تشغيل النظام داخليًا الآن ثم تحويله مستقبلًا إلى SaaS بدون إعادة بناء الـarchitecture.
+
+الفكرة الأساسية:
+
+```text
+Platform
+   ↓
+Tenant / Company
+   ↓
+Business Units / Departments / Projects / Users / Employees
+```
+
+كل شركة لها بياناتها وسياساتها وصلاحياتها وإعداداتها الخاصة، ولا يمكن لأي مستخدم في شركة رؤية بيانات شركة أخرى إلا إذا كان من مستوى Platform Administration.
+
+## مستويات الإدارة
+
+سيكون عندنا مستويان إداريان منفصلان.
+
+**Platform Super Admin** مسؤول عن المنصة ككل، ويستخدم غالبًا من مالك النظام مستقبلًا. يستطيع إنشاء شركة جديدة، تعطيلها، تحديد limits، إدارة إعدادات المنصة، متابعة حالة الخدمات، وإدارة الاشتراكات مستقبلًا.
+
+**Company Super Admin** مسؤول فقط عن شركته، ويستطيع إدارة المستخدمين، الأقسام، السياسات، المشاريع، الصلاحيات، والـsettings داخل Tenant الخاص به.
+
+مهم جدًا: Platform Admin لا يحصل تلقائيًا على صلاحية قراءة رواتب أو ملفات الموظفين داخل الشركات. لو احتجنا Support Access مستقبلًا يكون Access مؤقت ومراقب في Audit Log.
+
+---
+
+# Tenant / Company Profile
+
+عند إنشاء شركة جديدة، نحتاج Company Profile يحتوي على:
+
+```text
+Company Code
+Legal Name
+Trade Name
+Arabic Name
+English Name
+French Name
+Logo
+Country
+Currency
+Timezone
+Default Language
+Supported Languages
+Tax Number
+Commercial Registration
+Address
+Contact Email
+Contact Mobile
+Website
+Company Status
+```
+
+مع بيانات خاصة بالنظام:
+
+```text
+Tenant ID
+Tenant Code
+Subscription Plan
+Maximum Employees
+Maximum Users
+Maximum Storage
+Enabled Modules
+Created Date
+Activation Date
+Expiration Date
+```
+
+في الحالة الحالية يمكن جعل:
+
+```text
+Subscription Mode = Internal
+```
+
+لكن الـdatabase تكون جاهزة لاحقًا لـ:
+
+```text
+Trial
+Active
+Suspended
+Expired
+Cancelled
+```
+
+---
+
+# إعدادات اللغة
+
+كل Tenant يستطيع تحديد:
+
+```text
+Default Language
+Arabic / English / French
+```
+
+بالإضافة إلى:
+
+```text
+Enabled Languages
+☑ Arabic
+☑ English
+☑ French
+```
+
+لو Default = Arabic:
+
+```text
+direction = RTL
+```
+
+أما English وFrench:
+
+```text
+direction = LTR
+```
+
+ولا نربط الاتجاه بالـCompany فقط، بل بالـUser Preference أيضًا.
+
+يعني الشركة Default Arabic، لكن موظف معين ممكن يختار English.
+
+---
+
+# Company Branding
+
+كل شركة يمكنها تخصيص:
+
+Logo
+Primary Brand Identity
+Login Logo
+Email Signature
+Payslip Header
+Report Header
+Company Stamp
+Default Document Templates
+
+لكن الأفضل ألا نفتح تعديل ألوان النظام بشكل غير محدود في البداية حتى لا يصبح الـUI غير منضبط.
+
+في MVP يكفي:
+
+Logo + Company Name + Document Branding.
+
+---
+
+# Company Hierarchy
+
+الموديول لا يدير Org Structure بالتفصيل، لأن ده سيكون Module 02، لكنه يجب أن يحدد Root Structure.
+
+مثلاً:
+
+```text
+Tenant: Afro Egypt
+
+Business Units
+├── Telecom
+├── Power
+├── Construction
+└── Corporate Services
+```
+
+ثم كل Business Unit يدخل تحت Organization Module.
+
+---
+
+# Company Configuration
+
+كل Tenant يجب أن يكون له Configuration Profile مستقل.
+
+مثلاً:
+
+```text
+Attendance Mode
+Payroll Mode
+Authentication Mode
+Approval Mode
+Mobile App Enabled
+AI Enabled
+ERP Integration Enabled
+```
+
+والـsettings تكون قابلة للتغيير بدون تعديل code.
+
+مثال:
+
+```text
+Payroll Mode:
+Internal
+External ERP
+Hybrid
+```
+
+وهو أحد أهم المتطلبات التي اتفقنا عليها.
+
+---
+
+# Feature / Module Activation
+
+ليس شرطًا كل شركة تستخدم كل Modules.
+
+لذلك نحتاج:
+
+```text
+Module Management
+```
+
+مثلاً:
+
+```text
+Employee Management      Enabled
+Recruitment               Enabled
+Payroll                   Enabled
+Attendance                Enabled
+KPI                       Enabled
+Training                  Disabled
+Subcontractor Management  Enabled
+AI                        Enabled
+```
+
+وده مفيد جدًا مستقبلًا في الباقات التجارية.
+
+مثلاً:
+
+```text
+Basic
+Professional
+Enterprise
+```
+
+لكن في المرحلة الداخلية يمكن تفعيل كل Modules بدون Billing.
+
+---
+
+# Employee Limit
+
+بما أنك حددت حتى 5,000 موظف لكل شركة، نصمم النظام مبدئيًا على:
+
+```text
+Recommended Tenant Capacity:
+5,000 Active Employees
+```
+
+لكن لا أريد Hard Limit في الـdatabase.
+
+الأفضل:
+
+```text
+max_employees = configurable
+```
+
+بحيث ممكن Tenant يكون:
+
+500
+
+5,000
+
+20,000
+
+لاحقًا.
+
+---
+
+# Tenant Isolation
+
+دي أهم نقطة تقنية في الموديول.
+
+كل البيانات الأساسية يجب أن تحتوي:
+
+```text
+TenantId
+```
+
+مثلاً:
+
+```text
+Employee
+---------
+Id
+TenantId
+HRCode
+Name
+...
+```
+
+ونفس الشيء:
+
+```text
+Project
+Department
+Payroll
+Attendance
+Leave
+User
+Role
+Workflow
+```
+
+ومن ثم كل Query يمر تلقائيًا على Tenant Filter.
+
+مثلاً:
+
+```text
+WHERE TenantId = CurrentTenant
+```
+
+المطور لا يفترض أنه يتذكر إضافة TenantId في كل Query؛ لازم يكون فيه حماية مركزية في الـbackend.
+
+---
+
+# HR Code Uniqueness
+
+عندنا قرار مهم هنا.
+
+لا نحتاج HR Code يكون Unique على مستوى المنصة كلها.
+
+يكفي:
+
+```text
+TenantId + HRCode = Unique
+```
+
+مثلاً:
+
+شركة A:
+
+```text
+HR Code = 10025
+```
+
+وشركة B يمكن يكون عندها أيضًا:
+
+```text
+HR Code = 10025
+```
+
+بدون مشكلة.
+
+---
+
+# Company Super Admin Creation
+
+عند إنشاء Tenant جديد:
+
+```text
+Create Tenant
+   ↓
+Create Company Profile
+   ↓
+Create Default Settings
+   ↓
+Create Company Super Admin
+   ↓
+Assign Full Tenant Permissions
+   ↓
+Send Activation
+```
+
+Company Super Admin أول مرة يدخل:
+
+```text
+Verify Email / Mobile
+↓
+Change Password
+↓
+Accept Terms
+↓
+Setup Company
+```
+
+---
+
+# Initial Setup Wizard
+
+أقترح يكون فيه Wizard عند تشغيل شركة لأول مرة.
+
+مثلاً:
+
+### Step 1
+
+Company Information
+
+### Step 2
+
+Languages
+
+### Step 3
+
+Organization Basics
+
+### Step 4
+
+Employee Types
+
+### Step 5
+
+Attendance
+
+### Step 6
+
+Payroll Mode
+
+### Step 7
+
+Admin Users
+
+### Step 8
+
+Modules
+
+### Step 9
+
+Data Import
+
+### Step 10
+
+Review & Activate
+
+ده سيقلل جدًا اعتماد الشركة على فريق الـIT وقت onboarding.
+
+---
+
+# Tenant Settings Categories
+
+الـSettings لا نضعها كلها في صفحة واحدة.
+
+نقسمها مثلًا إلى:
+
+```text
+General
+Localization
+Security
+Authentication
+HR
+Attendance
+Payroll
+Projects
+Workflow
+Notifications
+AI
+Integrations
+Documents
+Data Retention
+Mobile
+```
+
+كل Section له Permission مستقل.
+
+---
+
+# Company Status
+
+كل Tenant له Status:
+
+```text
+Draft
+Setup
+Active
+Suspended
+Archived
+```
+
+لو Suspended:
+
+لا يتم حذف البيانات.
+
+لكن يتم منع معظم Logins حسب السياسة.
+
+---
+
+# Deactivation Rules
+
+لو شركة خرجت من الخدمة مستقبلًا:
+
+لا نحذف Tenant مباشرة.
+
+نعمل:
+
+```text
+Deactivate
+↓
+Block Access
+↓
+Archive
+↓
+Retention Period
+↓
+Delete / Export
+```
+
+مع Approval عالي المستوى.
+
+---
+
+# Data Retention
+
+نحتاج من البداية مفهوم:
+
+```text
+Retention Policy
+```
+
+مثل:
+
+Employee Files
+Payroll
+Attendance
+Audit Logs
+Documents
+AI Logs
+
+لأن كل نوع بيانات قد يحتاج مدة احتفاظ مختلفة حسب قوانين الشركة أو الدولة.
+
+التفاصيل القانونية نفسها تحتاج إعداد حسب الدولة ولن نفترضها داخل الـcore.
+
+---
+
+# Tenant Backup
+
+الـbackup يجب أن يدعم مستويين:
+
+```text
+Platform Backup
+```
+
+و:
+
+```text
+Tenant Export / Restore
+```
+
+حتى لو استخدمنا Shared Database.
+
+مستقبلًا نحتاج القدرة على تصدير بيانات Tenant مستقل.
+
+---
+
+# Company Data Export
+
+مهم جدًا للـSaaS.
+
+Company Admin أو Authorized User يستطيع طلب:
+
+```text
+Employee Export
+Attendance Export
+Payroll Export
+Project Assignment Export
+Documents Export
+Audit Export
+```
+
+لكن كل نوع Export له Permission.
+
+---
+
+# Audit Requirements
+
+كل Change في إعدادات الشركة يجب تسجيله.
+
+مثلاً:
+
+```text
+Payroll Mode
+Internal → Hybrid
+
+Changed By:
+Mohamed
+
+Date:
+10-Aug-2026
+
+Reason:
+Nama ERP Integration
+```
+
+خصوصًا:
+
+Permissions
+Payroll
+Authentication
+AI
+Data Retention
+Integrations.
+
+---
+
+# Tenant-Level AI Settings
+
+من البداية كل شركة لها AI Settings منفصلة.
+
+مثلاً:
+
+```text
+AI Enabled
+Chat Enabled
+Smart Data Entry Enabled
+Report Generation Enabled
+Dashboard Generation Enabled
+Document Extraction Enabled
+```
+
+وكذلك:
+
+```text
+Allowed Data Domains:
+Employees
+Attendance
+Payroll
+Projects
+KPI
+```
+
+وممكن شركة تمنع الـAI من الوصول إلى Payroll.
+
+---
+
+# AI Model Configuration
+
+مستقبلًا كل Tenant ممكن يكون له:
+
+```text
+Default AI Policy
+```
+
+لكن المستخدم لا يرى API keys غالبًا إلا Integration Admin.
+
+يمكن أيضًا تحديد:
+
+```text
+AI Data Retention
+AI Logging
+Sensitive Data Masking
+```
+
+دي نقطة سنرجع لها في AI Module.
+
+---
+
+# Multi-Country Readiness
+
+بما أننا Multi-Company ومن الممكن استخدام النظام في دول مختلفة، لا نربط الـcore بمصر فقط.
+
+نحتاج:
+
+```text
+Country
+Currency
+Timezone
+Date Format
+Number Format
+Weekend
+Working Week
+Language
+```
+
+وبعدين Payroll/local compliance يكون configurable.
+
+مثلاً:
+
+```text
+Egypt
+Madagascar
+Saudi Arabia
+```
+
+يمكن لكل واحدة Policies مختلفة.
+
+---
+
+# Tenant Database Model المبدئي
+
+أقرب شكل:
+
+```text
+Tenant
+------
+Id
+Code
+Status
+CreatedAt
+
+
+CompanyProfile
+--------------
+TenantId
+LegalName
+ArabicName
+EnglishName
+FrenchName
+CountryId
+CurrencyId
+Timezone
+Logo
+
+
+TenantSettings
+--------------
+TenantId
+SettingKey
+SettingValue
+
+
+TenantModules
+-------------
+TenantId
+ModuleCode
+Enabled
+
+
+TenantLimits
+------------
+TenantId
+MaxEmployees
+MaxUsers
+MaxStorage
+
+
+TenantLanguages
+---------------
+TenantId
+LanguageCode
+Enabled
+IsDefault
+```
+
+---
+
+# أهم Business Rules
+
+أقترح نثبت القواعد دي من الآن:
+
+1. أي Record Business يجب أن يتبع Tenant واحد.
+2. لا يوجد User Business بدون Tenant إلا Platform User.
+3. Company Super Admin لا يرى Tenant آخر.
+4. HR Code unique داخل Tenant.
+5. حذف Tenant ممنوع مباشرة.
+6. تغيير إعداد حساس يسجل Audit.
+7. كل Module يمكن تفعيله أو تعطيله.
+8. Language preference تكون User-level مع Company default.
+9. Payroll/Attendance/AI policies تكون Tenant configurable.
+10. كل Integration يتبع Tenant محدد.
+
+---
+
+# شاشات Module 01
+
+في MVP نحتاج تقريبًا:
+
+```text
+Platform Dashboard
+Tenant List
+Create Company
+Company Details
+Company Settings
+Company Admins
+Module Activation
+Language Settings
+Limits
+Audit
+```
+
+داخل الشركة نفسها:
+
+```text
+Company Profile
+General Settings
+Localization
+Security
+Modules
+Integrations
+AI Settings
+```
+
+---
+
+# شكل Dashboard الـPlatform Admin
+
+لا يحتاج يشوف HR Details.
+
+يشوف:
+
+Total Tenants
+
+Active Tenants
+
+Employees Count per Tenant
+
+Users
+
+Storage Usage
+
+System Health
+
+Active Integrations
+
+Failed Jobs
+
+AI Usage
+
+Last Backups
+
+Security Alerts.
+
+---
+
+# Dashboard Company Super Admin
+
+يشوف:
+
+Total Employees
+
+Active Users
+
+Departments
+
+Projects
+
+Configured Policies
+
+Enabled Modules
+
+Pending Setup
+
+Integration Status
+
+Security Alerts
+
+Storage Usage
+
+System Health for Tenant.
+
+---
+
+# ما يدخل MVP
+
+**MVP:**
+
+Multi-Tenant Core
+Company Creation
+Company Super Admin
+Tenant Isolation
+Company Settings
+AR/EN/FR
+RTL/LTR
+Module Enable/Disable
+Authentication Settings
+Payroll Mode
+Attendance Mode
+AI Enable/Disable
+Audit
+Basic Platform Dashboard.
+
+**Version 1:**
+
+Subscription Plans
+Billing
+Advanced Usage Limits
+Self-Service Tenant Provisioning
+Tenant Export/Restore
+Custom Domain
+Advanced Branding
+Support Access
+Advanced AI Governance
+Multi-region deployment.
+
+---
+
+# قرار Architecture مهم
+
+أنا لا أنصح في البداية بـ:
+
+```text
+Database per Company
+```
+
+لكل Tenant.
+
+الأفضل للمرحلة الحالية:
+
+```text
+Shared PostgreSQL
++
+TenantId isolation
++
+Application Security
++
+PostgreSQL Row-Level Security where appropriate
+```
+
+وبعد ذلك يمكن دعم:
+
+```text
+Dedicated Database Tenant
+```
+
+للعملاء الكبار أو أصحاب المتطلبات الأمنية الخاصة.
+
+ده يجعل المنتج عنده مستقبلًا:
+
+```text
+Standard Tenant
+Enterprise Dedicated Tenant
+```
+
+---
+
+## Definition of Done للموديول
+
+نعتبر Module 01 مقفول عندما نستطيع عمليًا تنفيذ السيناريو ده:
+
+```text
+Platform Admin
+↓
+Creates Afro Egypt
+↓
+Defines Arabic as default
+↓
+Enables HR + Attendance + Payroll + AI
+↓
+Creates Company Super Admin
+↓
+Super Admin logs in
+↓
+Sees only Afro Egypt
+↓
+Configures company
+↓
+Creates users later
+↓
+No data can cross Tenant boundary
+```
+
+لو السيناريو ده ناجح أمنيًا ووظيفيًا، نكون بنينا قاعدة النظام صح.
+
+**التالي هو Module 02 — Organization Structure & Job Architecture**، وهنا هنبدأ ندخل بعمق في Company → Business Unit → Sector → Department → Project → Site، والـPositions والـGrades والـReporting Lines، وكيف الموظف يكون له Administrative Manager وFunctional Manager وأكثر من Project في نفس الوقت.

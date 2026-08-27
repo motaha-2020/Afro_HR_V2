@@ -1,0 +1,1922 @@
+بالضبط. **Module 07** هو الخطوة المنطقية مباشرة بعد **Module 06 — Onboarding, Pre-Employment Compliance & Employee Activation**.
+
+الـOperations Manual نفسه يربط مرحلة ما بعد التفعيل مباشرة بـ **Workforce Management**، ويذكر صراحةً: تنسيق جداول الموظفين، متابعة الحضور، طلبات الإجازات، خطط الورديات، ودعم تخطيط القوى العاملة. كما يشترط أن تعتمد معالجة Payroll على **attendance records** مع project allocations والبدلات والتعديلات المعتمدة. 
+
+لذلك سأبني Module 07 باعتباره **المحرك التشغيلي اليومي للقوى العاملة**، وليس مجرد شاشة Punch In / Punch Out.
+
+# Module 07 — Attendance, Time, Shifts, Rosters & Field Workforce Tracking
+
+## 07.1 الهدف الرئيسي
+
+بعد وصول الموظف إلى:
+
+**Employee Status = Activated**
+
+يجب أن يستطيع النظام الإجابة يوميًا عن 6 أسئلة:
+
+**Who → Where → When → Under Which Project → How Attendance Was Proven → How Much Time Is Payable**
+
+مثال:
+
+> Ahmed Hassan
+> Technician
+> Project: Vodafone FTTH Cairo
+> Site: New Cairo Zone 03
+> Shift: 08:00–17:00
+> Attendance Method: GPS + Supervisor Approval
+> Check-In: 07:56
+> Check-Out: 17:21
+> Regular Time: 9h
+> Approved OT: 21 min
+> Payroll Status: Approved
+
+وهنا يبدأ الربط الحقيقي بين:
+
+**Employee → Project → Site → Shift → Attendance → Timesheet → Payroll → Project Cost**
+
+---
+
+# 07.2 Attendance Policy Engine
+
+لن نفرض Attendance Policy واحدة على كل الشركة.
+
+كل Company تستطيع إنشاء عدد غير محدود من السياسات:
+
+`Attendance Policies`
+
+مثلاً:
+
+| Policy                   | الاستخدام       |
+| ------------------------ | --------------- |
+| HQ Office Policy         | موظفو المقر     |
+| Site Engineers Policy    | مهندسو المواقع  |
+| Field Technicians Policy | الفنيون         |
+| Riggers Policy           | فرق الأبراج     |
+| Warehouse Policy         | المخازن         |
+| Drivers Policy           | السائقون        |
+| Daily Workers Policy     | العمالة اليومية |
+| Project-Based Policy     | موظفو المشروعات |
+| Remote Work Policy       | العمل عن بعد    |
+| Flexible Hours Policy    | الوظائف المرنة  |
+
+ويمكن ربط السياسة بـ:
+
+**Company / BU / Department / Job / Employee Type / Project / Site / Individual Employee**
+
+مع قاعدة أولوية واضحة:
+
+`Employee Override → Project Policy → Job Policy → Department Policy → Company Default`
+
+---
+
+# 07.3 Attendance Methods
+
+النظام يدعم أكثر من طريقة حضور في نفس الوقت.
+
+### Method A — Biometric
+
+يدعم:
+
+* Fingerprint
+* Face Recognition
+* Card Reader
+* Biometric Device ID
+* Multiple Devices
+* Device → Office/Site mapping
+
+مثلاً:
+
+`Device AFRO-HQ-01 → Cairo HQ`
+
+---
+
+### Method B — Mobile GPS Attendance
+
+الموظف يستخدم Mobile App أو Web Mobile.
+
+عند Check-In:
+
+* GPS coordinates
+* Timestamp
+* Employee
+* Device
+* Project
+* Site
+* Accuracy
+* Optional photo
+
+يتم التحقق من:
+
+`Employee Location ∈ Allowed Geofence`
+
+مثلاً:
+
+Site Location:
+
+`30.0281, 31.4913`
+
+Allowed Radius:
+
+`300 meters`
+
+---
+
+# 07.4 Geo-Fencing Engine
+
+مهم جدًا للـField Workforce.
+
+كل:
+
+**Office / Warehouse / Project / Site / Customer Site**
+
+يمكن أن يكون له Geofence.
+
+الأنواع:
+
+* Circle Geofence
+* Polygon Geofence
+* Multi-Zone Geofence
+* Moving / Temporary Work Zone
+
+مثال:
+
+**Vodafone Cairo Project**
+
+يحتوي:
+
+* Nasr City Zone
+* New Cairo Zone
+* Maadi Zone
+* Heliopolis Zone
+
+الموظف قد يكون مسموحًا له بالحضور من أي Zone منهم.
+
+---
+
+# 07.5 Supervisor Attendance
+
+مهم جدًا للعمالة الميدانية.
+
+Supervisor يستطيع تسجيل:
+
+**Team Attendance**
+
+مثلاً فريق:
+
+`OSP Team 04`
+
+يتكون من:
+
+* Supervisor
+* Technician 1
+* Technician 2
+* Technician 3
+* Driver
+* Helper 1
+* Helper 2
+
+Supervisor يفتح:
+
+**Team Attendance**
+
+ويختار:
+
+☑ Present
+☑ Present
+☑ Late
+☑ Absent
+☑ Present
+☑ Present
+☑ Sick Leave
+
+ثم:
+
+**Submit Attendance**
+
+لكن التسجيل يظل:
+
+`Submitted → Pending Validation → Approved`
+
+وليس مجرد تعديل مباشر للبيانات.
+
+---
+
+# 07.6 Attendance Evidence
+
+هذه نقطة مهمة في التصميم.
+
+أي Attendance Record يحتوي:
+
+**Attendance Evidence**
+
+مثل:
+
+* Biometric transaction
+* GPS
+* Selfie
+* Supervisor confirmation
+* QR Code
+* NFC
+* Site Wi-Fi
+* Customer system
+* Manual HR Entry
+
+وبالتالي يمكن للنظام تحديد:
+
+### Attendance Confidence Score
+
+مثلاً:
+
+Biometric:
+
+`100%`
+
+GPS + Selfie:
+
+`95%`
+
+GPS only:
+
+`85%`
+
+Supervisor:
+
+`75%`
+
+Manual Entry:
+
+`50%`
+
+ويصبح التقرير قادرًا على إظهار:
+
+> Attendance Verified
+> Attendance Requires Review
+
+---
+
+# 07.7 QR / Site Attendance
+
+يمكن لكل Site إنشاء:
+
+**Dynamic QR Code**
+
+الموظف يصل الموقع ويعمل Scan.
+
+النظام يتحقق من:
+
+* QR Validity
+* Employee Assignment
+* Time
+* GPS
+* Device
+
+وممكن الـQR يتغير كل:
+
+`30 / 60 / 120 minutes`
+
+لمنع تصوير QR وإرساله لزميل.
+
+---
+
+# 07.8 Shift Management
+
+لدينا:
+
+**Shift Templates**
+
+مثلاً:
+
+### Standard Shift
+
+08:00 → 17:00
+
+Break:
+
+13:00 → 14:00
+
+### Night Shift
+
+20:00 → 05:00
+
+### Warehouse Shift A
+
+06:00 → 14:00
+
+### Warehouse Shift B
+
+14:00 → 22:00
+
+### Warehouse Shift C
+
+22:00 → 06:00
+
+النظام يدعم:
+
+* Fixed Shift
+* Rotating Shift
+* Split Shift
+* Flexible Shift
+* Overnight Shift
+* On-Call Shift
+* Field Shift
+* Task-Based Work
+* No Fixed Shift
+
+---
+
+# 07.9 Shift Rules
+
+كل Shift يمكن أن يحتوي:
+
+**Start Time**
+
+**End Time**
+
+**Grace Period**
+
+مثلاً:
+
+`15 minutes`
+
+**Early Arrival Rule**
+
+**Late Arrival Rule**
+
+**Minimum Working Hours**
+
+**Maximum Working Hours**
+
+**Break Rules**
+
+**Paid / Unpaid Break**
+
+**Overtime Eligibility**
+
+**Night Differential**
+
+**Weekend Rule**
+
+**Holiday Rule**
+
+---
+
+# 07.10 Rostering Engine
+
+الـShift وحده غير كافٍ.
+
+نحتاج:
+
+**Roster**
+
+وهو:
+
+> من سيعمل؟
+> في أي يوم؟
+> في أي Shift؟
+> في أي Project؟
+> وفي أي Site؟
+
+مثال:
+
+### Weekly Roster
+
+| Employee | Sun | Mon | Tue | Wed | Thu | Fri | Sat |
+| -------- | --- | --- | --- | --- | --- | --- | --- |
+| Ahmed    | A   | A   | A   | A   | A   | OFF | OFF |
+| Mohamed  | B   | B   | B   | B   | B   | OFF | OFF |
+| Ali      | C   | C   | C   | C   | C   | OFF | OFF |
+
+---
+
+# 07.11 Project-Based Rostering
+
+وهذا مهم جدًا في Afro.
+
+يمكن للـProject Manager إنشاء:
+
+**Project Workforce Roster**
+
+مثلاً:
+
+Project:
+
+`Ericsson Cairo Modernization`
+
+Week:
+
+`10–16 Aug`
+
+Site:
+
+`Cairo North`
+
+Teams:
+
+`5`
+
+Employees:
+
+`32`
+
+ثم توزيع الموظفين على:
+
+**Team → Shift → Site → Work Order**
+
+---
+
+# 07.12 Multi-Project Employees
+
+بما أننا سمحنا سابقًا بأن الموظف يعمل على أكثر من Project، يجب ألا نجعل Attendance مربوطًا بمشروع واحد فقط.
+
+مثلاً:
+
+Ahmed يعمل:
+
+08:00–12:00
+
+`Project A`
+
+ثم:
+
+13:00–17:00
+
+`Project B`
+
+Timesheet:
+
+| Time | Project  |
+| ---- | -------- |
+| 4h   | Vodafone |
+| 4h   | Ericsson |
+
+ومن هنا نستطيع عمل:
+
+### Labor Cost Allocation
+
+Salary cost:
+
+`30,000 EGP`
+
+Project A:
+
+`50%`
+
+Project B:
+
+`50%`
+
+فتصبح تكلفة العمالة:
+
+`15,000 / project`
+
+وهذا يتفق أيضًا مع الـOperations Manual الذي يطلب مراجعة **employee project allocations** قبل معالجة Payroll. 
+
+---
+
+# 07.13 Field Team Structure
+
+نحتاج Concept مستقل:
+
+## Crew / Field Team
+
+مثلاً:
+
+**FTTH Installation Team 021**
+
+Team Leader:
+
+Ahmed
+
+Members:
+
+* Technician
+* Fiber Splicer
+* Civil Worker
+* Helper
+* Driver
+
+Assigned:
+
+`Vodafone Project`
+
+Site:
+
+`New Cairo`
+
+Vehicle:
+
+`AFR-2034`
+
+Supervisor:
+
+Mohamed
+
+---
+
+# 07.14 Dynamic Team Assignment
+
+الموظف ليس بالضرورة عضوًا دائمًا في Team.
+
+نستخدم:
+
+`Team Assignment`
+
+من:
+
+`01-Aug`
+
+إلى:
+
+`31-Aug`
+
+وبعدها يمكن نقله إلى Team آخر.
+
+نحتفظ بالـHistory.
+
+---
+
+# 07.15 Daily Workforce Deployment
+
+Project Manager أو Supervisor لديه شاشة:
+
+# Daily Deployment Board
+
+مثلاً:
+
+**10 August 2026**
+
+Project: Huawei Rollout
+
+| Team    | Site  | Planned | Present | Missing |
+| ------- | ----- | ------: | ------: | ------: |
+| Team 01 | Cairo |       7 |       7 |       0 |
+| Team 02 | Giza  |       8 |       6 |       2 |
+| Team 03 | Suez  |       6 |       5 |       1 |
+
+ومن هنا Operations تعرف فورًا:
+
+> أين لدينا Manpower Shortage اليوم؟
+
+---
+
+# 07.16 Check-In / Check-Out Engine
+
+كل Transaction:
+
+```text
+AttendanceEvent
+---------------
+Employee
+Date
+Event Type
+Timestamp
+Latitude
+Longitude
+Attendance Method
+Device
+Project
+Site
+Shift
+Evidence
+Source
+Confidence
+```
+
+Event Type:
+
+* Check In
+* Check Out
+* Break Start
+* Break End
+* Site Entry
+* Site Exit
+
+---
+
+# 07.17 Multiple Punch Handling
+
+النظام لا يفترض Check-In واحد وCheck-Out واحد.
+
+مثلاً:
+
+07:58 IN
+12:01 OUT
+12:47 IN
+17:22 OUT
+
+Attendance Engine يحسب:
+
+Working Time:
+
+`8h 38m`
+
+بدلاً من:
+
+`9h 24m`
+
+---
+
+# 07.18 Attendance Calculation Engine
+
+بعد جمع Raw Attendance Events يتم إنشاء:
+
+## Daily Attendance Record
+
+مثلاً:
+
+Scheduled:
+
+`08:00–17:00`
+
+Actual:
+
+`08:12–17:30`
+
+Result:
+
+Regular:
+
+`8h48m`
+
+Late:
+
+`12m`
+
+Overtime:
+
+`30m`
+
+Status:
+
+`Late`
+
+ثم تطبق Policy.
+
+---
+
+# 07.19 Attendance Statuses
+
+لا نكتفي بـPresent / Absent.
+
+يدعم:
+
+* Present
+* Absent
+* Late
+* Early Leave
+* Missing Punch
+* Partial Day
+* Annual Leave
+* Sick Leave
+* Emergency Leave
+* Unpaid Leave
+* Mission
+* Training
+* Business Trip
+* Remote Work
+* Weekend
+* Public Holiday
+* On Call
+* Rest Day
+* Suspended
+* No Schedule
+
+---
+
+# 07.20 Grace Period
+
+مثلاً:
+
+Shift:
+
+08:00
+
+Grace:
+
+15 min
+
+Attendance:
+
+08:11
+
+النتيجة:
+
+`Present`
+
+وليس Late.
+
+لكن يمكن للنظام الاحتفاظ بـ:
+
+`11 min arrival deviation`
+
+للتقارير دون تطبيق deduction.
+
+---
+
+# 07.21 Late Rules
+
+مثلاً Company Policy:
+
+0–15 min:
+
+No penalty
+
+16–30:
+
+Late Level 1
+
+31–60:
+
+Late Level 2
+
+> 60:
+
+Half-Day Candidate
+
+ولكن مهم جدًا:
+
+**Attendance Engine لا يقوم بخصم الراتب مباشرة.**
+
+بل ينتج:
+
+`Payroll Input`
+
+والخصم يتم لاحقًا بواسطة Payroll Rules.
+
+هذه Separation مهمة جدًا للحوكمة.
+
+---
+
+# 07.22 Missing Punch Workflow
+
+مثلاً:
+
+Ahmed:
+
+IN = 08:00
+
+OUT = Missing
+
+النظام يعمل:
+
+`Attendance Exception`
+
+الحالة:
+
+**Missing Check-Out**
+
+الموظف يستطيع:
+
+`Request Attendance Correction`
+
+ويكتب:
+
+> Left site at 17:15.
+
+Supervisor:
+
+Approve / Reject
+
+ثم HR Operations عند الحاجة.
+
+---
+
+# 07.23 Attendance Correction Workflow
+
+Workflow:
+
+`Employee Request`
+
+↓
+
+`Direct Manager`
+
+↓
+
+حسب Policy:
+
+`HR Operations`
+
+↓
+
+`Attendance Record Corrected`
+
+ويتم حفظ:
+
+Original:
+
+`Missing`
+
+Corrected:
+
+`17:15`
+
+Reason:
+
+`GPS application failure`
+
+Approved By:
+
+`PM`
+
+Audit Log لا يمكن حذفه.
+
+---
+
+# 07.24 Overtime Management
+
+النظام يدعم:
+
+### Planned OT
+
+Supervisor يطلب:
+
+Employee
+
+Date
+
+From
+
+To
+
+Hours
+
+Reason
+
+Project
+
+Cost Center
+
+ثم:
+
+Manager Approval
+
+### Unplanned OT
+
+يظهر النظام:
+
+`Detected OT`
+
+مثلاً:
+
+Worked:
+
+10h
+
+Scheduled:
+
+8h
+
+Potential OT:
+
+2h
+
+لكنه لا يصبح Payable حتى:
+
+`Approved OT`
+
+---
+
+# 07.25 Overtime Rules
+
+مثلاً:
+
+Weekday OT
+
+Weekend OT
+
+Holiday OT
+
+Night OT
+
+Emergency OT
+
+Project-Specific OT
+
+ويمكن لكل Company تحديد calculation policy لاحقًا داخل Payroll.
+
+---
+
+# 07.26 Timesheets
+
+Attendance ≠ Timesheet.
+
+هذه نقطة أساسية.
+
+Attendance:
+
+> هل الموظف موجود؟
+
+Timesheet:
+
+> ماذا كان يعمل؟
+
+مثلاً:
+
+Ahmed حضر:
+
+`9 hours`
+
+Timesheet:
+
+Project Vodafone:
+
+4h Fiber Splicing
+
+Project Huawei:
+
+3h Testing
+
+Training:
+
+1h
+
+Internal Meeting:
+
+1h
+
+Total:
+
+`9h`
+
+---
+
+# 07.27 Timesheet Dimensions
+
+Timesheet يمكن تسجيله على:
+
+* Company
+* Project
+* Site
+* Work Order
+* Task
+* Activity
+* Customer
+* Cost Center
+* Team
+
+وبالتالي Payroll وProject Costing يحصلان على بيانات دقيقة جدًا.
+
+---
+
+# 07.28 Leave Integration
+
+Module 07 يتصل مباشرة بـLeave Management.
+
+إذا Annual Leave Approved:
+
+النظام لا ينتظر Punch.
+
+Attendance يصبح:
+
+`Annual Leave`
+
+إذا Sick Leave:
+
+`Sick Leave`
+
+إذا Mission:
+
+`Business Mission`
+
+هذا يمنع ظهور الموظف:
+
+`Absent`
+
+خطأً.
+
+والـOperations Manual يضع فعلًا **attendance + leave management + schedules + shift plans** ضمن Workforce Management اليومية. 
+
+---
+
+# 07.29 Field Mission / Business Trip
+
+Employee يمكن أن يكون:
+
+Assigned Office:
+
+Cairo HQ
+
+لكن اليوم لديه:
+
+`Customer Site Mission`
+
+لذلك ينشأ:
+
+**Field Assignment**
+
+Date:
+
+10 Aug
+
+Location:
+
+Smart Village
+
+Attendance Policy:
+
+GPS
+
+ولا يطلب منه الحضور إلى HQ.
+
+---
+
+# 07.30 Remote Work
+
+Remote Work Request:
+
+Employee
+
+Date
+
+Reason
+
+Manager Approval
+
+Attendance Method:
+
+Web / Mobile
+
+لكن يتم تسجيل:
+
+`Work Mode = Remote`
+
+وليس Office Attendance.
+
+---
+
+# 07.31 Daily Workers
+
+مهم جدًا في شركات المقاولات.
+
+Employee Type:
+
+`Daily Worker`
+
+لا يجب أن نجبره على نفس نظام الموظف الشهري.
+
+يمكن تسجيل:
+
+Days Worked:
+
+`23`
+
+Daily Rate:
+
+`500 EGP`
+
+Attendance Approved:
+
+`22 days`
+
+Payable:
+
+`11,000 EGP`
+
+ثم ينتقل الناتج إلى Payroll.
+
+---
+
+# 07.32 Task / Production-Based Workers
+
+بعض الفنيين قد يكون أجرهم مرتبطًا بالإنتاج.
+
+مثلاً:
+
+Fiber Splicing:
+
+`X EGP / splice`
+
+Cable Pulling:
+
+`X EGP / meter`
+
+Home Passed:
+
+`X EGP / unit`
+
+لذلك Timesheet يدعم:
+
+**Production Quantity**
+
+مثلاً:
+
+Employee:
+
+Ahmed
+
+Activity:
+
+Fiber Splicing
+
+Quantity:
+
+`48`
+
+Unit:
+
+Splice
+
+Attendance:
+
+Present
+
+Supervisor Approval:
+
+Approved
+
+---
+
+# 07.33 Employee Location Assignment
+
+كل موظف يحتاج:
+
+**Work Assignment**
+
+وليس Work Location ثابتًا فقط.
+
+```text
+Employee
+→ Company
+→ Project
+→ Region
+→ Site
+→ Team
+→ Supervisor
+→ Shift
+```
+
+Effective From / To.
+
+وهكذا نستطيع معرفة:
+
+> Ahmed كان يعمل أين في أي تاريخ؟
+
+---
+
+# 07.34 Temporary Assignment
+
+مثلاً:
+
+Ahmed يعمل أساسًا:
+
+`Cairo`
+
+لكن لمدة أسبوع:
+
+`Alexandria`
+
+نعمل:
+
+`Temporary Assignment`
+
+ولا نغير Master Employee Record.
+
+---
+
+# 07.35 Workforce Calendar
+
+Company Calendar يتضمن:
+
+* Working Days
+* Weekends
+* Public Holidays
+* Special Holidays
+* Project Holidays
+
+وممكن Project لديه Calendar مختلف.
+
+مثلاً:
+
+HQ:
+
+Fri/Sat off
+
+Field Project:
+
+Rotation 14/7
+
+---
+
+# 07.36 Rotation Systems
+
+مهم لبعض المشروعات:
+
+* 14 days work / 7 off
+* 21 / 7
+* 28 / 14
+* 6 / 1
+* 5 / 2
+* Custom Rotation
+
+ويولد النظام Roster تلقائيًا.
+
+---
+
+# 07.37 Cross-Midnight Shifts
+
+مثلاً:
+
+22:00
+
+إلى:
+
+06:00
+
+النظام يعرف أن:
+
+Check-Out
+
+يخص Shift اليوم السابق.
+
+وهذه نقطة غالبًا تسبب مشاكل في Attendance Systems البسيطة.
+
+---
+
+# 07.38 Attendance Locking
+
+بعد انتهاء Payroll Cut-Off:
+
+Attendance Period:
+
+`Locked`
+
+ولا يمكن تعديلها مباشرة.
+
+أي تعديل يحتاج:
+
+**Post-Lock Adjustment Request**
+
+ويتم تسجيله للشهر التالي أو Payroll Adjustment.
+
+---
+
+# 07.39 Monthly Attendance Closing
+
+Workflow:
+
+`Raw Attendance`
+
+→
+
+`Exceptions`
+
+→
+
+`Employee Corrections`
+
+→
+
+`Supervisor Approval`
+
+→
+
+`HR Validation`
+
+→
+
+`Attendance Closing`
+
+→
+
+`Payroll Input`
+
+وهذه نقطة شديدة الأهمية؛ لأن الـManual ينص على أن Payroll يجب أن يعتمد على **validated employee information, approved project allocations, attendance records, allowances, KPI evaluations and authorized adjustments**. 
+
+---
+
+# 07.40 Payroll Output
+
+Module 07 لا يحسب Payroll النهائي.
+
+لكنه يرسل Module Payroll:
+
+```text
+Working Days
+Absent Days
+Paid Leave
+Unpaid Leave
+Late Minutes
+Early Leave
+Regular Hours
+Approved OT
+Night Hours
+Weekend Hours
+Holiday Hours
+Daily Worker Days
+Production Units
+```
+
+ثم:
+
+**Module Payroll**
+
+يحدد قيمتها المالية.
+
+وهذا فصل معماري مهم جدًا.
+
+---
+
+# 07.41 Attendance Exceptions Engine
+
+النظام ينشئ Exception عندما يجد:
+
+* Missing Check-In
+* Missing Check-Out
+* Late Arrival
+* Early Departure
+* Outside Geofence
+* Wrong Site
+* Wrong Shift
+* Duplicate Punch
+* Excessive Hours
+* No Roster
+* Attendance During Leave
+* Attendance During Suspension
+* Attendance from Unregistered Device
+* Impossible Location Movement
+
+---
+
+# 07.42 Anti-Fraud Controls
+
+خصوصًا في Mobile Attendance.
+
+يمكن تطبيق:
+
+* Device Binding
+* GPS Accuracy Threshold
+* Root/Jailbreak Detection
+* Mock Location Detection
+* Selfie
+* Face Match
+* Dynamic QR
+* Site Wi-Fi
+* Supervisor Verification
+* Impossible Travel Detection
+
+مثلاً:
+
+Check-In Cairo
+
+08:00
+
+Check-Out Alexandria
+
+08:20
+
+النظام يعمل:
+
+`Impossible Travel Alert`
+
+---
+
+# 07.43 Offline Field Attendance
+
+مهم جدًا للمواقع ضعيفة الشبكة.
+
+Mobile App يسمح:
+
+**Offline Check-In**
+
+ويخزن:
+
+Timestamp
+
+GPS
+
+Device signature
+
+ثم يعمل:
+
+Sync
+
+عند وجود Internet.
+
+ويظهر:
+
+`Offline Captured / Synced Later`
+
+مع منع تعديل timestamp.
+
+---
+
+# 07.44 Workforce Control Room
+
+هذه ستكون من أهم شاشات النظام.
+
+### Today
+
+Employees:
+
+`3,842`
+
+Scheduled:
+
+`3,210`
+
+Present:
+
+`2,931`
+
+Absent:
+
+`121`
+
+Late:
+
+`86`
+
+Leave:
+
+`72`
+
+Field:
+
+`1,922`
+
+Office:
+
+`1,009`
+
+Missing Punch:
+
+`64`
+
+Attendance Rate:
+
+`91.3%`
+
+---
+
+# 07.45 Map View
+
+للـField Workforce يمكن مشاهدة:
+
+**Active Teams Map**
+
+ولكن مع Role Permissions.
+
+مثلاً Project Manager يرى فقط:
+
+مشروعاته.
+
+Supervisor يرى:
+
+Team الخاص به.
+
+HR يرى:
+
+حسب الصلاحية.
+
+ولا ينبغي أن يتحول النظام إلى Continuous Employee Surveillance؛ الأصل أن يكون التتبع مرتبطًا بالـshift أو attendance event أو operational assignment حسب سياسة الشركة.
+
+---
+
+# 07.46 Project Workforce Dashboard
+
+Project Manager يرى:
+
+**Project Workforce**
+
+Planned:
+
+`128`
+
+Assigned:
+
+`121`
+
+Present:
+
+`113`
+
+Absent:
+
+`5`
+
+Leave:
+
+`3`
+
+Shortage:
+
+`15`
+
+ثم حسب Job:
+
+| Job         | Required | Available | Gap |
+| ----------- | -------: | --------: | --: |
+| Engineers   |       10 |        10 |   0 |
+| Technicians |       40 |        36 |  -4 |
+| Riggers     |       30 |        21 |  -9 |
+| Drivers     |       12 |        10 |  -2 |
+
+وهنا Module 07 يصبح أداة **Manpower Control** وليس Attendance فقط.
+
+---
+
+# 07.47 HR Operations Dashboard
+
+HR Operations، وهو بالفعل الدور الذي يعطيه الـManual مسؤولية متابعة schedules, attendance, leave وshift plans،  يرى مثلاً:
+
+* Attendance Rate
+* Absenteeism
+* Late Employees
+* Missing Punches
+* Unapproved OT
+* Unresolved Corrections
+* Workforce Shortages
+* Employees Without Roster
+* Employees Without Project Assignment
+* Expiring Shift Assignments
+
+ويتوافق هذا مع الهيكل الحالي، حيث يوجد HR Operations كمسار فعلي داخل People & Culture. 
+
+---
+
+# 07.48 Employee Self-Service
+
+الموظف يرى:
+
+**My Attendance**
+
+Today:
+
+Shift 08:00–17:00
+
+Check-In:
+
+07:54
+
+Check-Out:
+
+—
+
+ويستطيع:
+
+* Check-In
+* Check-Out
+* View Roster
+* View Attendance
+* View Timesheet
+* Request Correction
+* Request Leave
+* Request OT
+* View OT
+* View Attendance Exceptions
+
+---
+
+# 07.49 Supervisor Portal
+
+Supervisor يرى:
+
+**My Team Today**
+
+ويستطيع:
+
+* View team
+* Confirm attendance
+* Create roster
+* Change site
+* Assign shift
+* Submit OT
+* Approve correction
+* Submit timesheet
+* Confirm production
+
+لكن ليس له صلاحية تعديل Historical Attendance مباشرة.
+
+---
+
+# 07.50 Approval Matrix
+
+مثلاً:
+
+Attendance Correction:
+
+Employee
+→ Supervisor
+→ HR Ops
+
+Overtime:
+
+Supervisor
+→ Project Manager
+→ HR Ops
+
+Roster:
+
+Supervisor
+→ Project Manager
+
+Timesheet:
+
+Employee / Supervisor
+→ Project Manager
+
+Payroll Attendance Closing:
+
+HR Operations
+→ Payroll
+
+وكلها Configurable Workflow.
+
+---
+
+# 07.51 Notifications
+
+النظام يرسل Alerts مثل:
+
+**Employee**
+
+> Your shift starts in 30 minutes.
+
+**Supervisor**
+
+> 3 employees from Team 04 have not checked in.
+
+**Project Manager**
+
+> Manpower availability is 82% against today's requirement.
+
+**HR**
+
+> 64 attendance exceptions remain unresolved.
+
+**Payroll**
+
+> August attendance period has been closed and is ready for payroll processing.
+
+---
+
+# 07.52 AI / Analytics Layer
+
+يمكن لاحقًا أن يستخدم النظام البيانات لإظهار:
+
+### Absenteeism Risk
+
+> Team 12 has shown a 14% absenteeism rate over the last 30 days.
+
+### Manpower Shortage Prediction
+
+> Ericsson Project may face a 9-technician shortage next week.
+
+### Overtime Anomaly
+
+> OT for Project A is 34% above its 3-month average.
+
+### Attendance Anomaly
+
+> Employee generated repeated attendance events outside assigned sites.
+
+لكن:
+
+**AI does not approve payroll-impacting changes automatically.**
+
+يقدم:
+
+`Alert / Recommendation`
+
+والإنسان يعتمد القرار.
+
+---
+
+# 07.53 Core Database Objects
+
+نحتاج تقريبًا:
+
+```text
+AttendancePolicy
+AttendanceRule
+Shift
+ShiftTemplate
+Roster
+RosterAssignment
+WorkCalendar
+Holiday
+EmployeeAssignment
+ProjectAssignment
+SiteAssignment
+Crew
+CrewMember
+AttendanceEvent
+AttendanceRecord
+AttendanceEvidence
+AttendanceException
+AttendanceCorrection
+OvertimeRequest
+OvertimeRecord
+Timesheet
+TimesheetEntry
+FieldMission
+RemoteWorkRequest
+Geofence
+AttendanceDevice
+DeviceRegistration
+WorkforceDeployment
+AttendancePeriod
+AttendanceClosing
+```
+
+وهذه Entities منفصلة بدل وضع كل شيء داخل Employee Table.
+
+---
+
+# 07.54 Role Permissions
+
+### Employee
+
+يرى نفسه فقط.
+
+### Supervisor
+
+يرى Team.
+
+### Project Manager
+
+يرى Project(s).
+
+### HR Operations
+
+يرى Assigned Projects / Accounts.
+
+### Payroll
+
+يرى البيانات المعتمدة اللازمة للPayroll.
+
+### HR Manager
+
+يرى Company Workforce.
+
+### Company Super Admin
+
+System configuration.
+
+### SaaS Platform Admin
+
+Technical tenant administration فقط، ولا يفترض أن يرى HR confidential data إلا وفق صلاحية منفصلة ومقيدة.
+
+---
+
+# 07.55 Audit Trail
+
+أي تغيير يجب أن يسجل:
+
+```text
+Who
+When
+Old Value
+New Value
+Reason
+Approval
+Device
+IP
+```
+
+خصوصًا:
+
+* Attendance
+* Timesheet
+* OT
+* Shift
+* Roster
+* Employee assignment
+* Payroll-affecting records
+
+---
+
+# 07.56 Multi-Company SaaS
+
+كل Tenant له:
+
+* Attendance Policies
+* Shift Rules
+* Weekends
+* Holidays
+* OT Policies
+* Attendance Methods
+* Approval Workflows
+* Geofences
+* Devices
+* Calendars
+
+ولا يوجد Mixing بين الشركات.
+
+---
+
+# 07.57 Localization
+
+يدعم:
+
+🇬🇧 English — LTR
+🇪🇬 العربية — RTL
+🇫🇷 Français — LTR
+
+وحتى Shift Names وAttendance Status Display Names يمكن ترجمتها.
+
+---
+
+# 07.58 أهم Integration Map
+
+```text
+Module 02
+Organization & Jobs
+        ↓
+Module 03
+Identity & Permissions
+        ↓
+Module 05
+Recruitment
+        ↓
+Module 06
+Onboarding & Activation
+        ↓
+MODULE 07
+Attendance / Time / Workforce
+        ↓
+ ┌──────────────┬─────────────┐
+ ↓              ↓             ↓
+Leave        Payroll       Project
+Management  Engine        Costing
+```
+
+لكن فعليًا يوجد Cross-Integration:
+
+```text
+Attendance
+   ↕
+Shifts
+   ↕
+Roster
+   ↕
+Projects
+   ↕
+Sites
+   ↕
+Timesheets
+   ↕
+Payroll
+```
+
+---
+
+# 07.59 أهم Business Rule في Module 07
+
+أقترح أن تكون القاعدة المركزية:
+
+> **No attendance event should directly alter payroll.**
+
+بل:
+
+**Raw Attendance**
+
+→ **Calculated Attendance**
+
+→ **Exceptions Resolved**
+
+→ **Manager Validation**
+
+→ **Period Closing**
+
+→ **Payroll Input**
+
+هذا يمنع جزءًا كبيرًا من مشاكل الرواتب والنزاعات والتعديلات غير الموثقة.
+
+---
+
+## الشكل النهائي للـModule
+
+أرى أن القائمة الرئيسية تصبح:
+
+**Workforce & Time**
+
+* Workforce Control Room
+* Daily Deployment
+* Attendance
+* My Attendance
+* Team Attendance
+* Attendance Exceptions
+* Attendance Corrections
+* Shifts
+* Shift Templates
+* Rosters
+* Work Calendars
+* Field Teams / Crews
+* Employee Assignments
+* Projects & Sites Assignments
+* Timesheets
+* Overtime
+* Field Missions
+* Remote Work
+* Geofences
+* Attendance Devices
+* Attendance Policies
+* Attendance Closing
+* Reports & Analytics
+* Configuration
+
+وبهذه الصورة **Module 07 لا يصبح Attendance System تقليديًا**؛ بل يصبح **Workforce Execution Engine** الذي يربط موظفي المكتب والـBlue Collar والفنيين والمهندسين والعمالة اليومية وموظفي المشروعات بالـProjects وSites وPayroll، وهو بالضبط الجزء الناقص بين Employee Activation وبين التشغيل والرواتب في الـPeople & Culture lifecycle الحالي. 
+
+**والـModule المنطقي بعده عندي هو Module 08 — Leave, Absence, Holidays & Employee Availability Management**، لأنه يستخدم نفس الـCalendar والRoster ويؤثر مباشرةً على Attendance وWorkforce Availability وPayroll.

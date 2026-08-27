@@ -1,0 +1,1638 @@
+**Module 19 — Employee Engagement, Experience, Surveys, Recognition, Internal Communication, Culture & Wellbeing Management**
+
+هذا الـModule أراه مناسبًا جدًا بعد Module 18، لأنه ينقل النظام من إدارة الموظف كـ **record + transaction + cost + compliance** إلى إدارة **تجربة الموظف وصوته وعلاقته بالمنظمة**.
+
+الـOperations Manual الحالي يشير إلى أن HR Operations يدعم الموظفين طوال دورة العمل، ويتعامل مع employee requests وoperational issues وemployee engagement، لكنه لا يحتوي حتى الآن على framework مستقل لإدارة Employee Experience أو Surveys أو Recognition أو Culture Measurement. لذلك Module 19 سيكون امتدادًا جديدًا فوق العمليات الحالية وليس تكرارًا لها. 
+
+---
+
+# 19.1 الهدف الرئيسي
+
+بناء منظومة مستمرة لقياس وتحسين:
+
+* Employee Engagement
+* Employee Experience
+* Employee Voice
+* Organizational Culture
+* Recognition
+* Internal Communication
+* Workplace Wellbeing
+
+بحيث لا يصبح HR معتمدًا على:
+
+```text
+Complaints
+Annual Survey
+Manager Opinions
+Exit Interviews Only
+```
+
+ولكن يكون لديه دورة مستمرة:
+
+```text
+Listen
+↓
+Measure
+↓
+Analyze
+↓
+Identify Issues
+↓
+Create Actions
+↓
+Assign Owners
+↓
+Measure Impact
+↓
+Communicate Results
+```
+
+---
+
+# 19.2 حدود Module 19
+
+هذه نقطة مهمة جدًا حتى لا يحدث overlap.
+
+### Module 13
+
+يعالج:
+
+```text
+Grievances
+Disciplinary Cases
+Investigations
+Formal Complaints
+```
+
+### Module 14
+
+يعالج:
+
+```text
+Employee Requests
+HR Services
+Letters
+Documents
+Tickets
+```
+
+### Module 19
+
+يعالج:
+
+```text
+Employee Experience
+Engagement
+Feedback
+Recognition
+Culture
+Communication
+Wellbeing
+```
+
+مثلاً:
+
+> "المواصلات غير مناسبة للمشروع."
+
+يمكن أن تكون Employee Experience Feedback.
+
+لكن:
+
+> "أريد تقديم شكوى رسمية ضد مديري."
+
+تذهب إلى Module 13.
+
+---
+
+# 19.3 المكونات الرئيسية
+
+أقترح تقسيم Module 19 إلى 9 Areas:
+
+```text
+01 Employee Listening
+02 Survey Management
+03 Employee Experience Journeys
+04 Engagement Analytics
+05 Recognition & Rewards
+06 Culture Management
+07 Internal Communications
+08 Workplace Wellbeing
+09 Engagement Action Management
+```
+
+---
+
+# 19.4 Employee Listening
+
+النظام يجب أن يسمح بأكثر من طريقة للاستماع للموظفين.
+
+### Listening Channels
+
+* Annual Engagement Survey
+* Pulse Surveys
+* Onboarding Survey
+* 30 / 60 / 90 Day Survey
+* Project Experience Survey
+* Manager Feedback Survey
+* Training Feedback
+* Internal Mobility Feedback
+* Promotion Experience
+* Exit Survey
+* Employee Suggestions
+* Anonymous Feedback
+* Event Feedback
+
+---
+
+# 19.5 Survey Builder
+
+HR يستطيع إنشاء Survey دون تدخل Development.
+
+أنواع الأسئلة:
+
+```text
+Single Choice
+Multiple Choice
+Rating
+Likert Scale
+Yes / No
+Ranking
+Matrix
+0–10 Scale
+Free Text
+```
+
+ويجب دعم:
+
+```text
+Arabic
+English
+French
+```
+
+بنفس Question ID.
+
+---
+
+# 19.6 Question Library
+
+بدل إعادة إنشاء الأسئلة كل مرة.
+
+```text
+Question ID
+Question
+Dimension
+Category
+Language
+Scale
+Sensitivity
+Benchmark Eligibility
+Status
+```
+
+مثال:
+
+```text
+Dimension:
+Manager Effectiveness
+
+Question:
+My manager provides clear expectations.
+```
+
+---
+
+# 19.7 Survey Dimensions
+
+يمكن أن تشمل:
+
+* Leadership
+* Direct Manager
+* Communication
+* Recognition
+* Career Growth
+* Learning
+* Teamwork
+* Trust
+* Work Environment
+* Role Clarity
+* Workload
+* Safety
+* Compensation Perception
+* Belonging
+* Wellbeing
+* Intent to Stay
+
+---
+
+# 19.8 Survey Audience Builder
+
+يمكن تحديد المشاركين حسب:
+
+```text
+Company
+Business Unit
+Department
+Project
+Client
+Manager
+Job
+Grade
+Location
+Employee Type
+Contract Type
+Tenure
+```
+
+مثلاً:
+
+```text
+Ericsson
++
+Field Employees
++
+Greater Cairo
++
+Tenure > 90 Days
+```
+
+---
+
+# 19.9 Survey Privacy Modes
+
+أقترح 3 Modes واضحة:
+
+### Identified
+
+الإجابة مرتبطة بالموظف.
+
+### Confidential
+
+النظام يعرف الموظف، لكن Reporting يكون Aggregated.
+
+### Anonymous
+
+لا يمكن لمستخدم النظام معرفة صاحب الإجابة.
+
+---
+
+# 19.10 Minimum Reporting Threshold
+
+هذه قاعدة مهمة جدًا للخصوصية.
+
+مثلاً:
+
+```text
+Minimum Respondents = 5
+```
+
+لو Team لديها 3 موظفين فقط:
+
+```text
+Detailed Results Hidden
+```
+
+حتى لا يستطيع المدير استنتاج من كتب التعليق.
+
+الـThreshold يكون configurable.
+
+---
+
+# 19.11 Annual Engagement Survey
+
+Survey كبير نسبيًا مرة أو مرتين سنويًا.
+
+يقيس مثلاً:
+
+```text
+Leadership
+Manager
+Purpose
+Trust
+Growth
+Recognition
+Communication
+Culture
+Wellbeing
+Intent to Stay
+```
+
+ثم ينتج:
+
+```text
+Company Engagement Score
+```
+
+---
+
+# 19.12 Pulse Survey
+
+Surveys قصيرة ومتكررة.
+
+مثلاً 3–7 أسئلة.
+
+يمكن تشغيلها:
+
+```text
+Monthly
+Quarterly
+After Major Change
+After Project Mobilization
+```
+
+مثال:
+
+> هل workload الحالي مناسب؟
+
+> هل لديك الأدوات اللازمة للعمل؟
+
+> هل تعرف أولويات المشروع؟
+
+---
+
+# 19.13 Engagement Score
+
+لا أنصح بوجود formula hard-coded.
+
+يكون لدينا:
+
+```text
+Engagement Score Definition
+```
+
+مثلاً:
+
+```text
+Pride
++ Advocacy
++ Motivation
++ Intent to Stay
+```
+
+مع configurable weighting.
+
+---
+
+# 19.14 eNPS
+
+Employee Net Promoter Score.
+
+السؤال:
+
+> How likely are you to recommend the company as a place to work?
+
+Scale:
+
+```text
+0–10
+```
+
+والنظام يحسب:
+
+```text
+% Promoters
+-
+% Detractors
+=
+eNPS
+```
+
+---
+
+# 19.15 Engagement Trend
+
+مهم ألا نرى snapshot فقط.
+
+مثلاً:
+
+```text
+Q1  74
+Q2  70
+Q3  63
+```
+
+النظام يظهر:
+
+> Engagement dropped 11 points.
+
+ثم drilldown:
+
+```text
+Project
+Department
+Location
+Manager Population
+Job Family
+```
+
+مع تطبيق privacy threshold.
+
+---
+
+# 19.16 Employee Experience Journey
+
+هذا الجزء مختلف عن Survey التقليدي.
+
+نحتاج Journey Mapping.
+
+مثلاً:
+
+```text
+Candidate
+↓
+Offer
+↓
+Joining
+↓
+Onboarding
+↓
+Project Deployment
+↓
+Performance
+↓
+Development
+↓
+Promotion / Mobility
+↓
+Exit
+```
+
+ولكل مرحلة:
+
+```text
+Touchpoints
+Expected Experience
+Actual Experience
+Owner
+Feedback
+Score
+Open Issues
+```
+
+---
+
+# 19.17 Moments That Matter
+
+نحدد أحداثًا لها تأثير كبير على تجربة الموظف:
+
+* First Day
+* First Salary
+* First Project Deployment
+* First Manager Feedback
+* Promotion
+* Transfer
+* Recognition
+* Returning from Leave
+* Project Change
+* Exit
+
+ثم يمكن تشغيل survey أو pulse تلقائيًا.
+
+---
+
+# 19.18 Onboarding Experience
+
+مثلاً:
+
+### Day 7
+
+* First day experience
+* Manager contact
+* Basic readiness
+
+### Day 30
+
+* Role clarity
+* Team integration
+* Equipment
+* Training
+
+### Day 90
+
+* Job reality vs expectations
+* Manager support
+* Overall integration
+
+وهذا يرتبط مباشرة بـModule 06 الذي يدير onboarding والتفعيل والتجهيز والتدريب الأولي. 
+
+---
+
+# 19.19 Project Employee Experience
+
+بالنسبة لطبيعة Afro، هذا مهم جدًا.
+
+ليس كل الموظفين يعيشون نفس التجربة.
+
+قد يكون:
+
+```text
+Huawei
+Ericsson
+Nokia
+Internal Functions
+```
+
+لكل Project/Account تجربة مختلفة.
+
+نحتاج Project Experience Score.
+
+---
+
+# 19.20 Recognition Management
+
+Recognition يجب أن يكون منفصلًا عن Performance Bonus.
+
+يمكن أن يكون:
+
+* Peer Recognition
+* Manager Recognition
+* Customer Recognition
+* HR Recognition
+* Executive Recognition
+
+---
+
+# 19.21 Recognition Categories
+
+مثلاً:
+
+```text
+Safety Champion
+Customer Excellence
+Teamwork
+Innovation
+Project Excellence
+Values Champion
+Long Service
+Learning Achievement
+```
+
+---
+
+# 19.22 Recognition Workflow
+
+مثلاً:
+
+```text
+Nomination
+↓
+Validation
+↓
+Approval
+↓
+Recognition
+↓
+Reward
+```
+
+وبعض الأنواع يمكن أن تكون بدون Approval.
+
+مثلاً:
+
+```text
+Peer Thank You
+```
+
+---
+
+# 19.23 Recognition Rewards
+
+يمكن أن تكون:
+
+```text
+Certificate
+Public Recognition
+Gift
+Voucher
+Bonus
+Additional Leave
+Training Opportunity
+```
+
+لو reward مالي:
+
+```text
+Module 19
+↓
+Approved Reward
+↓
+Module 09 Payroll
+```
+
+---
+
+# 19.24 Recognition Analytics
+
+نحتاج قياس:
+
+* Recognized Employees
+* Recognition Frequency
+* Recognition by Project
+* Recognition by Manager
+* Recognition Categories
+* Employee Coverage
+* Recognition Distribution
+
+---
+
+# 19.25 Recognition Bias Detection
+
+مثلاً:
+
+```text
+Manager A
+Recognized 30 employees
+
+Manager B
+Recognized 0
+```
+
+أو recognition concentrated داخل Team معين.
+
+النظام يرفع signal للمراجعة وليس حكمًا.
+
+---
+
+# 19.26 Culture Management
+
+يجب تسجيل:
+
+```text
+Company Values
+Desired Culture
+Expected Behaviors
+```
+
+مثلاً:
+
+```text
+Safety
+Integrity
+Accountability
+Customer Focus
+Teamwork
+Continuous Improvement
+```
+
+---
+
+# 19.27 Culture Framework
+
+لكل Value:
+
+```text
+Value
+Definition
+Expected Behaviors
+Unacceptable Behaviors
+Survey Questions
+Recognition Categories
+```
+
+---
+
+# 19.28 Culture Measurement
+
+نقارن بين:
+
+```text
+Desired Culture
+vs
+Employee Experience
+```
+
+مثلاً الشركة تقول:
+
+```text
+Safety First
+```
+
+لكن survey تظهر:
+
+```text
+Employees feel deadlines override safety.
+```
+
+هذا يسمى:
+
+```text
+Culture Gap
+```
+
+---
+
+# 19.29 Culture Heatmap
+
+مثلاً:
+
+| Culture Dimension | HQ | Ericsson | Huawei |
+| ----------------- | -: | -------: | -----: |
+| Safety            | 88 |       74 |     81 |
+| Communication     | 70 |       57 |     64 |
+| Recognition       | 68 |       51 |     59 |
+| Trust             | 76 |       63 |     69 |
+
+وهنا تستطيع الإدارة تحديد أين تتدخل.
+
+---
+
+# 19.30 Internal Communication
+
+هذا الجزء لا يكون مجرد News Feed.
+
+النظام يدير Communication lifecycle.
+
+### Communication Types
+
+* Company Announcement
+* HR Update
+* Policy Update
+* Project Notice
+* Safety Alert
+* Emergency Communication
+* CEO Message
+* Event
+* Recognition Announcement
+
+---
+
+# 19.31 Targeted Communication
+
+يمكن تحديد Audience.
+
+مثلاً:
+
+```text
+All Employees
+```
+
+أو:
+
+```text
+Ericsson Employees Only
+```
+
+أو:
+
+```text
+Cairo Field Employees
+```
+
+أو:
+
+```text
+Managers Grade G6+
+```
+
+---
+
+# 19.32 Communication Priority
+
+```text
+Normal
+Important
+Urgent
+Emergency
+```
+
+---
+
+# 19.33 Read & Acknowledgment Tracking
+
+لبعض الرسائل:
+
+```text
+Delivered
+Read
+Acknowledged
+```
+
+مثلاً Policy Change.
+
+وهذا يرتبط بـModule 18.
+
+```text
+New Policy Published
+↓
+Communication
+↓
+Employee Reads
+↓
+Acknowledgment
+↓
+Module 18 stores compliance
+```
+
+---
+
+# 19.34 Communication Effectiveness
+
+يمكن قياس:
+
+```text
+Delivery Rate
+Read Rate
+Acknowledgment Rate
+Feedback
+```
+
+مثلاً:
+
+```text
+Sent          4,000
+Delivered     3,960
+Read          3,250
+Acknowledged  3,010
+```
+
+---
+
+# 19.35 Employee News Feed
+
+داخل Employee Portal:
+
+```text
+Announcements
+Recognition
+Events
+Polls
+Policy Updates
+Company News
+```
+
+لكن content حسب audience.
+
+---
+
+# 19.36 Employee Suggestions & Ideas
+
+الموظف يمكن أن يقدم:
+
+```text
+Suggestion
+Idea
+Improvement Proposal
+```
+
+مثلاً:
+
+* Safety
+* Process
+* Cost Saving
+* HR
+* Technology
+* Customer
+* Project Operations
+
+---
+
+# 19.37 Idea Workflow
+
+```text
+Submitted
+↓
+Screening
+↓
+Assigned
+↓
+Evaluation
+↓
+Approved
+↓
+Implementation
+↓
+Impact Measurement
+```
+
+---
+
+# 19.38 Idea Business Value
+
+يمكن تسجيل:
+
+```text
+Expected Saving
+Actual Saving
+Time Saved
+Risk Reduction
+Quality Improvement
+```
+
+وبالتالي Employee Voice لا يصبح فقط complaints.
+
+---
+
+# 19.39 Employee Feedback
+
+يمكن أن يكون:
+
+```text
+Named
+Confidential
+Anonymous
+```
+
+مع Category.
+
+---
+
+# 19.40 Escalation of Sensitive Feedback
+
+لو feedback يحتوي موضوعًا مثل:
+
+```text
+Harassment
+Fraud
+Serious Safety Violation
+```
+
+لا يتم تحويله آليًا لCase بدون governance.
+
+يظهر:
+
+```text
+Confidential HR Review Required
+```
+
+ثم HR يقرر إن كان:
+
+```text
+Module 13 Case
+```
+
+مع الحفاظ على anonymity rules.
+
+---
+
+# 19.41 Text Feedback Analytics
+
+AI يمكنه تحليل آلاف comments.
+
+مثلاً:
+
+```text
+Top Topics
+
+Workload             420
+Transportation       310
+Manager Communication 275
+Salary               245
+Equipment            188
+```
+
+---
+
+# 19.42 Sentiment Analysis
+
+يمكن تصنيف feedback:
+
+```text
+Positive
+Neutral
+Negative
+```
+
+لكن على مستوى aggregation.
+
+لا نستخدمه لإنشاء:
+
+```text
+Employee Sentiment Score
+```
+
+لفرد معين.
+
+---
+
+# 19.43 Wellbeing Management
+
+أقترح أن يكون:
+
+**Workplace Wellbeing**
+
+وليس نظام Medical Diagnosis.
+
+الأبعاد:
+
+* Workload
+* Rest
+* Fatigue
+* Work-Life Balance
+* Workplace Stress Perception
+* Psychological Safety
+* Social Connection
+* Physical Work Environment
+
+---
+
+# 19.44 Wellbeing Pulse
+
+أسئلة قصيرة مثل:
+
+> هل workload الحالي قابل للإدارة؟
+
+> هل تحصل على فترات الراحة الكافية؟
+
+> هل تشعر بالأمان عند إبلاغ الإدارة بمشكلة؟
+
+---
+
+# 19.45 Field Workforce Wellbeing
+
+هذه مهمة جدًا لشركة تنفيذ ومشاريع.
+
+Module 19 يمكن أن يأخذ من Module 07:
+
+```text
+Working Hours
+Overtime
+Night Shifts
+Rosters
+Attendance
+```
+
+ومن Module 08:
+
+```text
+Leave
+Absence
+```
+
+ثم يحدد:
+
+```text
+Team Fatigue Risk
+```
+
+---
+
+# 19.46 مثال
+
+```text
+Project X
+
+Average OT        High
+Absence           Rising
+Leave Taken       Low
+Wellbeing Score   Falling
+Turnover          Rising
+```
+
+النظام يظهر:
+
+```text
+Workforce Wellbeing Risk = HIGH
+```
+
+وليس:
+
+> Employee X has burnout.
+
+---
+
+# 19.47 Psychological Safety
+
+Dimension أراه مهم جدًا خصوصًا في HSE.
+
+يقيس مثلًا:
+
+> هل يستطيع الموظف الإبلاغ عن خطأ؟
+
+> هل يمكنه الاعتراض على unsafe activity؟
+
+> هل يشعر أن المشاكل يتم التعامل معها بعدالة؟
+
+---
+
+# 19.48 Engagement Action Plans
+
+هذه أهم نقطة في Module 19.
+
+لأن Survey بدون Actions يتحول إلى Reporting exercise.
+
+لازم:
+
+```text
+Survey Result
+↓
+Issue
+↓
+Action Plan
+↓
+Owner
+↓
+Due Date
+↓
+Target
+↓
+Progress
+↓
+Result
+```
+
+---
+
+# 19.49 مثال
+
+```text
+Issue:
+Low Supervisor Communication
+
+Current Score:
+52%
+
+Target:
+70%
+
+Action:
+Weekly toolbox communication session
+
+Owner:
+Project Manager
+
+Due Date:
+30-Nov
+```
+
+---
+
+# 19.50 Action Effectiveness
+
+بعد تنفيذ الإجراء:
+
+```text
+Before = 52
+After  = 66
+```
+
+النظام يقيس improvement.
+
+---
+
+# 19.51 You Said — We Did
+
+ميزة مهمة لبناء الثقة.
+
+مثلاً:
+
+```text
+You Said
+Transport timing causes delays.
+
+We Did
+New pickup routes were introduced.
+
+Result
+Transport satisfaction +16 points.
+```
+
+---
+
+# 19.52 Manager Dashboard
+
+Manager يرى:
+
+* Team Engagement
+* Culture
+* Recognition
+* Wellbeing
+* Feedback Topics
+* Open Actions
+
+لكن فقط إذا عدد المشاركين أكبر من privacy threshold.
+
+---
+
+# 19.53 Project Manager Dashboard
+
+يكون مهم جدًا:
+
+```text
+Project HC
+Engagement
+eNPS
+Turnover
+Absence
+OT
+Recognition
+Wellbeing
+Top Feedback Themes
+Action Plan Status
+```
+
+---
+
+# 19.54 People & Culture Dashboard
+
+يظهر:
+
+```text
+Company Engagement
+Culture
+eNPS
+Recognition
+Employee Voice
+Wellbeing
+Survey Response
+Communication Effectiveness
+Open Actions
+```
+
+---
+
+# 19.55 Executive Dashboard
+
+CEO لا يحتاج كل التفاصيل.
+
+مثلاً:
+
+```text
+Engagement Score
+eNPS
+Critical Experience Risks
+Top Culture Gaps
+Projects at Risk
+Recognition Coverage
+Open Critical Actions
+```
+
+---
+
+# 19.56 Project Employee Experience Command Center
+
+هذه الشاشة التي أعتبرها الأهم لشركة مثل Afro.
+
+مثلاً:
+
+```text
+ERICSSON PROJECT
+
+HC                  680
+Engagement          62%
+eNPS                +7
+Turnover            15.8%
+Absence             7.1%
+OT                  High
+Recognition         48%
+Manager Support     55%
+Communication       59%
+Wellbeing           58%
+
+Experience Risk:
+HIGH
+```
+
+ثم:
+
+```text
+Top Issues
+
+1. Workload
+2. Transportation
+3. Supervisor Communication
+4. Recognition
+```
+
+ثم:
+
+```text
+Open Actions: 7
+Overdue: 2
+```
+
+---
+
+# 19.57 Integration with Module 17
+
+Module 17 يأخذ من Module 19:
+
+```text
+Engagement
+eNPS
+Culture
+Recognition
+Wellbeing
+```
+
+ويقارنها مع:
+
+```text
+Turnover
+Absence
+Performance
+Productivity
+People Cost
+```
+
+مثلاً:
+
+> Projects with engagement below 60% have significantly higher voluntary turnover.
+
+لكن النظام يعرضها كعلاقة تحليلية، وليس سببًا مؤكدًا.
+
+---
+
+# 19.58 Integration with Module 18
+
+Module 18 يتحكم في:
+
+* Survey Privacy Policy
+* Minimum Cohort Size
+* Recognition Rules
+* Communication Approval
+* Sensitive Feedback Access
+* Data Retention
+* Anonymous Feedback Governance
+
+---
+
+# 19.59 Integration with Learning
+
+مثلاً:
+
+```text
+Manager Support Score Low
+```
+
+يمكن تحويله إلى:
+
+```text
+Manager Coaching Program
+```
+
+في Module 11.
+
+---
+
+# 19.60 Integration with Career
+
+مثلاً:
+
+```text
+Employees report:
+No visible career opportunities
+```
+
+يمكن لـModule 12 معالجة:
+
+```text
+Career Paths
+Internal Mobility
+Succession
+Development Plans
+```
+
+---
+
+# 19.61 Integration with HR Service Desk
+
+Feedback:
+
+> HR letters take too long.
+
+يمكن ربطه بـModule 14:
+
+```text
+Service SLA
+```
+
+بدل أن يبقى مجرد Survey Comment.
+
+---
+
+# 19.62 Survey Fatigue Management
+
+مهم جدًا.
+
+النظام يتتبع:
+
+```text
+Surveys Sent per Employee
+```
+
+ويمكن وضع Rule:
+
+```text
+Maximum Pulse Invitations
+per configured period
+```
+
+حتى لا تتكرر surveys بشكل يفقدها قيمتها.
+
+---
+
+# 19.63 Communication Fatigue
+
+نفس الفكرة.
+
+النظام يمنع:
+
+```text
+Too Many Notifications
+```
+
+ويسمح Digest للرسائل غير الحرجة.
+
+---
+
+# 19.64 Privacy
+
+Engagement Data يجب معاملتها كبيانات حساسة.
+
+خصوصًا:
+
+```text
+Anonymous Comments
+Wellbeing Responses
+Manager Feedback
+Culture Feedback
+```
+
+Module 18 يحكم صلاحياتها.
+
+---
+
+# 19.65 Free-Text Protection
+
+قبل عرض comments للManagers يمكن للنظام إزالة:
+
+```text
+Employee Names
+National ID
+Phone
+Email
+Direct Personal References
+```
+
+حتى لا يتم كشف هوية المشارك بالخطأ.
+
+---
+
+# 19.66 AI Guardrails
+
+AI يستطيع:
+
+* Summarize Comments
+* Identify Topics
+* Detect Trends
+* Suggest Survey Questions
+* Suggest Action Plans
+
+لكن لا يستطيع:
+
+```text
+Identify anonymous respondent
+```
+
+ولا:
+
+```text
+Automatically mark employee as disengaged
+```
+
+ولا:
+
+```text
+Penalize employee based on survey response
+```
+
+---
+
+# 19.67 Data Model
+
+أهم Entities:
+
+```text
+survey
+survey_version
+survey_question
+question_library
+
+survey_campaign
+survey_audience
+survey_response
+
+engagement_dimension
+engagement_score
+
+employee_journey
+journey_touchpoint
+experience_feedback
+
+recognition
+recognition_category
+recognition_reward
+
+communication
+communication_audience
+communication_acknowledgment
+
+employee_feedback
+employee_idea
+
+wellbeing_pulse
+
+engagement_action
+action_progress
+```
+
+---
+
+# 19.68 Navigation Structure
+
+```text
+Module 19
+│
+├── Employee Experience Overview
+│
+├── Employee Listening
+│
+├── Surveys
+│   ├── Survey Builder
+│   ├── Campaigns
+│   ├── Question Library
+│   └── Results
+│
+├── Engagement
+│   ├── Engagement Score
+│   ├── eNPS
+│   ├── Drivers
+│   └── Trends
+│
+├── Employee Journeys
+│
+├── Project Experience
+│
+├── Recognition
+│
+├── Culture
+│
+├── Employee Voice
+│   ├── Feedback
+│   ├── Suggestions
+│   └── Ideas
+│
+├── Internal Communication
+│
+├── Wellbeing
+│
+├── Action Plans
+│
+└── Experience Analytics
+```
+
+---
+
+# 19.69 القاعدة الأساسية
+
+أهم قاعدة عندي في Module 19:
+
+> **Employee Listening must result in organizational action—not employee surveillance.**
+
+أي:
+
+```text
+Survey
+↓
+Organizational Insight
+↓
+Management Action
+```
+
+وليس:
+
+```text
+Survey
+↓
+Employee Profiling
+↓
+Penalty
+```
+
+---
+
+# 19.70 النتيجة بعد Module 19
+
+المنظومة أصبحت الآن تغطي 4 مستويات مختلفة:
+
+```text
+Modules 01–16
+Operational HR
+
+Module 17
+People Intelligence
+
+Module 18
+Governance & Control
+
+Module 19
+Employee Voice & Experience
+```
+
+وبالتالي نبدأ نصل فعلًا إلى **People Management Platform** وليس HRMS تقليديًا فقط.
+
+والخطوة المنطقية التالية عندي ستكون:
+
+**Module 20 — Strategic Organization Development, Organization Design, Workforce Transformation, Change Management & Organizational Effectiveness**
+
+لأن الـOrg Chart الحالي يحتوي بالفعل على **Organizational Development** كوظيفة مستقلة تحت People & Culture، لكن الـManual التشغيلي لا يعطيها حتى الآن دورة تشغيلية مستقلة واضحة، وبالتالي تستحق Module كامل خاص بها بدل أن تبقى مجرد جزء من Organization Structure أو Analytics. 

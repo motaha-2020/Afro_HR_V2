@@ -1,0 +1,1729 @@
+نعم، و**Module 11** هنا لازم يكون أكثر من مجرد Training Calendar أو قائمة كورسات. الأفضل أن يكون هو المحرك الذي يحول **Gap → Development Action → Training/Certification → Assessment → Competency Update → أثر على الأداء والترقية والتوظيف الداخلي**.
+
+والـManual الحالي عنده بالفعل أجزاء متفرقة من هذا المسار: الـJob Offer يشرح متطلبات التدريب والشهادات، والـOnboarding يفرض HSE training قبل deployment، وهناك Skill Level Assessment Certificate وProfessional Practice License للفنيين، والـOrientation يشمل HR/HSE/Operational Induction.   
+لكن لا يوجد حتى الآن **Learning & Development Lifecycle** مستقل يدير الاحتياج التدريبي، الخطة، التنفيذ، الاعتماد، الصلاحية، التجديد، وربط ذلك بالـPerformance والـJob Architecture.
+
+# Module 11 — Learning, Training, Competency Development & Certification Management
+
+## 11.1 الهدف الأساسي
+
+الوحدة تدير الدورة التالية:
+
+**Job Requirements
+→ Employee Current Competency
+→ Skill Gap
+→ Development Need
+→ Training / Coaching / Certification
+→ Completion
+→ Assessment
+→ Competency Update
+→ Readiness / Eligibility**
+
+والمدخلات الأساسية تأتي من:
+
+* Module 02 — Job Architecture
+* Module 05 — Recruitment & ATS
+* Module 06 — Onboarding
+* Module 10 — Performance Management
+* HSE requirements
+* Project/customer requirements
+* Compliance requirements
+* Manager requests
+* Employee development plan
+
+---
+
+# 11.2 نقطة مهمة في التصميم
+
+لا نخلط بين 4 أشياء مختلفة:
+
+### Training
+
+مثل:
+
+* Excel
+* Leadership
+* Project Management
+* Fiber Splicing
+
+### Certification
+
+مثل:
+
+* PMP
+* First Aid
+* Working at Heights
+* Vendor Certification
+
+### Competency
+
+مثل:
+
+* Project Planning
+* Fiber Testing
+* Leadership
+* Cost Control
+
+### License / Authorization
+
+مثل:
+
+* Professional Practice License
+* Customer Site Authorization
+* Equipment Operator Permit
+
+كل واحدة لها lifecycle مختلف.
+
+---
+
+# 11.3 Learning Governance
+
+أقترح أن يكون **Organizational Development** هو الـBusiness Owner لهذه الوحدة، لأن الـOrg Chart الحالي يحتوي بالفعل على Organizational Development Leader داخل People & Culture. 
+
+لكن التنفيذ موزع:
+
+```text
+OD
+→ Learning Governance
+
+HSE
+→ Safety Training & Certification
+
+Technical Departments
+→ Technical Competency
+
+Project Managers
+→ Project-Specific Requirements
+
+Direct Managers
+→ Development Needs
+
+HR Operations
+→ Follow-up
+
+Employee
+→ Learning Execution
+
+External Providers
+→ Training / Certification
+```
+
+---
+
+# 11.4 Training Need Sources
+
+أي Training Need لازم يكون له **Source** واضح.
+
+مثلاً:
+
+### Performance Gap
+
+من Module 10.
+
+مثال:
+
+Employee score في:
+
+> Cost Control = 2/5
+
+فتظهر Development Need.
+
+---
+
+### Competency Gap
+
+Job requires:
+
+> Fiber Testing Level 4
+
+Employee current level:
+
+> Level 2
+
+Gap:
+
+> 2 Levels
+
+---
+
+### Mandatory Compliance
+
+مثلاً:
+
+* First Aid
+* Fire Fighting
+* Electrical Safety
+* Working at Heights
+
+وده متوافق مع الـManual، الذي يجعل HSE courses جزءًا من متطلبات onboarding لبعض الوظائف. 
+
+---
+
+### Customer Requirement
+
+مثلاً:
+
+Huawei Project requires:
+
+> Huawei Site Certification
+
+---
+
+### Project Requirement
+
+مثلاً:
+
+New FTTH Project requires:
+
+> OTDR Testing Training
+
+---
+
+### Promotion Requirement
+
+مثلاً:
+
+Promotion to:
+
+> Project Manager
+
+requires:
+
+* Leadership Level 3
+* Project Planning Level 4
+* PMP or Internal PM Certification
+
+---
+
+### Manager Request
+
+---
+
+### Employee Request
+
+---
+
+### Audit / Incident
+
+مثلاً:
+
+Safety incident.
+
+→ Mandatory refresher training.
+
+---
+
+# 11.5 Competency Framework
+
+نحتاج:
+
+## Competency Library
+
+مثال:
+
+### Technical
+
+* Fiber Splicing
+* OTDR Testing
+* FTTH Design
+* Civil Works Supervision
+* Telecom Project Planning
+
+### Project Management
+
+* Scheduling
+* Cost Control
+* Risk Management
+* Contract Management
+
+### Leadership
+
+* People Management
+* Decision Making
+* Conflict Management
+
+### Business
+
+* Financial Awareness
+* Customer Management
+* Negotiation
+
+### HSE
+
+* Working at Heights
+* Electrical Safety
+* Risk Assessment
+
+---
+
+# 11.6 Competency Levels
+
+مثلاً:
+
+| Level | Meaning             |
+| ----- | ------------------- |
+| L0    | Not Assessed        |
+| L1    | Awareness           |
+| L2    | Basic               |
+| L3    | Working Proficiency |
+| L4    | Advanced            |
+| L5    | Expert / Trainer    |
+
+لكن تكون Configurable.
+
+---
+
+# 11.7 Job Competency Profile
+
+Module 02 يحدد لكل Job:
+
+> Required Competencies
+
+مثال:
+
+## Fiber Supervisor
+
+| Competency       | Required Level |
+| ---------------- | -------------: |
+| Fiber Splicing   |             L4 |
+| OTDR Testing     |             L4 |
+| Site Supervision |             L4 |
+| HSE Awareness    |             L4 |
+| Reporting        |             L3 |
+| Leadership       |             L3 |
+
+---
+
+# 11.8 Employee Competency Profile
+
+لكل Employee:
+
+| Competency | Required | Current | Gap |
+| ---------- | -------: | ------: | --: |
+| Splicing   |        4 |       4 |   0 |
+| OTDR       |        4 |       2 |  -2 |
+| Leadership |        3 |       2 |  -1 |
+| Reporting  |        3 |       3 |   0 |
+
+ومن هنا النظام يولد:
+
+> Development Needs.
+
+---
+
+# 11.9 Skill Gap Engine
+
+المعادلة الأساسية:
+
+```text
+Competency Gap =
+Required Level - Current Level
+```
+
+ثم Priority:
+
+```text
+Gap Severity
+× Job Criticality
+× Project Requirement
+× Employee Role
+```
+
+مثلاً:
+
+OTDR gap = 2
+
+وهو required للdeployment.
+
+إذن:
+
+> Critical Development Gap
+
+---
+
+# 11.10 Training Catalog
+
+نحتاج Central Catalog.
+
+كل Course يحتوي:
+
+* Course Code
+* Course Name
+* Arabic Name
+* English Name
+* French Name
+* Description
+* Category
+* Provider
+* Internal / External
+* Delivery Method
+* Duration
+* Hours
+* Cost
+* Currency
+* Validity
+* Required Assessment
+* Pass Score
+* Competencies Developed
+* Target Job Roles
+* Target Grades
+* Mandatory / Optional
+* Prerequisites
+* Certification Result
+* Renewal Required
+* Active / Inactive
+
+---
+
+# 11.11 Delivery Methods
+
+النظام يدعم:
+
+* Classroom
+* Virtual
+* Self-paced
+* LMS
+* On-the-job
+* Coaching
+* Mentoring
+* Shadowing
+* Workshop
+* Toolbox Talk
+* Field Practice
+* External Training
+* Vendor Training
+
+---
+
+# 11.12 Learning Path
+
+بدل Course واحد فقط.
+
+مثلاً:
+
+## Fiber Technician Learning Path
+
+```text
+Company Orientation
+↓
+HSE Orientation
+↓
+Working at Heights
+↓
+Fiber Basics
+↓
+Splicing Training
+↓
+OTDR Training
+↓
+Field Shadowing
+↓
+Practical Assessment
+↓
+Certified Fiber Technician
+```
+
+وده مفيد جدًا لأن الـManual الحالي لديه بالفعل onboarding + HSE + shadowing لمدة أسبوعين ضمن operational readiness، فيمكن تحويلها إلى Learning Path رسمي داخل النظام. 
+
+---
+
+# 11.13 Mandatory Training Matrix
+
+واحدة من أهم شاشات النظام.
+
+مثلاً:
+
+| Job           | Training           | Mandatory | Validity |
+| ------------- | ------------------ | --------- | -------- |
+| Rigger        | Working at Heights | Yes       | 1 Year   |
+| Electrician   | Electrical Safety  | Yes       | 1 Year   |
+| Site Engineer | Risk Assessment    | Yes       | 2 Years  |
+| All Employees | Code of Conduct    | Yes       | Annual   |
+
+---
+
+# 11.14 Certification Management
+
+لكل Certification:
+
+* Certification Name
+* Issuing Body
+* Certification Number
+* Employee
+* Issue Date
+* Expiry Date
+* Validity Period
+* Certificate File
+* Verification URL/Reference
+* Status
+* Renewal Required
+* Renewal Lead Time
+* Cost
+* Customer / Project applicability
+
+Status:
+
+```text
+Planned
+In Training
+Exam Scheduled
+Passed
+Failed
+Certified
+Expiring Soon
+Expired
+Renewal In Progress
+Revoked
+```
+
+---
+
+# 11.15 Expiry Engine
+
+مثال:
+
+Certification expires:
+
+> 30 November 2026
+
+النظام يرسل:
+
+* 90 days before
+* 60 days
+* 30 days
+* 7 days
+
+ويظهر:
+
+> Expiring Soon.
+
+---
+
+# 11.16 Deployment Block
+
+دي نقطة مهمة جدًا لقطاع المقاولات والاتصالات.
+
+إذا كان Project X يتطلب:
+
+> Working at Heights
+
+والموظف:
+
+> Certificate Expired
+
+يمكن للنظام تطبيق:
+
+```text
+Deployment Eligibility = Blocked
+```
+
+بدل مجرد Notification.
+
+وده يتفق مع سياسة الـManual التي تمنع deployment للوظائف الحساسة للسلامة قبل استكمال الفحوص والتدريب والشهادات المطلوبة. 
+
+---
+
+# 11.17 Customer-Specific Certifications
+
+مثال:
+
+Huawei Project:
+
+* Huawei Safety Passport
+* Huawei Technical Certification
+
+Ericsson:
+
+* Ericsson Site Access
+* Ericsson HSE
+
+Nokia:
+
+* Nokia Project Certification
+
+ويكون لكل Employee:
+
+```text
+Global Qualification
++
+Customer Qualification
++
+Project Qualification
+```
+
+---
+
+# 11.18 Training Request Workflow
+
+```text
+Training Need Identified
+↓
+Training Request
+↓
+Manager Approval
+↓
+OD Review
+↓
+Budget Check
+↓
+Training Assignment
+↓
+Employee Enrollment
+↓
+Training Completion
+↓
+Assessment
+↓
+Certification / Competency Update
+↓
+Close
+```
+
+---
+
+# 11.19 Individual Development Plan — IDP
+
+من Module 10.
+
+كل Employee يمكن أن يكون له:
+
+## Individual Development Plan
+
+مثلاً:
+
+```text
+Employee: Ahmed
+
+Development Area:
+Leadership
+
+Current Level:
+L2
+
+Required:
+L3
+
+Development Actions:
+• Leadership Workshop
+• Coaching with Manager
+• Lead one site team for 3 months
+• Final Manager Assessment
+```
+
+---
+
+# 11.20 Development Action Types
+
+لا نفترض أن التدريب وحده يحل الـGap.
+
+يدعم:
+
+* Formal Training
+* Coaching
+* Mentoring
+* Shadowing
+* Stretch Assignment
+* Job Rotation
+* Project Assignment
+* Self Study
+* Certification
+* Workshop
+* Assessment
+* Reading / Learning Material
+
+---
+
+# 11.21 Performance Integration
+
+Module 10 قد يرسل:
+
+```text
+Development Need
+```
+
+مثلاً:
+
+> Planning competency below expected level.
+
+Module 11 يحولها:
+
+```text
+Development Need
+↓
+Training / Coaching
+↓
+Completion
+↓
+Reassessment
+↓
+Updated Competency
+```
+
+ثم النتيجة تعود إلى Module 10 في الدورة التالية.
+
+---
+
+# 11.22 PIP Integration
+
+إذا الموظف لديه:
+
+> Performance Improvement Plan
+
+يمكن ربط Actions بـModule 11.
+
+مثلاً:
+
+```text
+PIP Action:
+Complete Project Planning Course
+
+Deadline:
+30 Days
+
+Status:
+Completed
+```
+
+---
+
+# 11.23 Training Session Management
+
+كل Session يحتوي:
+
+* Course
+* Trainer
+* Venue
+* Start Date
+* End Date
+* Capacity
+* Participants
+* Waitlist
+* Attendance
+* Assessment
+* Cost
+* Project
+* Provider
+* Materials
+
+---
+
+# 11.24 Enrollment
+
+طرق التسجيل:
+
+* Auto Assigned
+* Manager Assigned
+* Employee Request
+* OD Assigned
+* HSE Assigned
+* Project Requirement
+* Performance Plan
+* Certification Renewal
+
+---
+
+# 11.25 Prerequisites
+
+مثلاً:
+
+لا يمكن التسجيل في:
+
+> Advanced Fiber Testing
+
+إلا إذا:
+
+```text
+Fiber Basics = Completed
+AND
+Splicing Level >= 3
+```
+
+---
+
+# 11.26 Training Attendance
+
+يمكن تسجيل:
+
+* Present
+* Absent
+* Late
+* Partial Attendance
+* Excused
+
+ويرتبط Module 07 لو التدريب أثناء ساعات العمل.
+
+---
+
+# 11.27 Training Assessment
+
+عدة أنواع:
+
+### Pre Assessment
+
+### Post Assessment
+
+### Written Exam
+
+### Practical Exam
+
+### Field Observation
+
+### Manager Assessment
+
+### Customer Assessment
+
+### Trainer Assessment
+
+---
+
+# 11.28 Assessment Score
+
+مثال:
+
+```text
+Written Exam       30%
+Practical Test     50%
+Trainer Evaluation 20%
+```
+
+Pass Mark:
+
+> 75%
+
+---
+
+# 11.29 Failed Training
+
+إذا Failed:
+
+يمكن:
+
+* Retake Exam
+* Repeat Course
+* Assign Coaching
+* Escalate Manager
+* Block Certification
+* Block Deployment
+
+حسب Rules.
+
+---
+
+# 11.30 Practical Qualification
+
+مهم للفنيين.
+
+مثلاً:
+
+Fiber Splicing:
+
+```text
+Theory Exam      20%
+Practical Test   60%
+Field Assessment 20%
+```
+
+ثم:
+
+> Competency Level Updated from L2 → L3
+
+---
+
+# 11.31 Skill Assessment
+
+الـManual الحالي يطلب **Skill Level Assessment Certificate للفنيين** وProfessional Practice License عند الحاجة. 
+
+لذلك النظام يجب أن يدير:
+
+```text
+Assessment Request
+↓
+Assessment Scheduled
+↓
+Assessor
+↓
+Practical Exam
+↓
+Score
+↓
+Competency Level
+↓
+Certificate
+```
+
+وليس مجرد Upload للCertificate.
+
+---
+
+# 11.32 Internal Trainer Management
+
+يمكن تسجيل موظفين كـ:
+
+> Internal Trainer
+
+مع:
+
+* Subject
+* Competency Level
+* Trainer Rating
+* Sessions Delivered
+* Certification
+* Availability
+
+---
+
+# 11.33 Train-the-Trainer
+
+يمكن إنشاء:
+
+> Trainer Qualification
+
+بحيث لا يستطيع أي Employee تقديم Course إلا إذا كان:
+
+```text
+Trainer Certified = Yes
+```
+
+---
+
+# 11.34 External Training Providers
+
+Provider master:
+
+* Provider Name
+* Specialization
+* Contact
+* Accreditation
+* Courses
+* Cost
+* SLA
+* Rating
+* Contracts
+* Documents
+
+---
+
+# 11.35 Training Provider Evaluation
+
+بعد Session:
+
+* Content Quality
+* Trainer Quality
+* Logistics
+* Relevance
+* Assessment Quality
+* Value for Money
+
+---
+
+# 11.36 Training Budget
+
+نحتاج Budget Management داخل الوحدة.
+
+Budget by:
+
+* Company
+* Department
+* Project
+* Cost Center
+* Training Category
+* Year
+
+مثال:
+
+```text
+Annual Training Budget
+EGP 2,000,000
+
+Committed
+650,000
+
+Consumed
+900,000
+
+Remaining
+450,000
+```
+
+---
+
+# 11.37 Training Cost
+
+Cost components:
+
+* Course Fee
+* Trainer
+* Venue
+* Exam Fee
+* Certificate
+* Travel
+* Accommodation
+* Transportation
+* Allowance
+* Materials
+
+---
+
+# 11.38 Project Cost Allocation
+
+لو التدريب خاص بمشروع:
+
+```text
+Training Cost
+→ Project Cost Center
+```
+
+لو Corporate:
+
+```text
+→ HR / OD Cost Center
+```
+
+ويمكن تقسيم التكلفة على أكثر من Project.
+
+---
+
+# 11.39 Training Agreement / Bond
+
+لبعض التدريبات المكلفة، يمكن Configurable:
+
+مثلاً:
+
+Training cost:
+
+> EGP 100,000
+
+Policy:
+
+> Employee must remain 12 months
+
+لكن تطبيق أي recovery مالي يجب أن يعتمد على Policy الشركة والقانون، وليس Rule ثابتة.
+
+---
+
+# 11.40 Learning Calendar
+
+يعرض:
+
+* Planned Trainings
+* Sessions
+* Exams
+* Certification Renewals
+* Mandatory Courses
+* Instructor Availability
+
+Filters:
+
+* Department
+* Project
+* Location
+* Course
+* Trainer
+* Employee Group
+
+---
+
+# 11.41 Training Capacity
+
+مثلاً:
+
+Course capacity:
+
+> 20
+
+Registered:
+
+> 20
+
+ثم:
+
+> Waiting List
+
+---
+
+# 11.42 Waitlist Management
+
+إذا انسحب Employee:
+
+النظام يمكن أن يرفع أول شخص من:
+
+> Waiting List.
+
+---
+
+# 11.43 Training Nomination
+
+Manager يستطيع ترشيح:
+
+* Employee
+* Team
+* Project workforce
+
+مع:
+
+* Reason
+* Priority
+* Expected outcome
+
+---
+
+# 11.44 Priority Levels
+
+مثلاً:
+
+### P0 — Deployment Critical
+
+### P1 — Compliance
+
+### P2 — Performance Gap
+
+### P3 — Development
+
+### P4 — Optional
+
+---
+
+# 11.45 Training Effectiveness
+
+لا نكتفي:
+
+> Completed Course.
+
+نحتاج 4 مستويات مثلاً:
+
+### Level 1 — Reaction
+
+هل التدريب كان مفيدًا؟
+
+### Level 2 — Learning
+
+هل تعلم الموظف؟
+
+### Level 3 — Behavior
+
+هل تغير الأداء في العمل؟
+
+### Level 4 — Business Result
+
+هل أثر على النتائج؟
+
+---
+
+# 11.46 Effectiveness Follow-Up
+
+بعد 60 أو 90 يومًا:
+
+Manager يجيب:
+
+```text
+Has employee applied learning?
+Yes / Partially / No
+```
+
+مع Score.
+
+---
+
+# 11.47 ROI Analysis
+
+لبعض البرامج:
+
+```text
+Training ROI =
+Business Benefit - Training Cost
+-------------------------------
+Training Cost
+```
+
+لكن لا يستخدم لكل Course؛ سيكون عبئًا غير ضروري.
+
+يستخدم فقط للبرامج الكبيرة.
+
+---
+
+# 11.48 Certification Compliance Dashboard
+
+مثال:
+
+```text
+Active Employees               4,250
+Mandatory Certifications       6,800
+Valid                          6,120
+Expiring < 30 Days               320
+Expired                          210
+Missing                          150
+```
+
+---
+
+# 11.49 Training Dashboard
+
+KPIs:
+
+* Training Hours
+* Training Cost
+* Cost per Employee
+* Completion Rate
+* Pass Rate
+* Mandatory Compliance %
+* Certification Expiry
+* Skill Gaps
+* Development Plans
+* Learning Hours by Project
+* Training Effectiveness
+* Training Budget Consumption
+
+---
+
+# 11.50 Skill Heatmap
+
+مثلاً:
+
+| Team   | Fiber | OTDR | Planning | HSE |
+| ------ | ----: | ---: | -------: | --: |
+| Team A |   4.2 |  3.8 |      2.7 | 4.5 |
+| Team B |   3.5 |  2.9 |      3.2 | 4.1 |
+
+وده يفيد Workforce Planning.
+
+---
+
+# 11.51 Critical Skill Risk
+
+النظام يكتشف:
+
+مثلاً:
+
+> Ericsson Project يحتاج 20 Certified Riggers.
+
+Available:
+
+> 14 فقط.
+
+Gap:
+
+> 6
+
+فيظهر:
+
+**Critical Skill Shortage**
+
+---
+
+# 11.52 Training Demand Forecast
+
+من:
+
+* Upcoming Projects
+* Recruitment Plan
+* Employee Skill Gaps
+* Certificate Expiry
+* Promotion Plans
+
+النظام يستطيع توقع:
+
+```text
+Next Quarter Training Demand
+```
+
+---
+
+# 11.53 Internal Mobility Integration
+
+إذا موظف يريد الانتقال إلى Job آخر:
+
+النظام يقارن:
+
+```text
+Target Job Requirements
+vs
+Employee Competency
+```
+
+ويولد:
+
+> Development Path.
+
+---
+
+# 11.54 Career Development
+
+مثال:
+
+```text
+Fiber Engineer
+↓
+Senior Fiber Engineer
+↓
+Site Manager
+↓
+Project Manager
+```
+
+ويعرض لكل انتقال:
+
+* Required Competencies
+* Missing Competencies
+* Required Training
+* Certifications
+* Experience
+
+---
+
+# 11.55 Succession Integration
+
+مستقبلًا Module Talent Management يقرأ:
+
+* Performance
+* Competency
+* Certifications
+* Development Readiness
+
+ويحدد:
+
+> Ready Now
+> Ready < 1 Year
+> Ready 1–2 Years
+
+---
+
+# 11.56 Learning Content Repository
+
+يمكن حفظ:
+
+* PDF
+* Video
+* Presentation
+* SOP
+* Technical Manual
+* Quiz
+* Checklist
+* Policy
+
+مع:
+
+* Version
+* Owner
+* Effective Date
+
+---
+
+# 11.57 Knowledge Check
+
+بعد قراءة Policy:
+
+```text
+Read
+↓
+Quiz
+↓
+Pass
+↓
+Acknowledged
+```
+
+مفيد لـ:
+
+* HSE
+* HR Policies
+* Code of Conduct
+* Customer Procedures
+
+---
+
+# 11.58 LMS Capability
+
+لو نريدها Full SaaS مستقبلًا:
+
+يدعم:
+
+* Courses
+* Lessons
+* Videos
+* Quiz
+* Progress
+* Certificates
+* SCORM/xAPI لاحقًا
+* Mobile Learning
+
+لكن أنصح ألا نبني LMS ثقيل من أول نسخة إذا لم يكن مطلوبًا؛ ممكن يبدأ النظام كـ**Learning Management + Compliance + Competency Engine** ثم يضاف Content Delivery تدريجيًا.
+
+---
+
+# 11.59 AI Functions
+
+AI ممكن يساعد في:
+
+### Training Recommendation
+
+من Skill Gap.
+
+### Learning Path Recommendation
+
+### Skill Extraction
+
+من Job Description.
+
+### Course-to-Competency Mapping
+
+### Training Need Summary
+
+### Quiz Generation
+
+### Training Material Summary
+
+### Skill Gap Analysis
+
+لكن القرار النهائي يبقى لـOD/Manager.
+
+---
+
+# 11.60 AI Skills Inference
+
+مثلاً CV + Job History + Training:
+
+AI يقترح:
+
+> Possible OTDR competency = L3
+
+لكن لا يحدث Official Competency Level تلقائيًا.
+
+يصبح:
+
+```text
+AI Suggested
+↓
+Assessment Required
+↓
+Approved Competency
+```
+
+---
+
+# 11.61 Employee Learning Portal
+
+الموظف يرى:
+
+```text
+My Learning
+My Certifications
+My Skill Profile
+My Development Plan
+Mandatory Training
+Recommended Courses
+Upcoming Sessions
+Training History
+Certificates
+Career Development
+```
+
+---
+
+# 11.62 Manager Portal
+
+Manager يرى:
+
+```text
+Team Skill Gaps
+Training Requests
+Pending Approvals
+Certification Status
+Mandatory Compliance
+Team Development Plans
+Critical Skills
+Training Calendar
+```
+
+---
+
+# 11.63 OD Dashboard
+
+```text
+Company Skill Map
+Critical Skill Gaps
+Training Budget
+Training Completion
+Certification Compliance
+Development Plan Progress
+Provider Performance
+Training Effectiveness
+```
+
+---
+
+# 11.64 HSE Dashboard
+
+فقط ما يخصه:
+
+* HSE Training
+* Safety Certifications
+* Expiring Certificates
+* Training Compliance
+* Deployment Eligibility
+
+---
+
+# 11.65 Project Manager Dashboard
+
+مثلاً:
+
+```text
+Project: Huawei FTTH
+
+Required Workforce       120
+Training Compliant       108
+Not Ready                 12
+
+Expired Certificates       4
+Training Pending            6
+Assessment Pending          2
+```
+
+---
+
+# 11.66 Permissions
+
+### Employee
+
+* Own Learning
+* Own Certificates
+* Training Requests
+
+### Manager
+
+* Own Team
+
+### Project Manager
+
+* Project Employees
+
+### HSE
+
+* Safety training only
+
+### OD
+
+* Company-wide Learning & Competency
+
+### HR Operations
+
+* Employee readiness/compliance
+
+### Payroll / Finance
+
+لا يحتاجان تفاصيل التدريب، إلا لو توجد:
+
+* Training Allowance
+* Cost Recovery
+* Training Payment
+
+---
+
+# 11.67 Notifications
+
+أمثلة:
+
+* Mandatory training assigned
+* Session tomorrow
+* Exam scheduled
+* Certificate expiring
+* Training overdue
+* Manager approval pending
+* Training failed
+* Renewal required
+* Development plan overdue
+* Employee became deployment-ineligible
+
+---
+
+# 11.68 Escalation Rules
+
+مثلاً:
+
+```text
+Mandatory Course Overdue 7 Days
+→ Employee + Manager
+
+Overdue 14 Days
+→ Department Manager
+
+Critical Deployment Certification Expired
+→ PM + HSE + HR Operations
+```
+
+---
+
+# 11.69 Audit Trail
+
+كل تغيير يحفظ:
+
+* User
+* Date
+* Action
+* Old Value
+* New Value
+* Approval
+* Evidence
+
+خصوصًا:
+
+* Competency Levels
+* Certifications
+* Assessment Results
+* Expiry Dates
+
+---
+
+# 11.70 Core Data Model
+
+أقترح:
+
+```text
+Competency
+CompetencyCategory
+CompetencyLevel
+JobCompetencyRequirement
+EmployeeCompetency
+
+TrainingNeed
+DevelopmentPlan
+DevelopmentAction
+
+Course
+LearningPath
+LearningPathItem
+
+TrainingSession
+Enrollment
+Attendance
+
+Assessment
+AssessmentResult
+
+CertificationType
+EmployeeCertification
+CertificationRenewal
+
+Trainer
+TrainingProvider
+
+TrainingBudget
+TrainingCost
+
+TrainingRequest
+TrainingApproval
+
+TrainingEffectiveness
+LearningEvidence
+
+TrainingComplianceRule
+DeploymentQualification
+
+LearningNotification
+LearningAuditLog
+```
+
+---
+
+# 11.71 التكامل مع Modules السابقة
+
+```text
+Module 02
+Job Architecture
+↓
+Required Competencies
+↓
+Module 05
+Candidate Skills
+↓
+Module 06
+Mandatory Onboarding Training
+↓
+Module 10
+Performance Gaps
+↓
+Module 11
+Learning & Development
+↓
+Updated Competency
+```
+
+مع Side Integrations:
+
+```text
+Module 07
+Training Attendance
+
+Module 09
+Training Cost / Allowance
+
+Projects
+Customer Certifications
+
+HSE
+Safety Requirements
+```
+
+---
+
+# 11.72 أهم Rule في Module 11
+
+النظام يجب أن يستطيع الإجابة في أي لحظة:
+
+> **هل هذا الموظف Qualified فعليًا لهذه الوظيفة / المهمة / الموقع / المشروع؟**
+
+وليس فقط:
+
+> هل حضر Course؟
+
+فالمنطق الصحيح:
+
+```text
+Training Completed
+≠
+Competency Confirmed
+≠
+Certification Valid
+≠
+Deployment Eligible
+```
+
+ممكن الموظف يكون حضر Training ولكنه فشل Assessment، أو نجح ولكن Certificate انتهت، أو شهادة سليمة لكن Project نفسه يتطلب Customer-specific authorization إضافية.
+
+هذه النقطة هي التي تحول Module 11 من **Training Tracker** إلى **Workforce Capability Management System**.
+
+---
+
+## الـWorkflow النهائي
+
+```text
+Job / Project Requirement
+        ↓
+Required Competency
+        ↓
+Employee Competency Assessment
+        ↓
+Gap Identified
+        ↓
+Training / Development Need
+        ↓
+Request & Approval
+        ↓
+Learning Path / Course Assignment
+        ↓
+Training Execution
+        ↓
+Assessment
+        ↓
+Pass / Fail
+        ↓
+Certification
+        ↓
+Competency Update
+        ↓
+Deployment Eligibility
+        ↓
+Performance Follow-up
+```
+
+والـModule المنطقي بعده في رأيي يكون **Module 12 — Career Management, Talent Review, Succession Planning, Promotions & Internal Mobility**؛ لأننا بعد Module 10 أصبح لدينا **Performance**، وبعد Module 11 أصبح لدينا **Competency + Skill Readiness**، وبالتالي أصبح لدينا لأول مرة بيانات كافية لاتخاذ قرارات عادلة نسبيًا حول **من يستحق الترقية، من يمكن أن يخلف Position critical، من Ready Now، ومن يحتاج Development Plan قبل الانتقال لوظيفة أعلى**.

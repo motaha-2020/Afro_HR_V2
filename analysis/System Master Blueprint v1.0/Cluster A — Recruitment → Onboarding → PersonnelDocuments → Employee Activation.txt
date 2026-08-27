@@ -1,0 +1,1791 @@
+الخطوة التالية المنطقية هي:
+
+# Cluster A — Recruitment → Onboarding → Personnel/Documents → Employee Activation
+
+الهدف هنا هو تثبيت **لحظة انتقال الشخص من Candidate إلى Employee** بدون تكرار بيانات، وبناء سلسلة بيانات واضحة من أول Manpower Request حتى Employee Activation.
+
+## 1. المسار الأساسي
+
+```text
+Manpower Request
+      ↓
+Vacancy
+      ↓
+Candidate
+      ↓
+Application
+      ↓
+Interview / Assessment
+      ↓
+Selected Candidate
+      ↓
+Offer
+      ↓
+Offer Accepted
+      ↓
+Onboarding Case
+      ↓
+Document Verification
+      ↓
+Contract
+      ↓
+Compliance / HSE / Insurance / System Setup
+      ↓
+Employee Created
+      ↓
+Employment Created
+      ↓
+Primary Assignment Created
+      ↓
+Employee Activated
+```
+
+وهذا مطابق تقريبًا لتسلسل الـManual: Hiring Request → Sourcing & Screening → Requester Review → Assessment → Selection → Job Offer → Acceptance → Handover to Personnel، ثم Onboarding وDocument Collection وContracting وSystem Registration وOperational/HSE readiness وأخيرًا Employment Activation. 
+
+---
+
+# 2. أهم قرار معماري
+
+لا يتم إنشاء `employee` عند دخول الشخص إلى الـATS.
+
+الصحيح:
+
+```text
+Candidate ≠ Employee
+```
+
+يبقى الشخص:
+
+```text
+recruitment.candidate
+```
+
+حتى:
+
+```text
+Offer Accepted
++
+Minimum employee-creation requirements completed
+```
+
+ثم يتم تنفيذ:
+
+```text
+Create Employee
+```
+
+مع حفظ الرابط:
+
+```text
+candidate_id → employee_id
+```
+
+وبذلك لا نحصل على Employee Records لأشخاص:
+
+* رفضوا العرض.
+* لم يحضروا.
+* فشلوا في onboarding.
+* انسحبوا قبل joining.
+
+---
+
+# 3. Recruitment Domain
+
+## الجداول الرئيسية
+
+```text
+recruitment.manpower_requests
+recruitment.vacancies
+
+recruitment.candidates
+recruitment.candidate_contacts
+recruitment.candidate_education
+recruitment.candidate_experience
+recruitment.candidate_skills
+
+recruitment.applications
+
+recruitment.shortlists
+
+recruitment.interviews
+recruitment.interview_panel_members
+recruitment.interview_evaluations
+
+recruitment.assessments
+recruitment.assessment_results
+
+recruitment.offers
+recruitment.offer_components
+
+recruitment.candidate_status_history
+```
+
+---
+
+# 4. `manpower_requests`
+
+هو بداية الـHiring lifecycle.
+
+```text
+request_id UUID PK
+
+tenant_id
+company_id
+
+request_number
+
+requested_by_employee_id
+
+org_unit_id
+position_id
+
+project_id nullable
+location_id nullable
+
+vacancy_count
+
+hiring_type
+priority
+
+replacement_employee_id nullable
+
+salary_range_min
+salary_range_max
+
+required_joining_date
+
+status
+
+requested_at
+approved_at
+```
+
+الـManual يطلب بالفعل بيانات مثل Position Title وNumber of Vacancies وProject Code/Name وDirect Manager وLocation وSalary Range وPriority وNew/Replacement Position. 
+
+---
+
+# 5. Manpower Request State Machine
+
+```text
+DRAFT
+   ↓
+SUBMITTED
+   ↓
+UNDER_APPROVAL
+   ↓
+APPROVED
+   ↓
+OPEN_FOR_RECRUITMENT
+   ↓
+PARTIALLY_FILLED
+   ↓
+FILLED
+```
+
+ومسارات أخرى:
+
+```text
+SUBMITTED → REJECTED
+APPROVED → CANCELLED
+```
+
+---
+
+# 6. Vacancy
+
+الـManpower Request قد يطلب:
+
+```text
+10 technicians
+```
+
+لكن من الأفضل أن يكون لدينا:
+
+```text
+manpower_request
+       ↓
+vacancy / requisition
+```
+
+بحسب سياسة النظام.
+
+أقترح:
+
+```text
+recruitment.vacancies
+```
+
+```text
+vacancy_id
+request_id
+
+position_id
+
+required_headcount
+
+filled_headcount
+
+status
+
+open_date
+target_fill_date
+close_date
+```
+
+---
+
+# 7. Candidate
+
+```text
+recruitment.candidates
+```
+
+يحتوي فقط Profile الـRecruitment.
+
+```text
+candidate_id
+
+tenant_id
+
+first_name_en
+middle_name_en
+last_name_en
+
+first_name_ar
+middle_name_ar
+last_name_ar
+
+mobile
+email
+
+nationality_code
+
+current_job_title
+
+current_employer
+
+current_salary nullable
+
+expected_salary nullable
+
+notice_period_days nullable
+
+availability_date nullable
+
+source_id
+
+candidate_status
+
+created_at
+```
+
+---
+
+# 8. Candidate National ID
+
+هنا توجد نقطة حساسة.
+
+يمكن جمع National ID عند الحاجة، لكن لا يجب نسخه لاحقًا يدويًا إلى Employee.
+
+عند التحويل إلى Employee:
+
+```text
+candidate identifier
+        ↓
+verified
+        ↓
+core_hr.employee_identifiers
+```
+
+بنفس normalized value وبعد validation.
+
+---
+
+# 9. Application
+
+Candidate يمكن أن يتقدم لأكثر من Vacancy.
+
+إذًا:
+
+```text
+Candidate N:M Vacancy
+```
+
+نحلها بـ:
+
+```text
+recruitment.applications
+```
+
+```text
+application_id
+
+candidate_id
+vacancy_id
+
+application_date
+
+current_stage
+
+status
+
+source_id
+
+rejection_reason_id nullable
+```
+
+---
+
+# 10. Interview Model
+
+لا نضع فقط:
+
+```text
+interview_score
+```
+
+لأن العملية في الـManual يمكن أن تشمل:
+
+* Technical Interview.
+* HSE Assessment.
+* HR Interview. 
+
+لذلك:
+
+```text
+recruitment.interviews
+```
+
+```text
+interview_id
+application_id
+
+interview_type
+
+scheduled_at
+
+status
+
+location_type
+
+location_details
+
+overall_result
+```
+
+والـPanel:
+
+```text
+interview_panel_members
+
+interview_id
+employee_id
+panel_role
+```
+
+---
+
+# 11. Interview Evaluation
+
+```text
+interview_evaluations
+```
+
+```text
+evaluation_id
+interview_id
+evaluator_employee_id
+
+criterion_id
+
+score
+rating
+comments
+
+recommendation
+```
+
+وبذلك نستطيع دعم:
+
+```text
+Communication
+Technical competency
+HSE fitness
+Culture fit
+Availability
+Compensation expectations
+```
+
+---
+
+# 12. Selected Candidate
+
+لا نحتاج جدولًا اسمه selected_candidates غالبًا.
+
+هذه تكون State:
+
+```text
+application.status = SELECTED
+```
+
+ثم Event:
+
+```text
+candidate.selected
+```
+
+---
+
+# 13. Offer
+
+```text
+recruitment.offers
+```
+
+```text
+offer_id
+
+application_id
+candidate_id
+
+company_id
+position_id
+
+proposed_grade_id
+
+project_id nullable
+location_id nullable
+
+proposed_joining_date
+
+currency_code
+
+offer_status
+
+issued_at
+expires_at
+
+accepted_at nullable
+rejected_at nullable
+```
+
+---
+
+# 14. Offer Components
+
+لا نضع:
+
+```text
+salary
+transport
+mobile
+allowance
+```
+
+كأعمدة ثابتة.
+
+نعمل:
+
+```text
+recruitment.offer_components
+```
+
+```text
+offer_component_id
+offer_id
+
+component_type
+
+amount
+
+calculation_type
+
+frequency
+
+remarks
+```
+
+مثال:
+
+```text
+BASIC
+FIXED_ALLOWANCE
+TRANSPORT
+MOBILE
+PROJECT_ALLOWANCE
+```
+
+---
+
+# 15. Important Ownership Rule
+
+Offer يحتوي:
+
+```text
+Proposed Compensation
+```
+
+لكن لا يصبح ذلك Compensation Master حتى بعد:
+
+```text
+employee activation / employment creation
+```
+
+حينها:
+
+```text
+Offer Components
+      ↓
+Approved Compensation Package
+      ↓
+compensation.employee_compensations
+```
+
+---
+
+# 16. Offer State Machine
+
+```text
+DRAFT
+ ↓
+PENDING_APPROVAL
+ ↓
+APPROVED
+ ↓
+ISSUED
+ ↓
+ACCEPTED
+```
+
+أو:
+
+```text
+ISSUED → REJECTED
+ISSUED → EXPIRED
+ISSUED → WITHDRAWN
+```
+
+---
+
+# 17. الحدث الحاسم
+
+عندما:
+
+```text
+offer.status = ACCEPTED
+```
+
+ينتج:
+
+```text
+offer.accepted
+```
+
+هذا الحدث لا ينشئ Employee فورًا بالضرورة.
+
+إنما يبدأ:
+
+```text
+onboarding_case
+```
+
+---
+
+# 18. Onboarding Domain
+
+الجداول:
+
+```text
+onboarding.onboarding_cases
+
+onboarding.onboarding_templates
+onboarding.template_requirements
+
+onboarding.onboarding_requirements
+
+onboarding.onboarding_tasks
+onboarding.onboarding_task_assignments
+
+onboarding.onboarding_approvals
+
+onboarding.onboarding_exceptions
+
+onboarding.readiness_checks
+```
+
+---
+
+# 19. `onboarding_cases`
+
+```text
+onboarding_case_id
+
+tenant_id
+company_id
+
+candidate_id
+application_id
+offer_id
+
+planned_position_id
+
+planned_project_id nullable
+planned_location_id nullable
+planned_manager_id nullable
+
+joining_date
+
+priority
+
+status
+
+readiness_status
+
+started_at
+completed_at nullable
+
+employee_id nullable
+employment_id nullable
+```
+
+في البداية:
+
+```text
+employee_id = NULL
+```
+
+ثم بعد إنشاء Employee يتم تحديث الرابط.
+
+---
+
+# 20. Onboarding State Machine
+
+```text
+INITIATED
+   ↓
+DOCUMENT_COLLECTION
+   ↓
+COMPLIANCE_IN_PROGRESS
+   ↓
+OPERATIONAL_PREPARATION
+   ↓
+READY_FOR_ACTIVATION
+   ↓
+ACTIVATED
+```
+
+وقد توجد:
+
+```text
+ON_HOLD
+FAILED
+CANCELLED
+```
+
+---
+
+# 21. Onboarding Template
+
+ليس كل موظف يحتاج نفس checklist.
+
+لذلك:
+
+```text
+onboarding_templates
+```
+
+يمكن أن يكون حسب:
+
+```text
+Company
+Country
+Employee Type
+Job
+Project
+Customer
+Worker Category
+```
+
+مثال:
+
+```text
+Egypt Support Employee
+
+Egypt Field Engineer
+
+Huawei Rigger
+
+Ericsson Technician
+```
+
+---
+
+# 22. Template Requirements
+
+```text
+onboarding.template_requirements
+```
+
+```text
+template_requirement_id
+
+template_id
+
+requirement_type_id
+
+mandatory
+
+sequence
+
+responsible_role
+
+sla_hours
+
+blocking_activation
+
+blocking_deployment
+```
+
+لاحظ الفرق بين:
+
+```text
+blocking_activation
+```
+
+و:
+
+```text
+blocking_deployment
+```
+
+مهم جدًا.
+
+---
+
+# 23. لماذا؟
+
+قد يكون الموظف قانونيًا Active في الشركة.
+
+لكن غير مسموح له بالنزول لموقع Huawei مثلًا حتى يكمل:
+
+```text
+Medical
+Working at Heights
+Electrical Safety
+Customer Certification
+```
+
+والـManual يفرق بالفعل بين activation وبين HSE/operational deployment requirements. 
+
+لذلك نحتاج حالتين:
+
+```text
+Employment Status
+```
+
+و:
+
+```text
+Deployment Readiness
+```
+
+ولا ندمجهما.
+
+---
+
+# 24. Onboarding Requirement
+
+```text
+onboarding.onboarding_requirements
+```
+
+```text
+requirement_id
+
+case_id
+
+requirement_type_id
+
+mandatory
+
+blocking_activation
+blocking_deployment
+
+status
+
+assigned_department
+
+due_date
+
+completed_at
+
+verified_by
+
+document_id nullable
+
+notes
+```
+
+---
+
+# 25. Requirement Types
+
+مثال من الـManual:
+
+```text
+NATIONAL_ID
+BIRTH_CERTIFICATE
+ACADEMIC_CERTIFICATE
+MILITARY_CERTIFICATE
+SOCIAL_INSURANCE_DOCUMENT
+POLICE_CLEARANCE
+MEDICAL_FORM_111
+ENGINEERS_SYNDICATE
+SKILL_CERTIFICATE
+PRACTICE_LICENSE
+
+EMPLOYMENT_CONTRACT
+NDA
+HANDBOOK_ACKNOWLEDGEMENT
+
+MEDICAL_INSURANCE
+
+BANK_LETTER
+
+HSE_MEDICAL_CLEARANCE
+FIRST_AID
+FIRE_FIGHTING
+ELECTRICAL_SAFETY
+RISK_ASSESSMENT
+WORKING_AT_HEIGHTS
+```
+
+وهذه كلها مدعومة مباشرة بالـManual الحالي. 
+
+---
+
+# 26. Shared Document Domain
+
+لا نخزن الملفات داخل onboarding tables.
+
+كل requirement يشير إلى:
+
+```text
+documents.documents
+```
+
+مثال:
+
+```text
+onboarding_requirement
+       ↓
+document_id
+       ↓
+documents.document
+```
+
+---
+
+# 27. Documents Core
+
+```text
+documents.documents
+```
+
+```text
+document_id
+
+tenant_id
+
+document_type_id
+
+owner_entity_type
+owner_entity_id
+
+document_number nullable
+
+issue_date nullable
+expiry_date nullable
+
+verification_status
+
+confidentiality_level
+
+current_version_id
+
+status
+
+created_at
+```
+
+---
+
+# 28. Document Versions
+
+```text
+documents.document_versions
+```
+
+```text
+document_version_id
+document_id
+
+version_number
+
+storage_key
+
+file_name
+mime_type
+file_size
+
+checksum
+
+uploaded_by
+uploaded_at
+```
+
+---
+
+# 29. لماذا Versioning؟
+
+لو الموظف رفع:
+
+```text
+National ID
+```
+
+ثم بعد سنة رفع نسخة جديدة.
+
+لا نحذف القديمة.
+
+بل:
+
+```text
+Document
+   ├── Version 1
+   └── Version 2
+```
+
+مع Current Version.
+
+---
+
+# 30. Personnel Domain أثناء Onboarding
+
+بعد اكتمال الوثائق الأساسية يبدأ:
+
+```text
+personnel.employment_contracts
+```
+
+لكن لا يجب أن يكون Personnel هو مالك Employee identity.
+
+هو Owner لـ:
+
+```text
+Contracts
+Legal docs
+Insurance
+Compliance
+```
+
+---
+
+# 31. Employee Creation Trigger
+
+هنا نحتاج قرارًا واضحًا.
+
+أوصي ألا ننتظر آخر يوم في Onboarding لإنشاء Employee.
+
+الأفضل وجود مرحلتين:
+
+```text
+PRE_EMPLOYMENT employee
+```
+
+ثم:
+
+```text
+ACTIVE employee
+```
+
+---
+
+# 32. السيناريو المقترح
+
+عند:
+
+```text
+Offer Accepted
++
+Joining confirmed
++
+minimum identity validation
+```
+
+يتم إنشاء:
+
+```text
+core_hr.employee
+```
+
+بحالة:
+
+```text
+PRE_EMPLOYMENT
+```
+
+ثم:
+
+```text
+core_hr.employment
+```
+
+بحالة:
+
+```text
+PRE_EMPLOYMENT
+```
+
+---
+
+# 33. لماذا هذا أفضل؟
+
+لأن IT وPersonnel وHSE وAdministration تحتاج Employee Reference لكي تنفذ Tasks قبل الـActivation.
+
+مثلًا:
+
+```text
+Create email
+Allocate laptop
+Register insurance
+Generate HR code
+Create access request
+```
+
+الـManual بالفعل يبدأ بعض هذه الإجراءات أثناء Onboarding قبل Employment Activation. 
+
+---
+
+# 34. لذلك Lifecycle تصبح
+
+```text
+Candidate
+   ↓
+Offer Accepted
+   ↓
+Onboarding Started
+   ↓
+Employee = PRE_EMPLOYMENT
+   ↓
+Employment = PRE_EMPLOYMENT
+   ↓
+Contract
+Documents
+HSE
+IT
+Insurance
+Assignment Preparation
+   ↓
+Activation Gate Passed
+   ↓
+Employment = ACTIVE
+Employee = ACTIVE
+```
+
+---
+
+# 35. Candidate → Employee Conversion
+
+نعمل Service واحد:
+
+```text
+CandidateConversionService
+```
+
+وظيفته:
+
+```text
+1 Validate candidate
+2 Detect duplicate employee
+3 Create employee
+4 Copy verified identifiers
+5 Copy contacts
+6 Create employment
+7 Link candidate → employee
+8 Generate employee code
+9 Publish employee.created
+```
+
+---
+
+# 36. Duplicate Detection
+
+هذه نقطة خطيرة جدًا.
+
+قبل إنشاء Employee، النظام يبحث باستخدام:
+
+```text
+National ID
+Passport
+Mobile
+Email
+Date of Birth
+```
+
+ولا يسمح بسهولة بإنشاء شخص مرتين.
+
+---
+
+# 37. Candidate Conversion Mapping
+
+مثال:
+
+```text
+recruitment.candidates.mobile
+           ↓
+core_hr.employee_contacts
+
+candidate National ID
+           ↓
+core_hr.employee_identifiers
+
+offer.position_id
+           ↓
+planned assignment
+
+offer.company_id
+           ↓
+employment.company_id
+
+offer joining date
+           ↓
+employment.hire_date
+```
+
+---
+
+# 38. ما الذي لا يتم نسخه؟
+
+مثل:
+
+```text
+expected_salary
+```
+
+لا يصبح salary.
+
+بل:
+
+```text
+accepted offer components
+```
+
+هي التي تصبح source للـCompensation package.
+
+---
+
+# 39. Employment Creation
+
+```text
+core_hr.employments
+```
+
+ينشأ مثلًا:
+
+```text
+employment_status = PRE_EMPLOYMENT
+
+hire_date = confirmed joining date
+
+employment_type = offer employment type
+
+worker_category = offer worker category
+```
+
+---
+
+# 40. Contract Creation
+
+بعد approval:
+
+```text
+employment
+    ↓
+employment_contract
+```
+
+العقد يبقى:
+
+```text
+PENDING_SIGNATURE
+```
+
+ثم:
+
+```text
+ACTIVE
+```
+
+بعد التوقيع.
+
+---
+
+# 41. Compensation Creation
+
+من Accepted Offer:
+
+```text
+offer
+   ↓
+offer components
+   ↓
+approved employment
+   ↓
+employee compensation package
+```
+
+لكن activation gate يتأكد أن compensation record صالح وموافق عليه.
+
+---
+
+# 42. Primary Assignment
+
+قبل activation ننشئ:
+
+```text
+workforce.employee_assignments
+```
+
+بحالة:
+
+```text
+PLANNED
+```
+
+مثال:
+
+```text
+Position: Fiber Engineer
+Project: Huawei
+Location: Cairo
+Manager: Project Manager
+Start Date: Joining Date
+```
+
+ثم عند activation:
+
+```text
+PLANNED → ACTIVE
+```
+
+---
+
+# 43. Activation Gate
+
+هذه من أهم أجزاء الـArchitecture.
+
+لا أريد:
+
+```text
+HR user clicks Activate
+```
+
+والنظام يصدق بدون validation.
+
+نعمل:
+
+```text
+Activation Eligibility Engine
+```
+
+يفحص:
+
+```text
+Required documents completed?
+Contract signed?
+Identity verified?
+Personnel record ready?
+Payroll setup ready?
+Required insurance initiated?
+Position assigned?
+Manager assigned?
+Required HSE clearance?
+System registration?
+Required certifications?
+```
+
+---
+
+# 44. Activation Rule
+
+الـManual نفسه ينص على ألا يتم تفعيل الموظف أو إسناده لمشروع أو إدخاله Payroll قبل اكتمال onboarding requirements والوثائق والموافقات المطلوبة. 
+
+لذلك هذه ليست مجرد UI validation.
+
+يجب أن تكون:
+
+```text
+Backend Business Rule
+```
+
+---
+
+# 45. Activation Decision
+
+```text
+if blocking_activation_requirements = 0 incomplete
+AND contract = signed
+AND employment = valid
+AND primary_assignment = prepared
+THEN
+eligible_for_activation = true
+```
+
+---
+
+# 46. Deployment Gate مختلف
+
+بعد Employee Activation قد يبقى:
+
+```text
+deployment_readiness = NOT_READY
+```
+
+مثال:
+
+```text
+Employee Active = YES
+
+Working at Heights = Missing
+
+Huawei Site Deployment = NO
+```
+
+وهذا مطلوب لأن الـManual يمنع deployment في safety-sensitive positions قبل استكمال medical/HSE/certifications. 
+
+---
+
+# 47. Readiness Tables
+
+```text
+onboarding.readiness_checks
+```
+
+```text
+readiness_check_id
+case_id
+
+readiness_type
+
+status
+
+checked_at
+
+blocking_reasons JSONB
+```
+
+types:
+
+```text
+EMPLOYMENT_ACTIVATION
+PROJECT_DEPLOYMENT
+CUSTOMER_DEPLOYMENT
+PAYROLL_READINESS
+SYSTEM_ACCESS_READINESS
+```
+
+---
+
+# 48. Activation Transaction
+
+كل شيء يجب أن يتم في Transaction.
+
+```text
+BEGIN
+
+Validate Activation Gate
+
+Employment → ACTIVE
+
+Employee → ACTIVE
+
+Assignment → ACTIVE
+
+Onboarding Case → ACTIVATED
+
+Set activation_date
+
+COMMIT
+```
+
+ثم Events.
+
+---
+
+# 49. Events Produced
+
+بعد نجاح activation:
+
+```text
+employee.activated
+```
+
+```text
+employment.activated
+```
+
+```text
+assignment.activated
+```
+
+```text
+onboarding.completed
+```
+
+---
+
+# 50. Consumers
+
+### M03 IAM
+
+```text
+employee.activated
+```
+
+→ enable final user access.
+
+### Attendance
+
+→ employee becomes eligible for attendance.
+
+### Payroll
+
+→ employee becomes eligible for payroll.
+
+### HR Operations
+
+→ create lifecycle follow-up.
+
+### Learning
+
+→ assign mandatory courses.
+
+### Analytics
+
+→ update headcount.
+
+---
+
+# 51. HR Operations Handover
+
+بعد activation:
+
+```text
+onboarding.completed
+      ↓
+hr_operations.employee_handover
+```
+
+وهذا يتفق مباشرة مع الـManual، حيث يبدأ HR Operations بعد استلام activated employee من Personnel ومراجعة onboarding status وproject assignment. 
+
+---
+
+# 52. Insurance
+
+لا نضع:
+
+```text
+medical_insurance = true
+```
+
+داخل employee.
+
+نعمل:
+
+```text
+personnel.employee_insurance_enrollments
+```
+
+```text
+enrollment_id
+employee_id
+provider_id
+plan_id
+
+coverage_start
+coverage_end
+
+status
+
+member_number
+```
+
+---
+
+# 53. Social Insurance
+
+```text
+personnel.social_insurance_records
+```
+
+```text
+record_id
+employment_id
+
+insurance_number
+
+registration_date
+
+effective_date
+
+status
+
+form_document_id
+```
+
+والـManual يذكر Social Insurance Form (1) عند الانضمام وForm (6) عند الخروج. 
+
+---
+
+# 54. IT Provisioning
+
+لا نملك Hardware inventory داخل HR.
+
+نعمل:
+
+```text
+integration.provisioning_requests
+```
+
+مثال:
+
+```text
+request_id
+employee_id
+
+request_type
+
+target_system
+
+status
+
+external_reference
+```
+
+types:
+
+```text
+CORPORATE_EMAIL
+SYSTEM_ACCESS
+LAPTOP
+MOBILE
+ACCESS_CARD
+```
+
+---
+
+# 55. Asset Ownership
+
+لو لدينا ERP/Asset system:
+
+```text
+Asset System owns Laptop
+```
+
+HR يحتفظ فقط:
+
+```text
+asset_reference
+assignment_status
+```
+
+لا يعيد بناء asset inventory.
+
+---
+
+# 56. Core Cluster A ERD
+
+```text
+Manpower Request
+      │
+      └──< Vacancy
+               │
+               └──< Application >── Candidate
+                         │
+                         ├──< Interview
+                         │       └── Evaluation
+                         │
+                         ├──< Assessment
+                         │
+                         └── Offer
+                               │
+                               └── Offer Components
+                                      │
+                                      ▼
+                               Offer Accepted
+                                      │
+                                      ▼
+                               Onboarding Case
+                                      │
+                 ┌────────────────────┼───────────────────┐
+                 │                    │                   │
+                 ▼                    ▼                   ▼
+          Requirements           Documents            Tasks
+                 │
+                 │
+                 ▼
+              Employee
+                 │
+                 ▼
+             Employment
+                 │
+        ┌────────┼───────────┐
+        ▼        ▼           ▼
+    Contract Assignment Compensation
+        │
+        └────────────┬─────────────
+                     ▼
+              Activation Gate
+                     │
+                     ▼
+             Employee ACTIVE
+```
+
+---
+
+# 57. Main Cardinalities
+
+| Parent           | Child           | Relation              |
+| ---------------- | --------------- | --------------------- |
+| Manpower Request | Vacancy         | 1:N                   |
+| Vacancy          | Application     | 1:N                   |
+| Candidate        | Application     | 1:N                   |
+| Application      | Interview       | 1:N                   |
+| Interview        | Evaluation      | 1:N                   |
+| Application      | Offer           | 1:N                   |
+| Offer            | Offer Component | 1:N                   |
+| Offer            | Onboarding Case | 1:0..1                |
+| Candidate        | Onboarding Case | 1:N over time         |
+| Onboarding Case  | Requirement     | 1:N                   |
+| Requirement      | Document        | N:0..1                |
+| Candidate        | Employee        | 1:0..1 per conversion |
+| Employee         | Employment      | 1:N                   |
+| Employment       | Contract        | 1:N                   |
+| Employment       | Assignment      | 1:N                   |
+| Employment       | Compensation    | 1:N                   |
+
+---
+
+# 58. Important Constraints
+
+### Offer
+
+لا يوجد أكثر من Offer واحد:
+
+```text
+ACCEPTED
+```
+
+لنفس Application.
+
+### Onboarding
+
+لا يوجد أكثر من Active Onboarding Case لنفس accepted offer.
+
+### Employee Conversion
+
+Candidate لا يتحول مرتين لنفس employment event.
+
+### Employee
+
+National ID verified يجب ألا يتكرر داخل نفس country/legal scope حسب policy.
+
+### Activation
+
+لا يمكن `ACTIVE` بدون successful activation gate.
+
+---
+
+# 59. Cluster A Source of Truth
+
+| Data                    | Owner               |
+| ----------------------- | ------------------- |
+| Manpower Request        | Recruitment         |
+| Candidate               | Recruitment         |
+| Application             | Recruitment         |
+| Interview               | Recruitment         |
+| Offer                   | Recruitment         |
+| Onboarding Case         | Onboarding          |
+| Employee                | Core HR             |
+| Employment              | Core HR             |
+| Contract                | Personnel           |
+| Employee Legal Document | Personnel/Documents |
+| Insurance               | Personnel           |
+| Assignment              | Workforce           |
+| Compensation            | Compensation        |
+| IT Account              | IAM/IT              |
+| Asset                   | Asset/ERP System    |
+| Project                 | Project/ERP System  |
+
+---
+
+# 60. أهم شيء نكون منعناه
+
+منعنا هذه الحالة:
+
+```text
+Candidate Table:
+Name
+National ID
+Salary
+Position
+Project
+
+Onboarding Table:
+Name
+National ID
+Salary
+Position
+Project
+
+Employee Table:
+Name
+National ID
+Salary
+Position
+Project
+
+Payroll Table:
+Name
+National ID
+Salary
+Position
+Project
+```
+
+وهذه كارثة Data Duplication.
+
+بدلًا منها:
+
+```text
+Candidate
+   ↓ conversion
+Employee
+   ↓ references
+Employment
+Assignment
+Compensation
+```
+
+والباقي يستخدم IDs.
+
+# القرار المقترح لـCluster A
+
+أثبت Architecture التالية:
+
+> **Accepted Offer starts Onboarding. Onboarding may create a PRE_EMPLOYMENT Employee record after minimum identity validation. Employee Activation is controlled by an Activation Gate. Recruitment owns candidate/offer data, Core HR owns Employee/Employment, Personnel owns legal records/contracts, Workforce owns assignments, and Compensation owns pay data.**
+
+وهذا يعطي النظام Lifecycle واضحًا جدًا وقابلًا للتدقيق.
+
+**الخطوة التالية:** نبني **Cluster B — Attendance, Time, Shifts, Rosters, Field Workforce, Leave & Availability ERD**، وفيه سنحل الجزء الأصعب تشغيليًا: تعدد طرق الحضور حسب الموظف والمشروع، fingerprint/GPS/supervisor/manual evidence، shift/roster، overtime، attendance exceptions، والعمل داخل/خارج القاهرة والـlocation/field allowance rules، ثم ربط كل ذلك بالـPayroll بدون أن يقرأ Payroll الـraw attendance مباشرة.

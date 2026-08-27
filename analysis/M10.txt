@@ -1,0 +1,2081 @@
+تمام. **Module 10** هنا لازم يكون هو الـ**Source of Truth للأداء والـKPI**، وليس مجرد شاشة لإدخال نسبة KPI وصلت من الخارج.
+
+الـManual الحالي يبدأ متأخرًا جدًا في دورة الأداء: فهو يفترض أن **PMO قام بالفعل بتقييم الموظفين وأرسل Quarterly KPI Evaluation Results**، وبعدها يبدأ Payroll في حساب الـKPI Bonus وإرساله إلى Finance. أي أن النظام الحالي موثق فيه **Payment Workflow** للـKPI، لكن غير موثق فيه فعليًا **Performance Management Lifecycle** الذي أنتج هذه النتيجة. 
+
+كما أن الـOrg Chart يوضح وجود **Organizational Development Leader** داخل People & Culture، وبالتالي من المنطقي أن يكون **OD هو Process Owner / Governance Owner** لوحدة Performance Management، بينما الـDirect Managers وProject Managers وPMO يشاركون في التقييم بحسب نوع الـKPI. 
+
+# Module 10 — Performance Management, KPI, Objectives, Appraisals & Incentives
+
+## 10.1 الهدف من الـModule
+
+الوحدة تدير دورة الأداء كاملة:
+
+**Company Strategy
+→ Department Objectives
+→ Project Objectives
+→ Team Objectives
+→ Employee Objectives
+→ KPI Measurement
+→ Manager Assessment
+→ Calibration
+→ Final Rating
+→ Incentive Eligibility
+→ Payroll**
+
+وبالتالي لا يتم إرسال رقم مثل:
+
+> Employee KPI = 87%
+
+إلى Payroll بدون معرفة:
+
+* لماذا حصل الموظف على 87%.
+* ما أهدافه.
+* ما الـKPIs الخاصة به.
+* من حددها.
+* من قيّمها.
+* ما مصدر الـActual.
+* ما الـTarget.
+* هل تم تعديل النتيجة أثناء Calibration.
+* من اعتمد النتيجة النهائية.
+* وما هي قاعدة تحويل النتيجة إلى Bonus.
+
+---
+
+# 10.2 المبدأ الأساسي
+
+نفصل تمامًا بين:
+
+### Performance Result
+
+وهو:
+
+> **How well did the employee perform?**
+
+وبين:
+
+### Incentive Calculation
+
+وهو:
+
+> **How much money should be paid because of that performance?**
+
+إذًا:
+
+**Module 10 owns Performance Result**
+
+بينما:
+
+**Module 09 Payroll owns Financial Calculation & Payment.**
+
+والتكامل يكون:
+
+> Module 10 → Approved Performance Result → Module 09 → Bonus Calculation → Payroll Payment
+
+وهذا يتوافق مع الـManual، الذي ينص حاليًا على أن PMO يرسل **Approved KPI Evaluation Report** ثم يقوم Payroll بحساب الـKPI bonus. 
+
+---
+
+# 10.3 Performance Cycle Configuration
+
+النظام يجب ألا يفترض أن كل الشركة تعمل بنفس دورة التقييم.
+
+Admin يستطيع إنشاء:
+
+### Performance Cycle
+
+مثال:
+
+**2026 Annual Performance Cycle**
+
+ويحدد:
+
+* Cycle Name
+* Company
+* Business Unit
+* Employee Population
+* Start Date
+* End Date
+* Review Frequency
+* Fiscal Year
+* Status
+
+### Review Frequency
+
+يدعم:
+
+* Monthly
+* Quarterly
+* Semi-Annual
+* Annual
+* Project-Based
+* Milestone-Based
+* Probation Review
+* Ad-hoc Review
+
+مثال Afro:
+
+**Operational Employees**
+
+* Quarterly KPI
+
+**Management**
+
+* Semi-Annual + Annual appraisal
+
+**Project Staff**
+
+* Quarterly + Project Completion Review
+
+**New Employees**
+
+* Probation Review after 3 months
+
+---
+
+# 10.4 Performance Cycle Status
+
+كل Cycle يمر بحالات:
+
+```text
+Draft
+↓
+Planning
+↓
+Objectives Setting
+↓
+Objectives Approval
+↓
+Active
+↓
+Continuous Monitoring
+↓
+Employee Self Review
+↓
+Manager Review
+↓
+Second-Level Review
+↓
+Calibration
+↓
+Final Approval
+↓
+Published
+↓
+Sent to Payroll
+↓
+Closed
+```
+
+ويجب أن يكون لكل انتقال:
+
+* User
+* Timestamp
+* Old Status
+* New Status
+* Comment
+* Approval
+
+Audit Trail كامل.
+
+---
+
+# 10.5 KPI Library
+
+بدل كتابة KPI جديد يدويًا لكل موظف، ننشئ:
+
+## Central KPI Library
+
+كل KPI يحتوي على:
+
+* KPI Code
+* KPI Name AR
+* KPI Name EN
+* KPI Name FR
+* Description
+* Category
+* Measurement Type
+* Unit of Measure
+* Calculation Formula
+* Target Type
+* Direction
+* Minimum Target
+* Standard Target
+* Stretch Target
+* Weight
+* Source System
+* Data Owner
+* Frequency
+* Applicable Job
+* Applicable Department
+* Applicable Project Type
+* Effective From
+* Effective To
+* Active / Inactive
+
+---
+
+# 10.6 KPI Categories
+
+مثلاً:
+
+### Financial KPIs
+
+* Revenue
+* Gross Margin
+* Cost Saving
+* Budget Variance
+* Collection
+
+### Project KPIs
+
+* Schedule Performance
+* Milestone Achievement
+* Project Delivery
+* Productivity
+* Cost Performance
+
+### Operational KPIs
+
+* Tasks Completed
+* Productivity
+* Quality
+* SLA Compliance
+* Repeat Fault Rate
+
+### Customer KPIs
+
+* Customer Satisfaction
+* Complaint Rate
+* Acceptance Rate
+
+### Quality KPIs
+
+* NCR Rate
+* Rework
+* First Pass Acceptance
+
+### HSE KPIs
+
+* Safety Violations
+* Toolbox Compliance
+* Incident Rate
+* PPE Compliance
+
+### People KPIs
+
+* Attendance
+* Absence
+* Turnover
+* Training Completion
+* Team Performance
+
+### Behavioral / Competency
+
+* Communication
+* Teamwork
+* Leadership
+* Problem Solving
+* Accountability
+* Initiative
+
+---
+
+# 10.7 KPI Measurement Types
+
+النظام يدعم عدة أنواع.
+
+### Numeric
+
+مثال:
+
+Target:
+
+> 100 Sites
+
+Actual:
+
+> 92 Sites
+
+Achievement:
+
+> 92%
+
+---
+
+### Percentage
+
+مثال:
+
+> SLA compliance ≥ 95%
+
+---
+
+### Currency
+
+مثال:
+
+> Revenue = EGP 20M
+
+---
+
+### Boolean
+
+مثال:
+
+> Certification Completed
+
+Yes / No
+
+---
+
+### Rating
+
+مثال:
+
+1–5
+
+---
+
+### Milestone
+
+مثال:
+
+```text
+Design Approved
+Civil Completed
+Installation Completed
+Acceptance Completed
+```
+
+---
+
+### Formula KPI
+
+مثال:
+
+```text
+Productivity =
+Completed Tasks /
+Working Days
+```
+
+---
+
+# 10.8 KPI Direction
+
+لازم ندعم نقطة مهمة جدًا:
+
+ليس دائمًا الرقم الأعلى أفضل.
+
+### Higher is Better
+
+مثل:
+
+* Revenue
+* Completed Sites
+* Productivity
+
+### Lower is Better
+
+مثل:
+
+* Complaints
+* Rework
+* Absence
+* Incident Rate
+
+### Target Range
+
+مثل:
+
+> Utilization = 80–90%
+
+### Exact Target
+
+مثل:
+
+> Budget Variance ≈ 0%
+
+---
+
+# 10.9 KPI Target Levels
+
+لكل KPI يمكن تعريف:
+
+### Threshold
+
+الحد الأدنى المقبول.
+
+### Target
+
+الأداء المطلوب.
+
+### Stretch
+
+الأداء الممتاز.
+
+مثال:
+
+| Level   | Completion |
+| ------- | ---------: |
+| Minimum |        70% |
+| Target  |       100% |
+| Stretch |       120% |
+
+ثم النظام يحول Achievement إلى Score.
+
+---
+
+# 10.10 KPI Scoring Engine
+
+مثال:
+
+Target:
+
+> 100 cabinets
+
+Actual:
+
+> 110 cabinets
+
+Achievement:
+
+> 110%
+
+لكن النظام قد يحدد:
+
+```text
+Maximum KPI Score = 120%
+```
+
+حتى لا يصل KPI واحد إلى نتيجة غير منطقية.
+
+مثال آخر:
+
+```text
+Actual / Target × 100
+```
+
+ثم:
+
+```text
+Weighted KPI Score =
+KPI Achievement × KPI Weight
+```
+
+---
+
+# 10.11 Objective Management
+
+ليس كل شيء KPI رقمي.
+
+لذلك النظام يجب أن يدعم:
+
+## Objectives
+
+مثال:
+
+> Implement new warehouse management process.
+
+ويحتوي:
+
+* Objective ID
+* Objective Description
+* Employee
+* Manager
+* Start Date
+* Due Date
+* Weight
+* Success Criteria
+* Status
+* Progress %
+* Evidence
+* Comments
+* Final Score
+
+Status:
+
+```text
+Not Started
+In Progress
+At Risk
+Delayed
+Completed
+Cancelled
+```
+
+---
+
+# 10.12 Cascading Objectives
+
+ميزة مهمة جدًا في النظام.
+
+مثلاً:
+
+### Company Objective
+
+> Increase Revenue 20%
+
+↓
+
+### Business Unit Objective
+
+> Deliver EGP 500M telecom projects
+
+↓
+
+### Department Objective
+
+> Achieve project completion target
+
+↓
+
+### Project Manager Objective
+
+> Deliver Project X by Q4
+
+↓
+
+### Site Engineer Objective
+
+> Complete 60 sites
+
+وبذلك نستطيع تتبع:
+
+> كل KPI للموظف مرتبط بأي هدف أعلى في الشركة.
+
+---
+
+# 10.13 Employee Performance Plan
+
+في بداية الدورة ينشئ النظام:
+
+## Individual Performance Plan — IPP
+
+ويتضمن مثلاً:
+
+| Component               | Weight |
+| ----------------------- | -----: |
+| Business KPI            |    30% |
+| Project KPI             |    30% |
+| Individual Objectives   |    20% |
+| Competencies            |    15% |
+| Attendance / Compliance |     5% |
+
+Total:
+
+**100%**
+
+النظام يمنع Approval إذا:
+
+```text
+Total Weight ≠ 100%
+```
+
+---
+
+# 10.14 KPI Assignment Rules
+
+يمكن تعيين KPI بناءً على:
+
+* Company
+* Department
+* Business Unit
+* Position
+* Job Family
+* Grade
+* Project
+* Location
+* Employment Type
+* Employee
+
+مثال:
+
+كل:
+
+> Project Manager
+
+يحصل تلقائيًا على:
+
+* Schedule Performance
+* Budget Performance
+* Project Quality
+* HSE
+* Client Satisfaction
+* Team Performance
+
+---
+
+# 10.15 KPI Template
+
+بدل إنشاء Performance Plan لكل شخص يدويًا.
+
+مثلاً:
+
+## Project Manager KPI Template
+
+```text
+Schedule Performance       25%
+Cost Performance           20%
+Project Revenue            15%
+Quality                     15%
+HSE                         10%
+Client Satisfaction         10%
+People Management           5%
+```
+
+ثم يتم تطبيق Template على الموظفين.
+
+---
+
+# 10.16 Project-Specific KPI
+
+دي مهمة جدًا لشركة Afro.
+
+الموظف قد يعمل على أكثر من Project.
+
+مثلاً:
+
+Engineer Ahmed:
+
+* Huawei Project = 60%
+* Ericsson Project = 40%
+
+كل Project Manager يمكن أن يقيم الجزء الخاص بمشروعه.
+
+ثم:
+
+```text
+Employee Project Score =
+Σ(Project Score × Allocation %)
+```
+
+مثال:
+
+Huawei:
+
+92 × 60%
+
+Ericsson:
+
+80 × 40%
+
+Final:
+
+**87.2**
+
+---
+
+# 10.17 Multi-Manager Evaluation
+
+بما أن الموظف قد يعمل مع أكثر من مدير أو مشروع، النظام يدعم:
+
+### Primary Manager
+
+### Functional Manager
+
+### Project Manager
+
+### Matrix Manager
+
+ويمكن تحديد Weight لكل Evaluator.
+
+مثال:
+
+| Evaluator          | Weight |
+| ------------------ | -----: |
+| Direct Manager     |    50% |
+| Project Manager    |    30% |
+| Functional Manager |    20% |
+
+---
+
+# 10.18 Self Assessment
+
+يمكن إعداد النظام ليطلب من الموظف:
+
+* تقييم نفسه.
+* إضافة Comments.
+* Upload Evidence.
+* ذكر Achievements.
+* ذكر Challenges.
+* ذكر Training Needs.
+
+ثم يظهر للمدير:
+
+```text
+Employee Score
+Manager Score
+Difference
+```
+
+---
+
+# 10.19 Evidence-Based KPI
+
+هذه نقطة مهمة جدًا للحكومة على التقييم.
+
+أي KPI يمكن أن يكون:
+
+### System Calculated
+
+مثال:
+
+Attendance.
+
+### Imported
+
+من:
+
+* ERP
+* Project System
+* CRM
+* Financial System
+* Attendance System
+
+### Manager Entered
+
+### Employee Submitted
+
+لكن النظام يجب أن يحفظ:
+
+> KPI Evidence Source
+
+مثل:
+
+* System Record
+* Document
+* Excel
+* Photo
+* Client Acceptance
+* Manager Confirmation
+
+---
+
+# 10.20 Automatic KPI Data
+
+أفضّل قدر الإمكان أن بعض KPIs لا يقوم المدير بإدخالها يدويًا.
+
+مثلاً:
+
+### Attendance
+
+من Module 07.
+
+### Absence
+
+من Module 08.
+
+### Project Productivity
+
+من Project Management System.
+
+### Revenue
+
+من ERP.
+
+### Safety
+
+من HSE System.
+
+### Training
+
+من Learning Module مستقبلًا.
+
+وبذلك نقلل التقييم الشخصي.
+
+---
+
+# 10.21 Competency Framework
+
+غير الـKPI.
+
+يجب وجود:
+
+## Competency Library
+
+مثل:
+
+* Leadership
+* Communication
+* Teamwork
+* Problem Solving
+* Decision Making
+* Technical Knowledge
+* Customer Focus
+* Planning
+* Accountability
+
+كل Competency:
+
+* Name
+* Description
+* Competency Category
+* Required Level
+* Behavioral Indicators
+
+---
+
+# 10.22 Competency Levels
+
+مثال:
+
+### Level 1 — Basic
+
+### Level 2 — Developing
+
+### Level 3 — Proficient
+
+### Level 4 — Advanced
+
+### Level 5 — Expert
+
+وكل Position من Module 02 يمكن أن يكون له:
+
+> Required Competency Profile.
+
+---
+
+# 10.23 Behavioral Anchors — BARS
+
+بدل:
+
+> Communication = 4/5
+
+بدون معنى.
+
+النظام يعرف معنى كل Rating.
+
+مثلاً:
+
+### Rating 1
+
+Fails to communicate critical information.
+
+### Rating 3
+
+Communicates clearly and on time.
+
+### Rating 5
+
+Proactively ensures alignment across teams.
+
+وده يقلل اختلاف التقييم بين المديرين.
+
+---
+
+# 10.24 Appraisal Components
+
+يمكن أن يتكون التقييم من:
+
+```text
+KPI                50%
+Objectives         20%
+Competencies       20%
+Behavior           5%
+Compliance         5%
+```
+
+لكنها Configurable.
+
+---
+
+# 10.25 Rating Scale
+
+Admin يستطيع إنشاء Scale.
+
+مثلاً:
+
+| Score    | Rating               |
+| -------- | -------------------- |
+| ≥ 90     | Outstanding          |
+| 80–89.99 | Exceeds Expectations |
+| 70–79.99 | Meets Expectations   |
+| 60–69.99 | Partially Meets      |
+| <60      | Unsatisfactory       |
+
+لكن مهم جدًا:
+
+**Hardcoded لا.**
+
+Rules Engine.
+
+---
+
+# 10.26 Performance Gates
+
+بعض المخالفات قد تمنع Rating معين حتى لو الـKPI مرتفع.
+
+مثلاً:
+
+إذا كان الموظف لديه:
+
+> Major HSE Violation
+
+قد يكون:
+
+```text
+Max Rating = Meets Expectations
+```
+
+أو:
+
+```text
+Incentive Eligibility = No
+```
+
+لكن هذا يجب أن يكون configurable وليس قرارًا ثابتًا في النظام.
+
+---
+
+# 10.27 Attendance Impact
+
+Module 07 وModule 08 يستطيعان إرسال:
+
+* Unauthorized Absence
+* Late Days
+* Attendance %
+* Leave Status
+
+ثم Rules Engine يحدد أثرها.
+
+مثلاً:
+
+```text
+Attendance < 90%
+→ Compliance KPI Reduced
+```
+
+لكن:
+
+**لا أنصح أن النظام يخفض الـPerformance Rating بالكامل تلقائيًا بسبب الحضور إلا إذا كانت Policy الشركة تقول ذلك.**
+
+الأفضل فصل:
+
+> Performance
+
+عن:
+
+> Discipline / Attendance
+
+ثم وضع Rule واضح لو مطلوب.
+
+---
+
+# 10.28 Manager Evaluation
+
+المدير يرى لكل Employee:
+
+* Objective
+* Target
+* Actual
+* Achievement
+* Employee Comment
+* Evidence
+* Manager Score
+* Manager Comment
+
+ولا يستطيع Submit قبل:
+
+* تقييم كل العناصر المطلوبة.
+* كتابة justification عند Scores معينة.
+
+مثلاً:
+
+Score:
+
+> Outstanding
+
+requires:
+
+> Mandatory justification.
+
+---
+
+# 10.29 Second-Level Manager Review
+
+بعد Direct Manager:
+
+```text
+Direct Manager
+↓
+Department Manager
+↓
+Performance Review
+```
+
+Second-Level Manager يستطيع:
+
+* Approve
+* Return
+* Request Evidence
+* Recommend Adjustment
+
+لكن لا يعدل بدون Audit Trail.
+
+---
+
+# 10.30 Calibration Process
+
+دي من أهم أجزاء الـModule.
+
+بعد Manager Reviews، يتم عمل:
+
+## Performance Calibration
+
+الغرض:
+
+تقليل:
+
+* Manager Bias
+* Rating Inflation
+* Rating Deflation
+* Department Differences
+
+Calibration Panel قد يتكون من:
+
+* OD
+* P&C Manager
+* Department Head
+* Business Unit Head
+* PMO
+* CEO حسب المستوى
+
+---
+
+# 10.31 Calibration Dashboard
+
+يعرض:
+
+### Rating Distribution
+
+مثلاً:
+
+```text
+Outstanding          22%
+Exceeds              35%
+Meets                33%
+Below                10%
+```
+
+مع مقارنة بين:
+
+* Departments
+* Projects
+* Managers
+* Grades
+
+---
+
+# 10.32 Manager Bias Detection
+
+النظام يستطيع اكتشاف:
+
+### Leniency Bias
+
+مدير يعطي الجميع درجات عالية.
+
+### Severity Bias
+
+مدير يعطي الجميع درجات منخفضة.
+
+### Central Tendency
+
+الجميع 3/5.
+
+### Rating Inflation
+
+زيادة غير طبيعية.
+
+### Recency Bias
+
+الاعتماد على فترة قصيرة.
+
+### Halo Effect Indicators
+
+ارتفاع جميع competencies بنفس النمط.
+
+لا أرى أن AI يعدّل التقييم تلقائيًا.
+
+دوره:
+
+> Flag / Recommendation Only.
+
+---
+
+# 10.33 Calibration Adjustment
+
+لو تم تغيير:
+
+```text
+Manager Score = 92
+
+Calibration Score = 85
+```
+
+النظام يجب أن يسجل:
+
+* Previous Score
+* New Score
+* Changed By
+* Calibration Committee
+* Reason
+* Date
+* Supporting Comment
+
+ولا يتم حذف التقييم الأصلي.
+
+---
+
+# 10.34 Final Performance Score
+
+بعد Calibration:
+
+```text
+Final Performance Score
+```
+
+مثال:
+
+**84.6%**
+
+Rating:
+
+**Exceeds Expectations**
+
+Status:
+
+**Final Approved**
+
+---
+
+# 10.35 Employee Performance Result
+
+Employee يستطيع رؤية:
+
+* Final Rating
+* KPI Breakdown
+* Objective Results
+* Competency Result
+* Manager Comments
+* Development Areas
+
+بحسب Permissions.
+
+---
+
+# 10.36 Employee Acknowledgment
+
+بعد Publish:
+
+الموظف يختار:
+
+```text
+Acknowledged
+```
+
+أو:
+
+```text
+Request Discussion
+```
+
+أو:
+
+```text
+Appeal
+```
+
+---
+
+# 10.37 Performance Appeal
+
+إذا اعترض الموظف:
+
+```text
+Employee Appeal
+↓
+HR / OD Review
+↓
+Manager Response
+↓
+Appeal Committee
+↓
+Decision
+↓
+Final Result
+```
+
+ويتم الاحتفاظ بالتاريخ الكامل.
+
+---
+
+# 10.38 Performance Improvement Plan — PIP
+
+لو النتيجة أقل من Threshold.
+
+مثلاً:
+
+```text
+Performance Score < 60
+```
+
+النظام يستطيع إنشاء:
+
+## Performance Improvement Plan
+
+يتضمن:
+
+* Improvement Areas
+* Required Actions
+* Manager
+* Start Date
+* End Date
+* Target
+* Follow-up Meetings
+* Evidence
+* Final Review
+
+Status:
+
+```text
+Draft
+Active
+Improving
+Completed
+Failed
+Extended
+Closed
+```
+
+---
+
+# 10.39 Probation Performance Review
+
+يرتبط بـModule 06.
+
+قبل نهاية Probation:
+
+النظام يولد:
+
+> Probation Evaluation
+
+ويتم تقييم:
+
+* Technical Capability
+* Attendance
+* Behavior
+* Learning
+* Work Quality
+* Manager Feedback
+
+Decision:
+
+```text
+Confirm Employment
+Extend Probation
+Terminate
+```
+
+حسب Policy والقانون المطبق.
+
+---
+
+# 10.40 Performance History
+
+Employee Profile يحتوي:
+
+```text
+2024      Meets
+2025      Exceeds
+2026 Q1   Exceeds
+2026 Q2   Outstanding
+```
+
+مع Trend.
+
+---
+
+# 10.41 Incentive Eligibility Engine
+
+هنا يبدأ الربط مع Payroll.
+
+Module 10 لا يدفع المبلغ.
+
+لكنه يقرر:
+
+```text
+Performance Score
+Rating
+Incentive Eligibility
+Incentive Factor
+```
+
+مثلاً:
+
+| Rating          | Factor |
+| --------------- | -----: |
+| Outstanding     |   1.50 |
+| Exceeds         |   1.20 |
+| Meets           |   1.00 |
+| Partially Meets |   0.50 |
+| Unsatisfactory  |      0 |
+
+كلها Configurable Rules.
+
+---
+
+# 10.42 Bonus Formula Configuration
+
+مثال:
+
+```text
+KPI Bonus =
+Eligible Bonus Base
+× Performance Factor
+```
+
+أو:
+
+```text
+Bonus =
+Basic Salary
+× Bonus %
+× Performance Factor
+```
+
+أو:
+
+```text
+Fixed KPI Amount
+× Performance Achievement
+```
+
+أو:
+
+```text
+Project Bonus Pool
+× Employee Share
+```
+
+نترك النظام يدعم كل النماذج.
+
+---
+
+# 10.43 Bonus Caps
+
+مثلاً:
+
+```text
+Max KPI Bonus = 150% of target bonus
+```
+
+أو:
+
+```text
+Max amount = EGP 30,000
+```
+
+يمكن ضبطها حسب:
+
+* Grade
+* Position
+* Project
+* Company
+* Employee Type.
+
+---
+
+# 10.44 Incentive Pool
+
+للـProjects يمكن إنشاء:
+
+```text
+Project Bonus Pool
+```
+
+مثال:
+
+Project:
+
+Huawei Rollout
+
+Bonus Pool:
+
+EGP 1,000,000
+
+ثم يوزع حسب:
+
+* Employee Grade
+* Performance
+* Allocation
+* Contribution
+
+---
+
+# 10.45 Payroll Integration
+
+بعد Final Approval يولد Module 10:
+
+## KPI Payroll Batch
+
+يحتوي:
+
+* Employee ID
+* HR Code
+* Employee Name
+* Project
+* Performance Cycle
+* KPI Score
+* Final Rating
+* Eligibility
+* Bonus Factor
+* Payment Period
+* Approval Reference
+
+ثم:
+
+```text
+Performance Module
+↓
+Approved KPI Batch
+↓
+Payroll Module
+↓
+Calculate Monetary Amount
+↓
+Payroll Validation
+↓
+Finance
+↓
+Payment
+```
+
+وهذا يوسع الـworkflow الحالي في الـManual بدل تغييره؛ لأن الـManual حاليًا يبدأ عند **PMO submission of quarterly KPI evaluation** ثم Payroll calculation ثم Finance payment والتقارير حسب المشروع. 
+
+---
+
+# 10.46 KPI Cost Allocation
+
+بما أن الـManual الحالي ينص على إصدار:
+
+> KPI Cost Allocation Reports by Project
+
+فلازم Performance Result يحتفظ بـ:
+
+* Project
+* Cost Center
+* Allocation %
+* Business Unit
+
+حتى يتمكن Module 09 من توزيع تكلفة الـKPI Bonus على المشاريع بصورة صحيحة. 
+
+---
+
+# 10.47 Organization Development Role
+
+بناءً على الهيكل الحالي، أفضل Governance Model:
+
+### Organizational Development
+
+مسؤول عن:
+
+* Performance Policy
+* KPI Framework
+* Competency Framework
+* Rating Scale
+* Performance Cycles
+* Calibration Governance
+* Performance Analytics
+
+وجود وظيفة **Organizational Development Leader** في الهيكل يجعل ذلك مناسبًا تنظيميًا. 
+
+### Direct Manager
+
+* Objective Setting
+* KPI Target
+* Employee Review
+* Feedback
+
+### Department Manager
+
+* Second-Level Review
+
+### Project Manager
+
+* Project KPI Evaluation
+
+### PMO
+
+* Project / Operational KPI Validation
+* Project Performance Data
+
+### Payroll
+
+* Incentive Financial Calculation
+
+### Finance
+
+* Payment
+
+### Employee
+
+* Self Assessment
+* Evidence
+* Acknowledgement
+* Appeal
+
+---
+
+# 10.48 Permissions Model
+
+لازم تكون granular جدًا.
+
+### Employee
+
+يشاهد:
+
+* أهدافه.
+* KPIs الخاصة به.
+* Progress.
+* Final Result.
+* Feedback.
+
+لا يشاهد:
+
+* Calibration للآخرين.
+* Salaries.
+* Bonus Pool.
+
+---
+
+### Direct Manager
+
+يشاهد:
+
+* Direct Reports فقط.
+
+---
+
+### Project Manager
+
+يشاهد:
+
+* Employees allocated to his projects.
+
+حتى لو ليسوا Direct Reports له.
+
+---
+
+### Department Manager
+
+يشاهد:
+
+* Department hierarchy.
+
+---
+
+### OD
+
+يشاهد:
+
+* Performance data.
+* Calibration.
+* KPI Framework.
+* Analytics.
+
+---
+
+### Payroll
+
+يشاهد:
+
+* Final Approved Performance Result.
+
+ولا يحتاج بالضرورة لرؤية:
+
+* Manager comments.
+* Employee self-assessment.
+
+---
+
+### Finance
+
+يشاهد:
+
+* Approved payment batch.
+
+---
+
+# 10.49 Performance Dashboard
+
+Executive Dashboard:
+
+```text
+Employees Evaluated
+Employees Pending
+Average Performance Score
+Outstanding %
+Below Expectations %
+PIP Employees
+Performance by Department
+Performance by Project
+Performance by Manager
+Bonus Eligible Employees
+Estimated Incentive Cost
+```
+
+---
+
+# 10.50 Manager Dashboard
+
+يعرض:
+
+```text
+My Team
+12 Employees
+
+Completed Reviews       7
+Pending Reviews         4
+Overdue                 1
+
+Average Score           81%
+Outstanding             2
+PIP Required            1
+```
+
+---
+
+# 10.51 Employee Dashboard
+
+مثال:
+
+```text
+2026 Q2
+
+Overall Score
+87%
+
+Rating
+Exceeds Expectations
+
+KPI
+91%
+
+Objectives
+85%
+
+Competencies
+80%
+
+Manager Review
+Completed
+
+Final Review
+Approved
+```
+
+---
+
+# 10.52 Performance Analytics
+
+النظام يحلل:
+
+### Performance Distribution
+
+### Performance by:
+
+* Company
+* BU
+* Department
+* Project
+* Location
+* Grade
+* Job
+* Manager
+
+### High Performers
+
+### Low Performers
+
+### Performance Trend
+
+### Promotion Candidates
+
+### Succession Candidates
+
+### Training Needs
+
+### Flight Risk + Performance
+
+مستقبلاً مع Talent Management.
+
+---
+
+# 10.53 KPI Quality Analytics
+
+النظام نفسه يراقب جودة الـKPI.
+
+مثلاً:
+
+### KPIs بدون Actual Source.
+
+### KPI Target غير منطقي.
+
+### KPI Weight = 0.
+
+### KPI يستخدمه Manager واحد فقط.
+
+### جميع الموظفين حصلوا 100%.
+
+### KPI لا يفرق بين الأداء.
+
+وبالتالي يستطيع OD تحسين Framework.
+
+---
+
+# 10.54 AI داخل Module 10
+
+ممكن استخدام AI في:
+
+### KPI Suggestion
+
+بناء على Job Description.
+
+مثلاً:
+
+> Project Manager
+
+يقترح:
+
+* Cost Performance.
+* Schedule Performance.
+* Quality.
+* HSE.
+* Client Satisfaction.
+
+لكن Manager / OD يعتمد.
+
+---
+
+### SMART Objective Checker
+
+يكتشف Objective مثل:
+
+> Improve project performance.
+
+ويقول إنه غير قابل للقياس.
+
+ويقترح:
+
+> Achieve ≥95% milestone completion by Q4.
+
+---
+
+### Appraisal Comment Assistant
+
+يساعد المدير في كتابة Feedback واضح.
+
+---
+
+### Bias Detection
+
+ينبه OD إلى Rating patterns غير الطبيعية.
+
+---
+
+### Performance Summary
+
+يلخص:
+
+* Strengths.
+* Weaknesses.
+* Development Needs.
+
+لكن:
+
+**AI لا يصدر Final Performance Rating ولا يغير Bonus تلقائيًا.**
+
+---
+
+# 10.55 Notifications
+
+النظام يرسل:
+
+### Employee
+
+* Objectives assigned.
+* Objectives awaiting acceptance.
+* Appraisal opened.
+* Final result published.
+
+### Manager
+
+* Employee review pending.
+* Evaluation deadline.
+* Missing KPI.
+* Calibration required.
+
+### OD
+
+* Cycle completion status.
+* Manager overdue.
+* Distribution anomaly.
+
+### Payroll
+
+* KPI batch approved.
+
+---
+
+# 10.56 SLA Engine
+
+مثلاً:
+
+```text
+Objective Setting        7 Days
+Employee Acceptance      3 Days
+Manager Review           5 Days
+Second Review            3 Days
+Calibration              5 Days
+Final Approval            2 Days
+```
+
+كلها Configurable.
+
+---
+
+# 10.57 Performance Period Lock
+
+بعد:
+
+> Final Approval
+
+لا يمكن تعديل Performance Result.
+
+إلا عبر:
+
+```text
+Reopen Request
+↓
+Authorized Approval
+↓
+Reason
+↓
+Audit Trail
+```
+
+---
+
+# 10.58 Retroactive Changes
+
+لو تغير Project Allocation بعد نهاية Quarter:
+
+لا نعيد الحساب بصمت.
+
+يتم:
+
+```text
+Performance Adjustment Case
+```
+
+مع:
+
+* Reason.
+* Previous result.
+* New result.
+* Approval.
+
+---
+
+# 10.59 Data Model الأساسي
+
+أقترح Entities رئيسية:
+
+```text
+PerformanceCycle
+
+PerformancePlan
+
+PerformancePlanEmployee
+
+Objective
+
+ObjectiveAssignment
+
+KPIDefinition
+
+KPITemplate
+
+KPIAssignment
+
+KPITarget
+
+KPIActual
+
+KPIEvidence
+
+Competency
+
+CompetencyLevel
+
+CompetencyAssignment
+
+EmployeeSelfAssessment
+
+ManagerAssessment
+
+SecondLevelAssessment
+
+CalibrationSession
+
+CalibrationDecision
+
+FinalPerformanceResult
+
+PerformanceAppeal
+
+PerformanceImprovementPlan
+
+IncentiveEligibility
+
+PerformancePayrollBatch
+
+PerformanceApproval
+
+PerformanceAuditLog
+```
+
+---
+
+# 10.60 العلاقات الأساسية
+
+```text
+Employee
+   │
+   ├── Performance Plan
+   │
+   ├── Objectives
+   │
+   ├── KPI Assignments
+   │
+   ├── Competencies
+   │
+   ├── Appraisals
+   │
+   ├── Calibration Result
+   │
+   ├── Final Rating
+   │
+   └── Incentive Eligibility
+```
+
+---
+
+# 10.61 الـWorkflow النهائي
+
+```text
+Create Performance Cycle
+            ↓
+Define KPI / Objective Framework
+            ↓
+Assign Templates
+            ↓
+Employee Performance Plan
+            ↓
+Manager Sets Targets
+            ↓
+Employee / Manager Agreement
+            ↓
+Performance Period Starts
+            ↓
+Continuous KPI Data Collection
+            ↓
+Employee Self Assessment
+            ↓
+Direct Manager Evaluation
+            ↓
+Project / Functional Evaluation
+            ↓
+Second-Level Review
+            ↓
+OD / Management Calibration
+            ↓
+Final Performance Rating
+            ↓
+Employee Acknowledgment
+            ↓
+Appeal — if applicable
+            ↓
+Final Approval
+            ↓
+Determine Incentive Eligibility
+            ↓
+Generate KPI Payroll Batch
+            ↓
+Module 09 Payroll
+            ↓
+Bonus Calculation
+            ↓
+Finance Payment
+```
+
+---
+
+# نقطة تصميم مهمة جدًا في Afro HR
+
+الـManual الحالي يسمي PMO كجهة ترسل **Quarterly KPI Evaluation Results**. 
+
+لكن لا أنصح أن نجعل:
+
+> **PMO = Owner لكل Performance Management في الشركة.**
+
+الأصح هندسيًا وتنظيميًا:
+
+```text
+Organizational Development
+          ↓
+Performance Framework Owner
+
+Managers / PM / PMO
+          ↓
+Performance Data & Evaluation
+
+Payroll
+          ↓
+Incentive Calculation
+
+Finance
+          ↓
+Payment
+```
+
+وبالتالي يحتفظ النظام الحالي بدور PMO حيث يكون KPI مرتبطًا بالمشروعات، ولكن لا نحول PMO إلى جهة تقييم وظائف Finance وHR وLegal وProcurement وغيرها.
+
+---
+
+## التكامل الآن أصبح واضحًا جدًا
+
+```text
+Module 02
+Organization & Job Architecture
+        ↓
+Module 06
+Employee Activation
+        ↓
+Module 07
+Attendance / Time / Field Workforce
+        ↓
+Module 08
+Leave / Absence / Availability
+        ↓
+Module 10
+Performance / KPI / Objectives
+        ↓
+Module 09
+Payroll / Compensation
+```
+
+لكن من ناحية **تشغيل النظام**، Module 10 يمكن أن يرسل نتيجة الـKPI إلى Module 09 في كل Quarter دون انتظار دورة Payroll شهرية كاملة.
+
+وأقترح أن يكون **Module 11 المنطقي بعده: Learning, Training, Competency Development & Certification Management**، لأن Performance Management سيبدأ تلقائيًا بإنتاج **Skill Gaps / Competency Gaps / PIP / Development Needs**، وهي المدخل الطبيعي لخطة التدريب والتطوير.

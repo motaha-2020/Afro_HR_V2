@@ -1,0 +1,2797 @@
+ممتاز. نبدأ الآن بـ **Enterprise Data Model & Database Domain Map**؛ وهي أهم مرحلة قبل تصميم الـBackend، لأن هدفها أن تجعل كل كيان Business Entity له **مكان واحد واضح، Owner واحد، ومصدر حقيقة واحد**، بينما بقية الـModules تشير إليه بدل أن تنشئ نسخًا منه.
+
+الـOperations Manual نفسه يؤكد هذا الاحتياج؛ فمثلًا الـonboarding يمر بإنشاء employee profile وHR Code وPayroll registration وsystem access، ثم نفس الموظف يُستخدم لاحقًا في HR Operations وPayroll وOffboarding. لو خزّنت كل وحدة Employee مستقلًا، سنحصل سريعًا على سجلات متعارضة.  كما أن الهيكل التنظيمي الحالي يفصل المسؤوليات بين Personnel وPayroll وHR Operations وTalent Acquisition وER & Compliance وOD، لذلك يجب أن ينعكس هذا الفصل أيضًا في Data Ownership. 
+
+# Afro_HR_V2
+
+# Enterprise Data Model & Database Domain Map — v1.0
+
+---
+
+# 1. المبدأ الحاكم
+
+لا نصمم قاعدة البيانات وفق Screens.
+
+ولا وفق Modules فقط.
+
+بل وفق:
+
+> **Business Domains → Aggregate Roots → Entities → Transactions → Events**
+
+مثال:
+
+```text
+Employee
+```
+
+ليس جزءًا من Payroll.
+
+وليس جزءًا من Attendance.
+
+وليس جزءًا من Performance.
+
+هو Entity مركزي داخل:
+
+```text
+Core HR Domain
+```
+
+ثم:
+
+```text
+Payroll → employee_id
+Attendance → employee_id
+Performance → employee_id
+Learning → employee_id
+Case Management → employee_id
+```
+
+ولا يحتفظ أي منهم بنسخة أخرى من الموظف.
+
+---
+
+# 2. المستوى الأعلى — Database Domain Map
+
+أقترح تقسيم قاعدة بيانات Afro_HR إلى **18 Business Data Domains**:
+
+```text
+01 Tenant & Platform
+02 Identity & Access
+03 Organization & Job Architecture
+04 Core Employee
+05 Workforce Assignment
+06 Recruitment
+07 Onboarding
+08 Personnel & Compliance
+09 Time & Attendance
+10 Leave & Availability
+11 Compensation & Payroll
+12 Performance
+13 Learning & Competency
+14 Talent & Career
+15 Employee Relations & Cases
+16 HR Service Delivery
+17 Offboarding
+18 Workforce Analytics & Governance
+```
+
+بالإضافة إلى:
+
+```text
+Shared Data Services
+Integration Data
+Audit & Event Store
+Documents
+Configuration
+```
+
+---
+
+# 3. الصورة الكاملة
+
+```text
+                   ┌───────────────────┐
+                   │ Tenant / Company  │
+                   └─────────┬─────────┘
+                             │
+                   ┌─────────▼─────────┐
+                   │ Organization      │
+                   │ Job / Position    │
+                   └─────────┬─────────┘
+                             │
+                   ┌─────────▼─────────┐
+                   │     Employee      │
+                   │   Core HR Record  │
+                   └─────────┬─────────┘
+                             │
+       ┌───────────┬─────────┼─────────┬───────────┐
+       │           │         │         │           │
+       ▼           ▼         ▼         ▼           ▼
+ Assignment   Attendance   Leave    Payroll    Performance
+       │                              │             │
+       │                              │             ▼
+       │                              │          Learning
+       │                              │             │
+       │                              │             ▼
+       │                              │          Talent
+       │                              │
+       ├──────────────┐               │
+       ▼              ▼               ▼
+ Personnel       HR Cases       Compensation
+       │
+       ▼
+ Offboarding
+```
+
+---
+
+# 4. Domain 01 — Tenant & Platform
+
+هذا Domain حرج لأننا نصمم النظام كـ **Multi-Company SaaS**.
+
+## Aggregate Roots
+
+### Tenant
+
+```text
+tenant
+```
+
+يمثل العميل أو المؤسسة المشتركة في النظام.
+
+مثال:
+
+```text
+Afro Group
+Company B
+Company C
+```
+
+### Core tables
+
+```text
+tenants
+companies
+legal_entities
+branches
+business_units
+tenant_settings
+company_settings
+number_sequences
+locales
+currencies
+timezones
+fiscal_calendars
+working_calendars
+system_features
+feature_flags
+```
+
+### tenant
+
+```text
+tenant_id
+tenant_code
+tenant_name
+status
+subscription_plan
+default_language
+default_timezone
+created_at
+```
+
+---
+
+# 5. Multi-Tenant Rule
+
+كل Business Table تقريبًا يجب أن يحتوي:
+
+```text
+tenant_id
+```
+
+وفي بعض الحالات:
+
+```text
+company_id
+```
+
+مثال:
+
+```text
+employees
+
+employee_id
+tenant_id
+company_id
+...
+```
+
+ولا نعتمد على:
+
+```text
+employee_id
+```
+
+وحده في Security filtering.
+
+---
+
+# 6. Domain 02 — Identity & Access
+
+هذا Domain لا يخزن Employee نفسه.
+
+بل يخزن:
+
+> من يستطيع دخول النظام وماذا يستطيع أن يفعل؟
+
+## Tables
+
+```text
+users
+user_identities
+user_credentials
+roles
+permissions
+role_permissions
+user_roles
+permission_scopes
+security_policies
+login_sessions
+mfa_methods
+access_requests
+delegations
+```
+
+---
+
+## العلاقة المهمة
+
+```text
+Employee
+   │
+   └────── user_id
+```
+
+لكن ليس كل Employee يجب أن يكون User.
+
+وقد يوجد:
+
+```text
+external user
+contractor user
+auditor
+system integration user
+```
+
+بدون Employment Record.
+
+---
+
+# 7. Domain 03 — Organization & Job Architecture
+
+هذا أحد أهم Master Data Domains.
+
+### Tables
+
+```text
+organization_units
+organization_unit_types
+
+jobs
+job_families
+job_subfamilies
+
+positions
+position_statuses
+
+grades
+bands
+career_levels
+
+reporting_lines
+
+cost_centers
+
+work_locations
+sites
+
+organization_versions
+organization_changes
+```
+
+---
+
+# 8. الفرق بين Job وPosition
+
+من الضروري جدًا عدم دمجهما.
+
+## Job
+
+هو:
+
+> تعريف الوظيفة نفسها.
+
+مثل:
+
+```text
+Project Manager
+Fiber Technician
+HR Specialist
+Payroll Specialist
+```
+
+---
+
+## Position
+
+هو:
+
+> Seat حقيقية داخل Organization.
+
+مثال:
+
+```text
+Position ID: POS-EGY-00127
+Job: Project Manager
+Department: Operations
+Project: Huawei
+Location: Cairo
+Reports To: Operations Manager
+Status: Filled
+```
+
+وقد يكون لدينا:
+
+```text
+20 Fiber Technician Positions
+```
+
+لكن كلها تستخدم:
+
+```text
+1 Job Definition
+```
+
+---
+
+# 9. Position Model
+
+```text
+positions
+
+position_id
+tenant_id
+company_id
+
+position_code
+
+job_id
+
+org_unit_id
+
+grade_id
+
+reports_to_position_id
+
+cost_center_id
+
+default_location_id
+
+employment_type
+
+budgeted_headcount
+
+status
+
+effective_from
+effective_to
+```
+
+---
+
+# 10. Domain 04 — Core Employee
+
+هنا يجب أن يعيش **Golden Employee Record**.
+
+هذا هو أهم Aggregate Root في النظام كله.
+
+```text
+employees
+```
+
+---
+
+# 11. لا نجعل employees جدولًا ضخمًا
+
+خطأ شائع:
+
+```text
+employees
+150 columns
+```
+
+الأفضل:
+
+```text
+employees
+employee_personal_details
+employee_contacts
+employee_addresses
+employee_identifiers
+employee_emergency_contacts
+employee_bank_accounts
+employee_family_members
+employee_dependents
+employee_employment_records
+employee_status_history
+```
+
+---
+
+# 12. employees
+
+نحتفظ فيه بالهوية الأساسية فقط:
+
+```text
+employee_id
+
+tenant_id
+company_id
+
+employee_code
+
+first_name_en
+middle_name_en
+last_name_en
+
+first_name_ar
+middle_name_ar
+last_name_ar
+
+display_name
+
+status
+
+hire_date
+
+termination_date
+
+created_at
+updated_at
+```
+
+---
+
+# 13. Personal Data
+
+```text
+employee_personal_details
+
+employee_id
+date_of_birth
+gender
+nationality
+marital_status
+military_status
+religion -- لا أنصح باستخدامها إلا إذا كان هناك سبب قانوني واضح
+blood_type
+```
+
+بعض البيانات يجب أن تخضع لـ:
+
+```text
+Sensitive Data Classification
+```
+
+---
+
+# 14. Employee Identifier
+
+بدل وضع National ID وPassport وغيرهما كأعمدة:
+
+```text
+employee_identifiers
+
+identifier_id
+employee_id
+
+identifier_type
+identifier_number
+
+country
+
+issue_date
+expiry_date
+
+verified
+```
+
+identifier_type:
+
+```text
+NATIONAL_ID
+PASSPORT
+SOCIAL_INSURANCE
+WORK_PERMIT
+ENGINEERS_SYNDICATE
+TECHNICIAN_LICENSE
+CUSTOMER_ID
+```
+
+وهذا يتماشى مع الـManual، الذي يطلب National ID وSocial Insurance وأحيانًا Engineers Syndicate membership وprofessional practice license وغيرها ضمن ملف الموظف. 
+
+---
+
+# 15. Employment Record
+
+مهم جدًا أن نفصل:
+
+```text
+Person
+```
+
+عن:
+
+```text
+Employment
+```
+
+لأن نفس الشخص قد:
+
+* يعمل في شركة.
+* يخرج.
+* يعود لاحقًا.
+* ينتقل بين legal entities.
+
+لذلك:
+
+```text
+employee_employment_records
+```
+
+يحتوي:
+
+```text
+employment_id
+employee_id
+
+company_id
+
+employment_type
+
+contract_type
+
+hire_date
+
+probation_end_date
+
+employment_status
+
+termination_date
+
+termination_reason
+
+effective_from
+effective_to
+```
+
+---
+
+# 16. Domain 05 — Workforce Assignment
+
+وهذه نقطة سأفصلها عن Employee تمامًا.
+
+لأن Employee يمكن أن يكون:
+
+```text
+Position = Project Manager
+```
+
+لكن يعمل في:
+
+```text
+Project A
+Project B
+Project C
+```
+
+بنسب مختلفة.
+
+---
+
+# 17. Assignment Model
+
+```text
+employee_assignments
+
+assignment_id
+
+employee_id
+
+assignment_type
+
+position_id
+
+project_id
+
+site_id
+
+location_id
+
+manager_employee_id
+
+allocation_percentage
+
+primary_assignment
+
+start_date
+end_date
+
+status
+```
+
+---
+
+## Assignment Type
+
+```text
+PRIMARY_POSITION
+PROJECT_ASSIGNMENT
+TEMPORARY_ASSIGNMENT
+SECONDMENT
+SITE_DEPLOYMENT
+ACTING_ASSIGNMENT
+SHADOWING
+CUSTOMER_ASSIGNMENT
+```
+
+---
+
+# 18. لماذا هذا مهم جدًا لـAfro؟
+
+لأن الـManual نفسه يتحدث عن:
+
+* Project Code
+* Project Name
+* Direct Manager
+* Work Location
+* Project Allocation
+* Project Payroll Cost
+* deployment
+
+ويذكر أن Payroll يقوم بمراجعة Project Allocations شهريًا. 
+
+إذًا:
+
+```text
+Project Assignment
+```
+
+لا يجوز أن يكون مجرد field داخل employees.
+
+---
+
+# 19. Domain 06 — Recruitment
+
+Aggregate Root:
+
+```text
+recruitment_request
+```
+
+وليس Candidate.
+
+لأن كل Hiring lifecycle يبدأ من Demand.
+
+---
+
+# 20. Recruitment Tables
+
+```text
+manpower_requests
+
+vacancies
+
+candidates
+candidate_contacts
+candidate_documents
+candidate_experiences
+candidate_education
+candidate_skills
+
+applications
+
+shortlists
+
+interviews
+interview_panels
+interview_evaluations
+
+assessments
+
+offers
+offer_components
+
+candidate_status_history
+
+recruitment_sources
+```
+
+---
+
+# 21. Manpower Request
+
+```text
+manpower_requests
+
+request_id
+
+requested_by
+
+position_id
+
+number_of_vacancies
+
+project_id
+
+location_id
+
+salary_range_min
+salary_range_max
+
+priority
+
+hiring_type
+
+replacement_employee_id
+
+status
+
+requested_at
+approved_at
+```
+
+هذا يعكس الحقول التي يطلبها الـManual في Hiring Request مثل Position Title وVacancies وProject وDirect Manager وLocation وSalary Range وPriority وNew/Replacement Position. 
+
+---
+
+# 22. Candidate ≠ Employee
+
+هذه قاعدة أخرى.
+
+```text
+Candidate
+```
+
+لا يصبح Employee بمجرد دخوله ATS.
+
+التحول يكون:
+
+```text
+Offer Accepted
+        ↓
+Onboarding
+        ↓
+Employee Created
+```
+
+ثم نحتفظ:
+
+```text
+candidate_id → employee_id
+```
+
+للتاريخ.
+
+---
+
+# 23. Domain 07 — Onboarding
+
+Aggregate:
+
+```text
+onboarding_case
+```
+
+---
+
+## Tables
+
+```text
+onboarding_cases
+onboarding_templates
+onboarding_requirements
+onboarding_tasks
+onboarding_task_assignments
+onboarding_checklists
+onboarding_approvals
+onboarding_exceptions
+onboarding_readiness
+```
+
+---
+
+# 24. Onboarding Case
+
+```text
+onboarding_case_id
+candidate_id
+employee_id
+position_id
+project_id
+joining_date
+priority
+status
+readiness_status
+started_at
+completed_at
+```
+
+---
+
+# 25. Requirement Model
+
+لا نضع 30 Boolean مثل:
+
+```text
+has_id
+has_medical
+has_contract
+has_photo
+has_certificate
+```
+
+بل:
+
+```text
+onboarding_requirements
+
+requirement_id
+case_id
+
+requirement_type
+
+mandatory
+
+required_for_job_id
+required_for_project_id
+required_for_customer_id
+
+status
+
+completed_at
+```
+
+فتصبح rules قابلة للتعديل.
+
+---
+
+# 26. Domain 08 — Personnel & Compliance
+
+هذا هو System of Record لـ:
+
+```text
+Contracts
+Employee Documents
+Insurance
+Legal Employment Documents
+Renewals
+Expiry Compliance
+```
+
+---
+
+# 27. Document Design
+
+لا نضع:
+
+```text
+national_id_file
+contract_file
+medical_file
+```
+
+داخل Employee.
+
+نعمل Document Service مركزيًا.
+
+---
+
+## document_records
+
+```text
+document_id
+
+tenant_id
+
+document_type
+
+owner_entity_type
+owner_entity_id
+
+file_storage_id
+
+document_number
+
+issue_date
+expiry_date
+
+status
+
+verification_status
+
+confidentiality_level
+
+version
+```
+
+---
+
+# 28. owner_entity_type
+
+يسمح للـDocument Engine بأن يخدم كل النظام.
+
+```text
+EMPLOYEE
+CANDIDATE
+CONTRACT
+CASE
+PAYROLL
+TRAINING
+CERTIFICATION
+OFFBOARDING
+POLICY
+```
+
+وهذا يمنع أن يقوم كل Module بعمل document tables منفصلة.
+
+---
+
+# 29. Contract Tables
+
+```text
+employment_contracts
+contract_versions
+contract_terms
+contract_amendments
+contract_renewals
+contract_signatures
+```
+
+---
+
+## employment_contracts
+
+```text
+contract_id
+employee_id
+employment_id
+
+contract_type
+
+start_date
+end_date
+
+probation_period
+
+base_salary_reference
+
+status
+
+signed_at
+```
+
+Compensation details لا أنصح بتكرارها بالكامل داخل العقد.
+
+تبقى في Compensation Domain ويشير العقد إليها عند الحاجة.
+
+---
+
+# 30. Insurance
+
+```text
+insurance_providers
+insurance_plans
+
+employee_insurance_enrollments
+
+insurance_dependents
+
+insurance_claim_references
+
+social_insurance_records
+```
+
+---
+
+# 31. Domain 09 — Time & Attendance
+
+Aggregate:
+
+```text
+attendance_day
+```
+
+أو:
+
+```text
+timesheet
+```
+
+حسب نوع الموظف.
+
+---
+
+# 32. Tables
+
+```text
+attendance_events
+
+attendance_days
+
+attendance_devices
+
+attendance_sources
+
+shifts
+
+shift_patterns
+
+rosters
+
+roster_assignments
+
+timesheets
+timesheet_entries
+
+overtime_requests
+
+attendance_exceptions
+
+field_visits
+
+geo_zones
+```
+
+---
+
+# 33. attendance_events
+
+Raw evidence:
+
+```text
+attendance_event_id
+employee_id
+
+event_type
+
+timestamp
+
+source
+
+device_id
+
+latitude
+longitude
+
+site_id
+
+verification_status
+```
+
+---
+
+# 34. attendance_day
+
+Processed result:
+
+```text
+attendance_day_id
+
+employee_id
+work_date
+
+shift_id
+
+scheduled_start
+scheduled_end
+
+actual_in
+actual_out
+
+worked_minutes
+late_minutes
+early_leave_minutes
+overtime_minutes
+
+attendance_status
+```
+
+هذه نقطة مهمة:
+
+```text
+attendance_events = Raw Data
+
+attendance_day = Calculated Result
+```
+
+ولا نمسح الـRaw Data بعد الحساب.
+
+---
+
+# 35. Allowance Rule
+
+بسبب شرطنا السابق الخاص بـ:
+
+* داخل القاهرة.
+* خارج القاهرة.
+* موقع معين.
+* مشروع معين.
+* وظيفة معينة.
+* مسافة معينة.
+
+نستخدم:
+
+```text
+allowance_rules
+```
+
+بدل hard coding.
+
+---
+
+# 36. allowance_rules
+
+```text
+allowance_rule_id
+
+allowance_type
+
+employee_category
+
+job_id
+
+project_id
+
+location_id
+
+geo_zone_id
+
+minimum_hours
+
+minimum_distance
+
+amount
+
+calculation_type
+
+effective_from
+effective_to
+```
+
+مثال:
+
+```text
+Field Allowance
+Outside Cairo
+250 EGP/day
+Minimum 6 working hours
+```
+
+---
+
+# 37. Domain 10 — Leave & Availability
+
+Tables:
+
+```text
+leave_types
+leave_policies
+leave_entitlements
+leave_balances
+
+leave_requests
+
+leave_transactions
+
+holiday_calendars
+holidays
+
+absence_records
+
+employee_availability
+```
+
+---
+
+# 38. Leave Balance لا تخزنه فقط كرقم
+
+الأفضل Ledger.
+
+```text
+leave_transactions
+
+transaction_id
+employee_id
+leave_type_id
+
+transaction_type
+
+days
+
+reference_type
+reference_id
+
+transaction_date
+```
+
+مثال:
+
+```text
++21 Annual entitlement
+
+-3 Approved Leave
+
++2 Carry forward
+```
+
+ومنها نحسب Balance.
+
+هذا أفضل كثيرًا في Audit.
+
+---
+
+# 39. Domain 11 — Compensation & Payroll
+
+أكبر Domain مالي داخل HR.
+
+أقترح داخليًا فصله منطقيًا إلى:
+
+```text
+Compensation
+Payroll
+Payroll Cost Allocation
+```
+
+---
+
+# 40. Compensation Tables
+
+```text
+salary_structures
+salary_components
+
+employee_compensation
+
+employee_compensation_components
+
+allowance_types
+
+deduction_types
+
+bonus_types
+
+compensation_changes
+```
+
+---
+
+# 41. Salary Component
+
+لا نخزن:
+
+```text
+basic_salary
+housing
+transportation
+field_allowance
+mobile_allowance
+```
+
+كأعمدة ثابتة.
+
+بل:
+
+```text
+salary_components
+```
+
+مثل:
+
+```text
+BASIC
+FIXED_ALLOWANCE
+FIELD_ALLOWANCE
+OVERTIME
+KPI_BONUS
+PROJECT_BONUS
+DEDUCTION
+TAX
+SOCIAL_INSURANCE
+```
+
+---
+
+# 42. Payroll Tables
+
+```text
+payroll_periods
+
+payroll_runs
+
+payroll_run_employees
+
+payroll_line_items
+
+payroll_inputs
+
+payroll_adjustments
+
+payroll_approvals
+
+payslips
+
+bank_payment_batches
+
+payroll_journals
+```
+
+---
+
+# 43. Payroll Input
+
+يجب ألا يعمل Payroll مباشرة من Attendance tables.
+
+نستخدم Snapshot:
+
+```text
+payroll_inputs
+```
+
+مثال:
+
+```text
+employee_id
+payroll_period
+
+input_type
+
+value
+
+source_module
+
+source_reference_id
+
+approved
+```
+
+---
+
+# 44. لماذا Snapshot؟
+
+لنفترض أن:
+
+```text
+Attendance
+```
+
+تم تعديله في الشهر التالي.
+
+لا يجب أن يتغير Payroll التاريخي.
+
+لذلك:
+
+```text
+Attendance → Approved Payroll Input
+```
+
+ثم Payroll يعمل على Snapshot immutable.
+
+---
+
+# 45. Payroll Line Item
+
+```text
+payroll_line_items
+
+payroll_employee_id
+
+component_id
+
+quantity
+
+rate
+
+amount
+
+source_type
+source_reference
+
+taxable
+
+social_insurance_applicable
+
+project_id
+cost_center_id
+```
+
+---
+
+# 46. Project Cost Allocation
+
+بما أن الـManual يطلب Payroll Cost Reports by Project، نحتاج:
+
+```text
+payroll_cost_allocations
+```
+
+
+
+```text
+payroll_line_id
+project_id
+cost_center_id
+allocation_percentage
+allocated_amount
+```
+
+وبالتالي موظف يعمل:
+
+```text
+Project A 60%
+Project B 40%
+```
+
+يمكن تحميل تكلفته فعليًا.
+
+---
+
+# 47. Domain 12 — Performance
+
+Tables:
+
+```text
+performance_cycles
+
+goal_templates
+
+goals
+
+employee_goals
+
+kpi_definitions
+
+kpi_targets
+
+kpi_results
+
+performance_reviews
+
+review_sections
+
+review_ratings
+
+manager_feedback
+
+employee_feedback
+
+calibration_sessions
+
+performance_improvement_plans
+```
+
+---
+
+# 48. KPI Definition
+
+```text
+kpi_id
+
+name
+
+description
+
+measurement_unit
+
+calculation_method
+
+weight
+
+target_source
+
+frequency
+```
+
+ثم:
+
+```text
+employee_kpis
+```
+
+يربط KPI بالموظف ودورة التقييم.
+
+---
+
+# 49. Domain 13 — Learning & Competency
+
+Tables:
+
+```text
+skills
+competencies
+
+competency_frameworks
+
+job_competency_requirements
+
+employee_skills
+
+employee_competencies
+
+courses
+
+training_programs
+
+training_sessions
+
+training_enrollments
+
+training_results
+
+certifications
+
+employee_certifications
+
+certification_requirements
+```
+
+---
+
+# 50. Employee Skills
+
+مهم جدًا ألا يكون:
+
+```text
+Excel = Good
+Fiber = Excellent
+```
+
+كنص.
+
+نحتاج:
+
+```text
+employee_skills
+
+employee_id
+skill_id
+
+proficiency_level
+
+verified
+
+verified_by
+
+assessment_date
+
+expiry_date
+```
+
+---
+
+# 51. Domain 14 — Talent & Career
+
+Tables:
+
+```text
+career_paths
+
+career_path_steps
+
+talent_pools
+
+talent_reviews
+
+nine_box_reviews
+
+critical_positions
+
+succession_plans
+
+succession_candidates
+
+readiness_assessments
+
+promotion_requests
+
+employee_movements
+```
+
+---
+
+# 52. Promotion لا تعدل Employee مباشرة
+
+الصحيح:
+
+```text
+promotion_request
+      ↓
+approval
+      ↓
+promotion.approved
+      ↓
+new assignment
+new position
+new compensation
+```
+
+ونحافظ على القديم Historical.
+
+---
+
+# 53. Domain 15 — Employee Relations & Cases
+
+Aggregate:
+
+```text
+hr_case
+```
+
+---
+
+# 54. Tables
+
+```text
+hr_cases
+
+case_types
+
+case_parties
+
+case_events
+
+case_notes
+
+case_documents
+
+case_evidence
+
+investigations
+
+investigation_interviews
+
+disciplinary_actions
+
+grievances
+
+appeals
+
+legal_reviews
+```
+
+---
+
+# 55. Security هنا مختلفة
+
+لا يكفي:
+
+```text
+HR_ROLE
+```
+
+حتى يرى HR Case.
+
+نحتاج:
+
+```text
+CASE_ASSIGNED_USER
+ER_MANAGER
+LEGAL_ASSIGNED
+AUTHORIZED_MANAGER
+```
+
+وقد نضيف:
+
+```text
+restricted_case = true
+```
+
+---
+
+# 56. Case Evidence
+
+لا يتم حذفها أو تعديلها بسهولة.
+
+```text
+case_evidence
+
+evidence_id
+case_id
+
+evidence_type
+
+document_id
+
+submitted_by
+
+submitted_at
+
+hash
+
+chain_of_custody_status
+```
+
+---
+
+# 57. Domain 16 — HR Service Delivery
+
+Tables:
+
+```text
+service_catalog
+
+service_categories
+
+service_requests
+
+service_request_status_history
+
+service_slas
+
+request_approvals
+
+request_comments
+
+generated_letters
+```
+
+---
+
+# 58. أهم Rule
+
+Module 14:
+
+```text
+Request System
+```
+
+وليس:
+
+```text
+System of Record
+```
+
+مثال:
+
+الموظف يطلب:
+
+```text
+Salary Certificate
+```
+
+M14 يستقبل الطلب.
+
+لكن البيانات تأتي من:
+
+```text
+M01 Employee
+M02 Position
+M09 Compensation
+```
+
+ثم Document Engine ينتج الخطاب.
+
+---
+
+# 59. Domain 17 — Offboarding
+
+Aggregate:
+
+```text
+offboarding_case
+```
+
+---
+
+# 60. Tables
+
+```text
+offboarding_cases
+
+offboarding_reasons
+
+resignations
+
+termination_records
+
+notice_periods
+
+handover_records
+
+clearance_templates
+
+clearance_tasks
+
+clearance_responses
+
+asset_return_records
+
+access_revocation_requests
+
+exit_interviews
+
+final_settlement_requests
+
+employee_closure_records
+```
+
+---
+
+# 61. Clearance Tasks
+
+بدل أعمدة:
+
+```text
+it_clearance
+finance_clearance
+hr_clearance
+manager_clearance
+```
+
+نعمل:
+
+```text
+clearance_tasks
+```
+
+```text
+task_id
+offboarding_case_id
+
+department
+
+task_type
+
+assigned_to
+
+status
+
+completed_at
+```
+
+ويمكن إضافة قسم جديد بدون Database Change.
+
+الـManual نفسه يوزع الـclearance حاليًا بين IT وOperations/HR & Administration وFinance وDirect Manager. 
+
+---
+
+# 62. Final Settlement
+
+لا نحسبه داخل Offboarding.
+
+الصحيح:
+
+```text
+M16 Offboarding
+      ↓
+final.settlement.requested
+      ↓
+M09 Payroll
+      ↓
+final.settlement.calculated
+      ↓
+M16
+```
+
+وهذا يمنع وجود Payroll logic في Module 16.
+
+---
+
+# 63. Domain 18 — Workforce Analytics & Governance
+
+هنا يجب الفصل بين:
+
+```text
+Operational Data
+```
+
+و:
+
+```text
+Analytical Data
+```
+
+---
+
+# 64. لا نشغل Executive Dashboards مباشرة من Transaction DB
+
+الأفضل لاحقًا:
+
+```text
+Operational PostgreSQL
+        ↓
+CDC / Events / ETL
+        ↓
+Analytics Store
+        ↓
+Power BI / Dashboards / AI
+```
+
+---
+
+# 65. Analytical Facts
+
+مثلًا:
+
+```text
+fact_headcount
+fact_payroll
+fact_attendance
+fact_turnover
+fact_recruitment
+fact_leave
+fact_training
+fact_performance
+fact_hr_cases
+```
+
+---
+
+# 66. Dimensions
+
+```text
+dim_employee
+
+dim_date
+
+dim_company
+
+dim_department
+
+dim_position
+
+dim_job
+
+dim_project
+
+dim_location
+
+dim_grade
+
+dim_manager
+```
+
+---
+
+# 67. Shared Domain — Documents
+
+كما ذكرت:
+
+```text
+documents
+document_versions
+document_links
+document_signatures
+document_access_logs
+document_templates
+generated_documents
+```
+
+---
+
+# 68. Shared Domain — Workflow
+
+```text
+workflow_definitions
+
+workflow_versions
+
+workflow_instances
+
+workflow_steps
+
+workflow_tasks
+
+workflow_actions
+
+workflow_escalations
+```
+
+---
+
+# 69. Workflow Generic Relation
+
+كل Workflow Instance يمكن أن يرتبط بـ:
+
+```text
+entity_type
+entity_id
+```
+
+مثال:
+
+```text
+MANPOWER_REQUEST
+LEAVE_REQUEST
+PROMOTION_REQUEST
+OFFBOARDING_CASE
+HR_CASE
+```
+
+وبالتالي لا نبني approval infrastructure لكل Module.
+
+---
+
+# 70. Shared Domain — Rules Engine
+
+Tables:
+
+```text
+business_rules
+rule_sets
+rule_conditions
+rule_actions
+rule_versions
+rule_execution_logs
+```
+
+مثال:
+
+```text
+IF
+employee.location != Cairo
+AND
+worked_hours >= 6
+
+THEN
+allowance = 250
+```
+
+بدون تعديل Code.
+
+---
+
+# 71. Shared Domain — Notification
+
+```text
+notification_templates
+
+notification_rules
+
+notifications
+
+notification_recipients
+
+notification_delivery_attempts
+
+notification_preferences
+```
+
+Channels:
+
+```text
+IN_APP
+EMAIL
+SMS
+PUSH
+WHATSAPP
+```
+
+حسب integrations المتاحة.
+
+---
+
+# 72. Shared Domain — Audit
+
+هذا لا غنى عنه في HR.
+
+```text
+audit_logs
+```
+
+```text
+audit_id
+
+tenant_id
+
+user_id
+
+entity_type
+entity_id
+
+action
+
+old_values
+new_values
+
+ip_address
+
+timestamp
+```
+
+---
+
+# 73. لكن Payroll وER تحتاج Audit أقوى
+
+يمكن عمل:
+
+```text
+immutable_audit_events
+```
+
+بحيث لا يسمح حتى Admin بتعديل التاريخ.
+
+---
+
+# 74. Shared Domain — Events
+
+```text
+domain_events
+
+event_id
+
+tenant_id
+
+aggregate_type
+aggregate_id
+
+event_type
+
+event_version
+
+payload
+
+occurred_at
+
+published_at
+
+correlation_id
+
+causation_id
+```
+
+---
+
+# 75. مثال Event حقيقي
+
+```json
+{
+  "event_type": "employee.activated",
+  "aggregate_type": "employee",
+  "employee_id": "EMP-100234",
+  "company_id": "AFRO-EGY",
+  "position_id": "POS-304",
+  "project_id": "HUAWEI-CM",
+  "joining_date": "2026-08-10"
+}
+```
+
+ثم يستهلكه:
+
+```text
+Identity
+Attendance
+Payroll
+Learning
+HR Operations
+Analytics
+```
+
+---
+
+# 76. أهم Aggregate Roots
+
+لو أردت تلخيص النظام كله، فهذه هي الكيانات التي أعتبرها Aggregate Roots الأساسية:
+
+```text
+Tenant
+
+Company
+
+OrganizationUnit
+
+Job
+
+Position
+
+Employee
+
+Employment
+
+Assignment
+
+RecruitmentRequest
+
+Candidate
+
+OnboardingCase
+
+Contract
+
+AttendanceDay
+
+LeaveRequest
+
+PayrollRun
+
+PerformanceReview
+
+TrainingEnrollment
+
+Certification
+
+TalentReview
+
+HRCase
+
+ServiceRequest
+
+OffboardingCase
+
+Policy
+
+WorkforcePlan
+```
+
+---
+
+# 77. Entity Ownership Map
+
+وهذا الجدول يجب تثبيته رسميًا:
+
+| Entity              | Owning Domain       | Main Consumer                 |
+| ------------------- | ------------------- | ----------------------------- |
+| Employee            | Core HR             | الجميع                        |
+| Employment          | Core HR             | Payroll, Personnel            |
+| Organization Unit   | Org Design          | الجميع                        |
+| Job                 | Job Architecture    | Recruitment, Talent           |
+| Position            | Job Architecture    | Recruitment, Assignment       |
+| Assignment          | Workforce           | Attendance, Payroll, Projects |
+| Candidate           | Recruitment         | Onboarding                    |
+| Recruitment Request | Recruitment         | Workforce Planning            |
+| Onboarding Case     | Onboarding          | Personnel, IT, HSE            |
+| Contract            | Personnel           | Payroll, Offboarding          |
+| Employee Document   | Personnel/Documents | Compliance                    |
+| Attendance          | Time                | Payroll                       |
+| Leave               | Leave               | Attendance, Payroll           |
+| Compensation        | Compensation        | Payroll                       |
+| Payroll Run         | Payroll             | Finance                       |
+| Performance Review  | Performance         | Talent, Learning              |
+| Skill               | Learning            | Talent                        |
+| Certification       | Learning            | HSE/Operations                |
+| HR Case             | ER                  | Legal, Payroll                |
+| Service Request     | HR Service Desk     | Relevant Module               |
+| Offboarding Case    | Offboarding         | IT, Payroll, Finance          |
+| Workforce Plan      | Analytics/Planning  | Recruitment                   |
+| Policy              | Governance          | All modules                   |
+
+---
+
+# 78. Database Schemas
+
+إذا استخدمنا PostgreSQL، فلا أنصح بوضع كل شيء داخل:
+
+```text
+public
+```
+
+بل Schemas واضحة:
+
+```text
+platform.*
+
+iam.*
+
+org.*
+
+core_hr.*
+
+workforce.*
+
+recruitment.*
+
+onboarding.*
+
+personnel.*
+
+time.*
+
+leave.*
+
+compensation.*
+
+payroll.*
+
+performance.*
+
+learning.*
+
+talent.*
+
+er.*
+
+service.*
+
+offboarding.*
+
+workflow.*
+
+documents.*
+
+rules.*
+
+notifications.*
+
+integration.*
+
+audit.*
+
+analytics.*
+```
+
+مثال:
+
+```text
+core_hr.employees
+
+org.positions
+
+workforce.employee_assignments
+
+time.attendance_days
+
+payroll.payroll_runs
+
+er.hr_cases
+```
+
+هذا سيجعل الـArchitecture واضحة جدًا للفريق.
+
+---
+
+# 79. أهم العلاقات الأساسية
+
+```text
+Tenant
+  │
+  └── Company
+       │
+       ├── Organization Unit
+       │      │
+       │      └── Position
+       │            │
+       │            └── Job
+       │
+       └── Employee
+              │
+              ├── Employment
+              │
+              ├── Assignment ─── Position
+              │                  Project
+              │
+              ├── Contract
+              │
+              ├── Attendance
+              │
+              ├── Leave
+              │
+              ├── Compensation
+              │
+              ├── Payroll
+              │
+              ├── Performance
+              │
+              ├── Training
+              │
+              ├── HR Cases
+              │
+              └── Offboarding
+```
+
+---
+
+# 80. Employee Lifecycle Data Model
+
+عمليًا Lifecycle ستكون:
+
+```text
+Candidate
+    │
+    ▼
+Application
+    │
+    ▼
+Offer
+    │
+    ▼
+Onboarding Case
+    │
+    ▼
+Employee
+    │
+    ├── Employment
+    │
+    ├── Position
+    │
+    ├── Assignment
+    │
+    ├── Contract
+    │
+    └── Compensation
+           │
+           ▼
+       Active Worker
+           │
+ ┌─────────┼─────────┐
+ ▼         ▼         ▼
+Time      Leave   Performance
+ │                    │
+ ▼                    ▼
+Payroll             Talent
+ │
+ ▼
+Finance
+
+Eventually
+
+Employee
+   ↓
+Offboarding Case
+   ↓
+Final Settlement
+   ↓
+Employment Closed
+```
+
+---
+
+# 81. أهم Architecture Rule في التاريخ
+
+كل Transaction يحتاج:
+
+```text
+effective_from
+effective_to
+```
+
+عندما تكون المعلومة Temporal.
+
+مثال:
+
+لا نفعل:
+
+```text
+employee.manager_id = X
+```
+
+ثم نغيره إلى Y ونفقد القديم.
+
+بل:
+
+```text
+Employee A
+Manager X
+01-Jan → 30-Jun
+
+Employee A
+Manager Y
+01-Jul → Current
+```
+
+---
+
+# 82. Effective Dating يجب استخدامه في
+
+```text
+Employment
+
+Position
+
+Assignment
+
+Manager
+
+Salary
+
+Grade
+
+Contract
+
+Work Location
+
+Cost Center
+
+Shift
+
+Allowance Rule
+
+Leave Policy
+
+Benefit Plan
+
+Permissions
+```
+
+وهذا سيكون مهمًا جدًا عند:
+
+```text
+Payrollย้อนหลัง
+Audit
+Historical reports
+Promotion
+Transfer
+Restructuring
+```
+
+---
+
+# 83. Soft Delete
+
+لا نستخدم:
+
+```text
+DELETE employee
+```
+
+ولا:
+
+```text
+DELETE payroll
+```
+
+بل:
+
+```text
+status
+archived_at
+deleted_at
+```
+
+حسب نوع البيانات.
+
+وبعض البيانات:
+
+```text
+Payroll
+Audit
+Cases
+Contracts
+```
+
+قد لا يسمح بحذفها أصلًا.
+
+---
+
+# 84. Global IDs
+
+لا أنصح أن تكون Business IDs:
+
+```text
+1
+2
+3
+4
+```
+
+خارجيًا.
+
+نستخدم:
+
+```text
+UUID / UUIDv7
+```
+
+كـPrimary Key تقني.
+
+وبجانبه:
+
+```text
+employee_code = AFR-EGY-000123
+
+position_code = POS-OPS-00214
+```
+
+---
+
+# 85. مثال Employee Identity
+
+```text
+employee_id
+UUID
+
+employee_code
+AFR-EGY-001927
+```
+
+ولا نعتمد HR Code كـPrimary Key.
+
+لأنه Business Identifier ويمكن أن تتغير قواعده.
+
+---
+
+# 86. Project كيان مهم
+
+لكن Project لا أنصح أن يكون HR Master.
+
+إذا كان هناك Operations/ERP System:
+
+```text
+Project
+```
+
+يجب أن يكون:
+
+```text
+External Master
+```
+
+ونحفظ في HR:
+
+```text
+project_reference
+
+project_external_id
+project_code
+project_name
+status
+source_system
+last_synced_at
+```
+
+لا ندير المشروع نفسه داخل HR.
+
+---
+
+# 87. نفس الشيء Cost Center
+
+لو Finance/ERP هو Owner:
+
+```text
+ERP owns Cost Center
+```
+
+وHR يستهلكه.
+
+---
+
+# 88. Source of Truth Classification
+
+لكل Entity نضع:
+
+```text
+INTERNAL_MASTER
+EXTERNAL_MASTER
+DERIVED
+TRANSACTIONAL
+REFERENCE
+```
+
+مثال:
+
+| Entity       | Classification  |
+| ------------ | --------------- |
+| Employee     | INTERNAL_MASTER |
+| Position     | INTERNAL_MASTER |
+| Project      | EXTERNAL_MASTER |
+| Cost Center  | EXTERNAL_MASTER |
+| Attendance   | TRANSACTIONAL   |
+| Payroll Cost | DERIVED         |
+| Country      | REFERENCE       |
+| Currency     | REFERENCE       |
+
+---
+
+# 89. Data Classification
+
+أوصي بإضافة تصنيف لكل Field:
+
+```text
+PUBLIC
+INTERNAL
+CONFIDENTIAL
+SENSITIVE
+HIGHLY_RESTRICTED
+```
+
+مثال:
+
+```text
+Employee Name → Internal
+
+Mobile → Confidential
+
+National ID → Sensitive
+
+Bank Account → Highly Restricted
+
+Salary → Highly Restricted
+
+Disciplinary Case → Highly Restricted
+
+Medical Data → Highly Restricted
+```
+
+وهذا مهم جدًا للصلاحيات لاحقًا.
+
+---
+
+# 90. أكثر 10 أخطاء يجب منعها الآن
+
+1. إنشاء employee table داخل كل Module.
+
+2. وضع كل بيانات الموظف في employees.
+
+3. اعتبار Position = Job.
+
+4. وضع Project كـText بدل reference.
+
+5. تغيير salary بدل الاحتفاظ بتاريخ.
+
+6. تخزين Leave Balance بدون Ledger.
+
+7. حساب Payroll مباشرة من Raw Attendance.
+
+8. وضع Document Columns داخل كل Table.
+
+9. بناء Approvals داخل كل Module.
+
+10. Hard-coding Policies في Backend.
+
+---
+
+# 91. Architecture Target
+
+النتيجة المطلوبة في النهاية:
+
+```text
+                       Afro HR Data Platform
+
+ ┌──────────────────────── Master Data ────────────────────────┐
+ │ Tenant │ Company │ Org │ Job │ Position │ Employee │ Skill │
+ └─────────────────────────────────────────────────────────────┘
+
+ ┌────────────────────── Transaction Data ─────────────────────┐
+ │ Recruitment │ Attendance │ Leave │ Payroll │ Cases │ Talent │
+ └─────────────────────────────────────────────────────────────┘
+
+ ┌──────────────────────── Shared Data ────────────────────────┐
+ │ Workflow │ Documents │ Policies │ Rules │ Notifications     │
+ └─────────────────────────────────────────────────────────────┘
+
+ ┌────────────────────── Integration Data ─────────────────────┐
+ │ ERP │ Finance │ Projects │ Banks │ Insurance │ Devices      │
+ └─────────────────────────────────────────────────────────────┘
+
+ ┌──────────────────────── Audit / Events ─────────────────────┐
+ │ Audit Trail │ Domain Events │ Integration Logs │ History    │
+ └─────────────────────────────────────────────────────────────┘
+
+ ┌──────────────────────── Analytics ──────────────────────────┐
+ │ Workforce │ Cost │ Talent │ Attendance │ Payroll │ AI       │
+ └─────────────────────────────────────────────────────────────┘
+```
+
+# القرار المعماري الذي أريد تثبيته
+
+من هذه اللحظة أعتبر أن **Afro_HR_V2 Data Architecture** يجب أن تعتمد:
+
+**Domain-oriented relational architecture باستخدام PostgreSQL + strict data ownership + effective dating + immutable audit + event-driven integration + shared document/workflow/rules engines.**
+
+ولا أنصح حاليًا بـMicroservices Database-per-Service؛ لأن ذلك سيزيد تعقيد التطوير والتشغيل دون فائدة حقيقية في المرحلة الأولى. الأفضل أن نبدأ بـ:
+
+```text
+Modular Monolith
+        +
+Domain-separated PostgreSQL Schemas
+        +
+Event Bus abstraction
+```
+
+بحيث نستطيع مستقبلًا استخراج أي Domain إلى Microservice بدون إعادة تصميم الـBusiness Model.
+
+**الخطوة التالية التي أنصح بها الآن:** تحويل هذا الـDomain Map إلى **Logical Database Schema & ERD**، ونبدأ تحديد الجداول الفعلية والمفاتيح والعلاقات `1:1 / 1:N / N:M` والـFKs، بدءًا من قلب النظام:
+
+**Tenant → Company → Organization Unit → Job → Position → Employee → Employment → Assignment → Contract → Compensation.**
+
+وبمجرد تثبيت هذه النواة، يصبح بناء بقية Modules أكثر أمانًا بكثير.

@@ -1,0 +1,455 @@
+نعم. هذه هي الخطوة الصحيحة الآن قبل الدخول في تصميم الـDatabase أو الـAPIs، لأننا لو بدأنا التطوير قبل تثبيت **System Master Map** سنكتشف لاحقًا أن أكثر من Module يعتبر نفسه مالكًا لنفس البيانات، أو أن Workflow ينفذ Business Rule موجودًا أصلًا في Module آخر.
+
+سأتعامل مع الـ**System Master Map** كوثيقة Architecture حاكمة للنظام، وليس مجرد جدول Modules. وهي ستحدد بوضوح: **من يملك البيانات؟ من يستهلكها؟ من يغيرها؟ ما الحدث الذي يبدأ العملية؟ وما الذي يحدث بعد اكتمالها؟**
+
+الـPeople & Culture Operations Manual الحالي يؤكد أصلًا أن العمليات مترابطة بهذه الصورة: Recruitment ينتقل إلى Personnel، ثم Onboarding، ثم HR Operations، بينما Payroll يعتمد على Employee Master Data وProject Allocation وAttendance وAllowances وKPI، وOffboarding يحتاج Personnel وIT وFinance وDirect Manager.  كما أن الهيكل التنظيمي الحالي يفصل بين Organizational Development وTalent Acquisition وEmployee Relations & Compliance وPayroll وPersonnel وHR Operations، ولذلك سأستخدم هذه الوظائف كـBusiness Owners حيث تنطبق. 
+
+# Afro_HR_V2 — System Master Map
+
+سأبدأ أولًا بالـ**Level-1 Master Map** لكل الـ20 Modules. بعد ذلك ننزل لكل Module إلى Level-2 Event/Data Map.
+
+> ملاحظة واحدة: الأسماء الدقيقة لـModules 02–20 محفوظة من تصميمنا السابق، بينما Module 01 و04 لم أجد لهما اسمًا صريحًا في الجزء المسترجع من النقاش السابق؛ لذلك سأثبت لهما Architecture Role منطقيًا الآن، ويمكننا اعتماد التسمية النهائية أثناء الـBlueprint Freeze.
+
+| #      | Module                                                                                                                        | Primary Owner                            | Master Data                                                                                                     | Main Transactions                                                                | Key Inputs                                              | Key Outputs                                                     | Main Policies / Rules                                                            | Events Produced                                                                           | Events Consumed                                                                | Main Integrations                               | Shared Engines                                             | Dependencies     |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------------- | ---------------------------------------------------------- | ---------------- |
+| **01** | **Core HR & Employee Master Data**                                                                                            | Personnel / P&C                          | Employee, Employment Status, Employee Type, Personal Data, Contacts, IDs, Bank Info, Emergency Contact          | Employee creation, update, status change, profile correction                     | Hiring confirmation, contracts, organization assignment | Golden Employee Record                                          | Unique HR Code, required fields, effective dating, confidentiality               | Employee.Created, Employee.Updated, Employment.StatusChanged                              | Candidate.Hired, Employee.Activated, Employee.Transferred, Employee.Terminated | ERP, Payroll, Banks, Insurance, IT              | Audit, Workflow, Documents, Notification, Effective Dating | 02,03,05,06      |
+| **02** | **Organization Structure & Job Architecture**                                                                                 | Organizational Development               | Company, BU, Sector, Department, Project, Site, Position, Job, Grade, Career Level, Cost Center, Reporting Line | Org change, position creation, position movement, restructuring                  | Strategy, manpower plan, approved organization changes  | Approved Org Structure & Position Architecture                  | Position approval, span of control, reporting rules, grade rules                 | Position.Created, OrgUnit.Changed, ReportingLine.Changed                                  | Company.Created, WorkforcePlan.Approved                                        | Finance/ERP, Projects                           | Approval, Versioning, Effective Dating, Audit              | 01               |
+| **03** | **Identity, Users, Roles, Permissions & Security**                                                                            | System Admin / IT                        | User, Role, Permission, Scope, Security Profile, MFA Rules                                                      | Account creation, role assignment, access grant/revoke                           | Employee status, position, project assignments          | Authorized User Context                                         | RBAC + ABAC, least privilege, segregation of duties                              | User.Created, Access.Granted, Access.Revoked                                              | Employee.Activated, Assignment.Changed, Offboarding.Started                    | SSO, Email, SMS/OTP, IAM                        | RBAC/ABAC, Audit, Notification                             | 01,02            |
+| **04** | **Workforce Assignment, Project Deployment & Employee Movement**                                                              | HR Operations / Personnel                | Assignment Type, Location, Project Role, Deployment Rule                                                        | Transfer, secondment, project assignment, temporary assignment, manager change   | Employee record, project demand, org structure          | Current employee assignment                                     | One primary employment + multiple permitted project assignments; effective dates | Assignment.Created, Employee.Transferred, Manager.Changed                                 | Employee.Activated, Project.Created, Position.Changed                          | Project System, Finance, Payroll                | Workflow, Effective Dating, Approval                       | 01,02,03         |
+| **05** | **Recruitment, Manpower Request & Applicant Tracking System (ATS)**                                                           | Talent Acquisition                       | Candidate, Talent Pool, Source, Interview Template, Recruitment Channel                                         | MPR, sourcing, screening, interview, assessment, offer                           | Approved position, manpower budget, job profile         | Selected Candidate / Accepted Offer                             | Hiring approval, priority P0/P1, salary range, assessment requirements           | ManpowerRequest.Approved, Candidate.Shortlisted, Candidate.Selected, Offer.Accepted       | Vacancy.Created, WorkforceGap.Detected                                         | Email, Job Boards, HSE, ERP                     | Workflow, SLA, Documents, Notification, Approval           | 02,17            |
+| **06** | **Onboarding, Pre-Employment Compliance & Employee Activation**                                                               | Personnel + HR Operations                | Onboarding Checklist, Requirement Templates, Activation Criteria                                                | Document collection, contracting, HSE clearance, equipment readiness, activation | Accepted offer, candidate data, position, project       | Activated Employee                                              | No activation before mandatory documents/approvals/HSE requirements              | Onboarding.Started, Employee.Activated, Readiness.Completed                               | Offer.Accepted                                                                 | IT, HSE, Administration, Payroll, ERP           | Checklist, Workflow, Documents, SLA, Notification          | 01,02,03,05,15   |
+| **07** | **Attendance, Time, Shifts, Rosters & Field Workforce Tracking**                                                              | HR Operations                            | Shift, Roster, Attendance Rule, Device, Geo-zone, Work Calendar, OT Rule, Location Allowance Rule               | Check-in/out, roster, timesheet, OT, lateness, field attendance                  | Employee assignment, work calendar, GPS/device logs     | Approved attendance & payable time                              | Fingerprint/GPS/Supervisor rules; Cairo/outside-Cairo/site allowance rules       | Attendance.Recorded, OT.Approved, Attendance.ExceptionRaised                              | Employee.Activated, Shift.Assigned, Leave.Approved                             | Biometric, Mobile GPS, Project Systems, Payroll | Rules Engine, Geo Engine, Workflow                         | 01,04            |
+| **08** | **Leave, Absence, Holidays & Employee Availability Management**                                                               | HR Operations / Personnel                | Leave Type, Holiday Calendar, Entitlement Rule, Absence Rule                                                    | Leave request, approval, accrual, balance adjustment, absence                    | Attendance, calendar, employee status                   | Approved leave, availability calendar                           | Eligibility, balance, carry forward, holiday treatment                           | Leave.Requested, Leave.Approved, Leave.Cancelled, Availability.Changed                    | Employee.Activated, Attendance.ExceptionRaised                                 | Payroll, Calendar, Project Planning             | Rules, Workflow, Calendar, Notifications                   | 01,07            |
+| **09** | **Payroll, Compensation, Earnings, Deductions & Payroll Processing Engine**                                                   | Payroll                                  | Salary Structure, Component, Tax Rule, SI Rule, Allowance Rule, Deduction Rule, Bank Rule                       | Payroll run, adjustment, allowance, deduction, settlement, payment               | Attendance, leave, assignments, KPI, employee master    | Payslip, bank file, payroll journal, cost allocation            | Payroll cutoff, validated inputs only, approval before salary changes            | Payroll.Calculated, Payroll.Approved, Salary.Paid, Payroll.Posted                         | Attendance.Closed, Leave.Closed, Allowance.Approved, KPI.Approved              | Finance, Banks, ERP, Insurance                  | Formula Engine, Rules Engine, Approval, Audit              | 01,04,07,08      |
+| **10** | **Performance Management, Objectives, KPI & Appraisal Lifecycle**                                                             | OD / HR Operations                       | KPI Library, Goal Template, Rating Scale, Review Cycle                                                          | Goal setting, check-in, appraisal, calibration, evaluation                       | Position, employee, company objectives                  | Performance score, development gaps, KPI results                | Rating methodology, calibration, approval                                        | Review.Completed, KPI.ScoreApproved, PerformanceGap.Detected                              | Employee.Assigned, ReviewCycle.Opened                                          | Payroll, Learning, Talent                       | Workflow, Scoring, Notification                            | 01,02            |
+| **11** | **Learning, Training, Competency Development & Certification Management**                                                     | OD / L&D                                 | Skill, Competency, Course, Certification, Provider, Training Matrix                                             | Training request, enrollment, assessment, certificate renewal                    | Skill gaps, HSE requirement, performance gaps           | Skill profile, certification readiness                          | Mandatory training, expiry, role competency requirements                         | Training.Completed, Skill.Updated, Certification.Expiring                                 | PerformanceGap.Detected, Position.Assigned                                     | LMS, HSE, Customer Platforms                    | Learning Rules, Document, Notification                     | 02,06,10         |
+| **12** | **Career Management, Talent Review, Succession Planning, Promotions & Internal Mobility**                                     | OD / P&C Management                      | Career Path, Talent Pool, Critical Position, Readiness Scale, Promotion Rule                                    | Talent review, succession nomination, promotion, internal move                   | Performance, skills, tenure, vacancy                    | Succession plan, promotion recommendation, mobility action      | Promotion eligibility, readiness, approval matrix                                | Promotion.Approved, Successor.Nominated, Mobility.Approved                                | Review.Completed, Skill.Updated, Vacancy.Created                               | Payroll, Org Design, Recruitment                | Scoring, Workflow, Approval                                | 02,10,11         |
+| **13** | **Employee Relations, Grievances, Disciplinary Actions, Investigations & Case Management**                                    | ER & Compliance                          | Case Type, Violation Matrix, Disciplinary Matrix, Evidence Type                                                 | Complaint, grievance, investigation, hearing, decision, appeal                   | Incident, employee complaint, manager report            | Case decision, disciplinary action                              | Confidentiality, labor law, evidence, authority matrix                           | Case.Opened, Investigation.Completed, DisciplinaryAction.Approved                         | Complaint.Submitted, Incident.Reported                                         | Legal, Payroll, Documents                       | Case Engine, Evidence Vault, Workflow, SLA                 | 01,03,18         |
+| **14** | **HR Service Desk, Employee Requests, Letters, Documents & Employee Self-Service**                                            | HR Operations                            | Service Catalog, Request Type, SLA, Letter Template                                                             | HR request, inquiry, certificate request, service ticket                         | Employee request                                        | Resolved request / generated letter                             | SLA, approval path, requester authorization                                      | HRRequest.Created, HRRequest.Resolved, Letter.Generated                                   | Employee.Activated                                                             | Email, SMS, Document Service                    | Service Desk, Workflow, SLA, Templates                     | 01,03            |
+| **15** | **Employee Documents, Contracts, Personnel Administration, Social Insurance, Medical Insurance & Compliance Management**      | Personnel                                | Document Type, Contract Type, Insurance Plan, Expiry Rule, Legal Requirement                                    | Contract, renewal, SI registration, medical insurance, document verification     | Employee master, onboarding documents                   | Legal personnel file / compliance status                        | Mandatory docs, contract validity, insurance timelines                           | Contract.Signed, Contract.Expiring, Document.Expired, Insurance.Activated                 | Employee.Created, Onboarding.Started                                           | Insurance Providers, Government/ERP             | Document Engine, Expiry Engine, Notification               | 01,06            |
+| **16** | **Offboarding, Resignation, Termination, Clearance, Asset Recovery, Final Settlement & Exit Management**                      | Personnel + HR Operations                | Exit Reason, Clearance Template, Notice Rule, Settlement Rule                                                   | Resignation, termination, handover, clearance, exit interview, settlement        | Employee record, assets, payroll balance, leave balance | Closed employee record                                          | Disable access by last working day; clearance before closure                     | Offboarding.Started, AccessRevocation.Requested, Clearance.Completed, Employee.Terminated | Resignation.Submitted, Contract.Expired                                        | IT, Finance, Assets, Payroll                    | Workflow, Checklist, Settlement Engine                     | 01,03,09,15      |
+| **17** | **HR Analytics, Workforce Planning, People Cost, Headcount Budgeting & Executive People Intelligence**                        | P&C Management / OD                      | Workforce Scenario, HC Budget, KPI Definition, People Cost Model                                                | HC plan, workforce forecast, cost simulation, variance analysis                  | All operational modules                                 | Workforce plan, people dashboard, budget requirement            | Metric definitions, approved budget baseline                                     | WorkforcePlan.Approved, HeadcountGap.Detected, BudgetExceeded                             | Payroll.Posted, Hiring.Completed, Turnover.Recorded                            | Finance, BI/Data Warehouse                      | Analytics, Forecasting, KPI Engine                         | All Core Modules |
+| **18** | **HR Governance, Policies, Delegation of Authority, Internal Controls, Audit, Compliance, Data Privacy & HR Risk Management** | ER & Compliance / P&C Manager            | Policy, DoA, Control, Risk, Audit Rule, Retention Rule                                                          | Policy publication, control test, audit, exception approval, risk treatment      | Transactions from all modules                           | Compliance status, findings, approved exceptions                | Labor law, privacy, DoA, SoD, retention                                          | Policy.Published, Control.Failed, Risk.Raised, Exception.Approved                         | Any controlled transaction                                                     | Legal, Audit, GRC                               | Policy Engine, Audit Engine, Approval Matrix               | All Modules      |
+| **19** | **Employee Engagement, Experience, Surveys, Recognition, Internal Communication, Culture & Wellbeing Management**             | OD / HR Operations                       | Survey, Recognition Type, Engagement Driver, Communication Channel                                              | Survey campaign, pulse survey, recognition, communication                        | Employee population, lifecycle events                   | Engagement score, sentiment, actions                            | Anonymity, eligibility, communication governance                                 | Survey.Completed, Recognition.Given, EngagementRisk.Detected                              | Employee.Activated, Anniversary.Reached, Exit.Completed                        | Email, Mobile, Notification                     | Survey, Campaign, Analytics                                | 01,02            |
+| **20** | **Strategic Organization Development, Organization Design & Enterprise People Strategy**                                      | Organizational Development / P&C Manager | Org Design Scenario, Capability Model, Operating Model, Strategic Workforce Framework                           | Org redesign, capability planning, restructuring, span analysis                  | Workforce analytics, business strategy, talent data     | Future org model, redesign proposal, transformation initiatives | Governance, business case, approval, version control                             | OrgDesign.Approved, Restructure.Initiated, CapabilityGap.Detected                         | WorkforcePlan.Approved, Strategy.Updated                                       | Finance, Strategy, Projects                     | Scenario Engine, Analytics, Approval                       | 02,10,11,12,17   |
+
+---
+
+# النقطة الأهم: Data Ownership
+
+قبل الـDatabase Design يجب أن نغلق هذه المسألة تمامًا.
+
+ليس كل Module يستخدم Employee Data يصبح Owner لها.
+
+مثلًا:
+
+**Module 01 هو المالك الحقيقي لـEmployee Master.**
+
+أما:
+
+* Payroll يقرأ Employee.
+* Attendance يقرأ Employee.
+* Leave يقرأ Employee.
+* Performance يقرأ Employee.
+* Learning يقرأ Employee.
+* Offboarding يغير Employment Status من خلال Controlled Lifecycle Command.
+
+لكن لا يجب أن يكون لأي واحد منهم نسخة مستقلة من Employee Master.
+
+وهنا تظهر قاعدة Architecture أساسية:
+
+> **One Business Object → One System Owner → Many Consumers.**
+
+---
+
+# Master Data Ownership Matrix
+
+هناك كيانات يجب تثبيت مالك واحد لها من الآن:
+
+| Business Object                        | System Owner                 |
+| -------------------------------------- | ---------------------------- |
+| Employee                               | M01                          |
+| Employment Record                      | M01                          |
+| Company / Legal Entity                 | System Administration / Core |
+| Organization Unit                      | M02                          |
+| Position                               | M02                          |
+| Job                                    | M02                          |
+| Grade                                  | M02                          |
+| Reporting Line                         | M02                          |
+| User Account                           | M03                          |
+| Role / Permission                      | M03                          |
+| Employee Assignment                    | M04                          |
+| Candidate                              | M05                          |
+| Vacancy / Recruitment Request          | M05                          |
+| Onboarding Case                        | M06                          |
+| Shift / Roster                         | M07                          |
+| Attendance Transaction                 | M07                          |
+| Leave Type / Leave Balance             | M08                          |
+| Compensation Structure                 | M09                          |
+| Payroll Run                            | M09                          |
+| KPI / Performance Review               | M10                          |
+| Competency / Skill                     | M11                          |
+| Career Path / Succession               | M12                          |
+| Employee Relations Case                | M13                          |
+| HR Service Request                     | M14                          |
+| Employee Contract / Personnel Document | M15                          |
+| Offboarding Case                       | M16                          |
+| Workforce Plan / Headcount Budget      | M17                          |
+| HR Policy / Control / Risk             | M18                          |
+| Survey / Recognition                   | M19                          |
+| Org Design Scenario                    | M20                          |
+
+وهذه النقطة وحدها ستمنع نسبة كبيرة من مشاكل النظام لاحقًا.
+
+---
+
+# أهم العلاقات بين Modules
+
+الـSystem ليس 20 تطبيقًا منفصلًا، وإنما **Event-Driven HR Platform**.
+
+مثلًا رحلة الموظف الطبيعية تصبح:
+
+```text
+M17 Workforce Planning
+        ↓
+M02 Position / Organization
+        ↓
+M05 Recruitment
+        ↓
+Offer.Accepted
+        ↓
+M06 Onboarding
+        ↓
+Employee.Activated
+        ↓
+M01 Employee Master
+        ↓
+M03 Identity & Access
+        ↓
+M04 Project / Work Assignment
+        ↓
+ ┌───────────────┬───────────────┬───────────────┐
+ M07             M08             M10
+ Attendance      Leave           Performance
+ └───────────────┴───────────────┴───────────────┘
+                 ↓
+                M09
+              Payroll
+```
+
+وخلال فترة العمل:
+
+```text
+M10 Performance
+       ↓
+Skill Gap
+       ↓
+M11 Learning
+       ↓
+Competency Updated
+       ↓
+M12 Talent / Promotion / Succession
+       ↓
+M04 Employee Movement
+       ↓
+M01 Employment Record Update
+       ↓
+M09 Compensation Impact
+```
+
+وعند الخروج:
+
+```text
+Resignation / Termination / Contract Expiry
+                ↓
+              M16
+          Offboarding
+      ┌─────────┼─────────┐
+      ↓         ↓         ↓
+     M03       M15       M09
+    Access   Personnel   Final
+    Revoke    Closure   Settlement
+      ↓         ↓         ↓
+        Employee.Terminated
+                ↓
+              M01
+```
+
+وهذا يتفق مع الـManual الحالي، الذي يحدد أن الـoffboarding يبدأ بسبب resignation أو contract expiration أو termination أو end-of-project assignment، ثم يمر بإلغاء الوصول، handover، clearance، legal/financial closure ثم file closure. 
+
+---
+
+# Shared Engines
+
+وهنا توجد نقطة Architecture مهمة جدًا:
+
+لا ينبغي أن نضع Workflow Engine داخل كل Module.
+
+يجب إنشاء **Shared Platform Layer** تحت كل الـModules.
+
+أقترح أن يحتوي Afro_HR_V2 على:
+
+| Shared Engine               | الوظيفة                                  |
+| --------------------------- | ---------------------------------------- |
+| **Workflow Engine**         | Routing, approval, rejection, escalation |
+| **Rules Engine**            | Business rules بدون Hard Coding          |
+| **Policy Engine**           | HR policies and eligibility              |
+| **Approval / DoA Engine**   | Delegation of Authority                  |
+| **SLA Engine**              | Deadlines and escalation                 |
+| **Notification Engine**     | Email / SMS / Push / In-App              |
+| **Document Engine**         | Upload, generation, versioning           |
+| **Template Engine**         | Letters, contracts, certificates         |
+| **Audit Trail Engine**      | Who changed what and when                |
+| **Effective Dating Engine** | Current / future / historical records    |
+| **Calculation Engine**      | Payroll / allowances / leave / KPI       |
+| **Calendar Engine**         | Holidays / shifts / payroll calendars    |
+| **Geo Engine**              | GPS / sites / field attendance           |
+| **Search Engine**           | Global employee/document/case search     |
+| **Event Bus**               | Module-to-module communication           |
+| **Integration Hub**         | External APIs / ERP / banks etc.         |
+| **Analytics Engine**        | KPIs and dashboards                      |
+| **AI Services Layer**       | Copilot / analysis / recommendations     |
+| **Data Privacy Engine**     | masking / retention / sensitive access   |
+| **Multi-Tenant Engine**     | tenant / company isolation               |
+| **Localization Engine**     | Arabic / English / French + RTL/LTR      |
+
+---
+
+# Event Catalog
+
+أنصح ألا نسمح لكل Developer باختراع Event Name أثناء التطوير.
+
+نعمل **Enterprise Event Catalog** من البداية.
+
+أمثلة:
+
+```text
+employee.created
+employee.updated
+employee.activated
+employee.suspended
+employee.terminated
+
+position.created
+position.filled
+position.vacant
+position.closed
+
+recruitment.request.created
+recruitment.request.approved
+candidate.shortlisted
+candidate.selected
+offer.issued
+offer.accepted
+
+onboarding.started
+onboarding.requirement.completed
+employee.ready_for_deployment
+
+assignment.created
+assignment.changed
+project.assignment.ended
+
+attendance.recorded
+attendance.exception.detected
+overtime.approved
+
+leave.requested
+leave.approved
+leave.cancelled
+
+payroll.period.opened
+payroll.calculated
+payroll.approved
+salary.paid
+
+performance.review.completed
+performance.gap.detected
+
+training.completed
+certification.expiring
+
+promotion.approved
+transfer.approved
+
+hr.case.opened
+disciplinary.action.approved
+
+contract.expiring
+insurance.expiring
+
+offboarding.started
+clearance.completed
+
+workforce.plan.approved
+headcount.budget.exceeded
+```
+
+هذه ستكون لاحقًا أساس:
+
+**Backend Services + Event Bus + Notification Rules + Automation + AI Agents.**
+
+---
+
+# مثال عملي على Event Chain
+
+افترض أن موظف تمت ترقيته.
+
+لا أريد Backend يقوم بـ20 Update يدويًا.
+
+الصحيح:
+
+```text
+M12
+Promotion Approved
+      ↓
+promotion.approved
+      ↓
+M02
+Update Position
+      ↓
+M04
+Update Assignment
+      ↓
+M01
+Update Employment Record
+      ↓
+M09
+Evaluate Compensation Impact
+      ↓
+M03
+Evaluate Permission Changes
+      ↓
+M17
+Update Headcount / Cost Analytics
+```
+
+وكل Module يتفاعل فقط مع الأحداث التي تخصه.
+
+هذا يجعل النظام قابلًا للتوسع جدًا.
+
+---
+
+# Integrations Architecture
+
+من الـManual الحالي واضح بالفعل وجود احتياج إلى ERP وPayroll وIT systems وFinance والبنوك والتأمينات والمشروعات. الـManual مثلًا ينص على إنشاء Employee Profile في ERP، Payroll Registration، Corporate Email، System Access، Medical Insurance، Social Insurance، ثم إرسال payroll package إلى Finance. 
+
+لذلك سأضع Integration Hub مركزيًا وليس Integration داخل كل Module:
+
+```text
+                Afro_HR_V2
+
+        ┌─────────────────────┐
+        │   Integration Hub   │
+        └──────────┬──────────┘
+                   │
+ ┌─────────────────┼───────────────────┐
+ ↓                 ↓                   ↓
+ERP / Finance     Banks             Insurance
+ ↓                 ↓                   ↓
+Projects          Email/SMS          Biometric
+ ↓                                     ↓
+Customer Systems                    GPS/Mobile
+```
+
+---
+
+# System Boundaries
+
+هناك أيضًا قرار يجب أن يكون مكتوبًا داخل الـMaster Map:
+
+### HR owns
+
+Employee lifecycle
+Organization
+Positions
+Employment
+Attendance
+Leave
+Compensation rules
+Payroll calculation
+Personnel records
+Talent
+Performance
+Training
+HR cases
+Employee services
+
+### Other systems may own
+
+Finance GL
+Bank execution
+Warehouse inventory
+IT devices
+Projects
+Customer operational systems
+
+Afro_HR_V2 لا يكرر هذه البيانات.
+
+يأخذ منها reference أو sync حسب الحاجة.
+
+---
+
+# إضافة مهمة جدًا للـMaster Map
+
+أنا أقترح أن نضيف **4 أعمدة** فوق الـ11 أعمدة التي ذكرتها.
+
+فتصبح الوثيقة النهائية تحتوي:
+
+**Module → Business Capability → Owner → Data Owner → Master Data → Transactions → Inputs → Outputs → Policies → Events Produced → Events Consumed → Integrations → Shared Engines → Dependencies → Source of Truth**
+
+السبب أن **Owner** و**Data Owner** ليسا بالضرورة نفس الشيء.
+
+مثال:
+
+Payroll Team قد يكون Process Owner لعملية Payroll.
+
+لكن Employee Master Data يظل مملوكًا لـPersonnel/Core HR.
+
+---
+
+# والـMaster Blueprint النهائي يصبح 6 Layers
+
+```text
+┌───────────────────────────────────────────┐
+│            Employee / Manager UX          │
+│      Web • Mobile • ESS • MSS • Admin     │
+├───────────────────────────────────────────┤
+│              20 HR Modules                │
+├───────────────────────────────────────────┤
+│              Shared Engines               │
+│ Workflow • Rules • Policy • SLA • Docs    │
+├───────────────────────────────────────────┤
+│             Event & API Layer             │
+│ Event Bus • REST APIs • Webhooks          │
+├───────────────────────────────────────────┤
+│                 Data Layer                │
+│ Operational DB • Documents • Analytics    │
+├───────────────────────────────────────────┤
+│              Integration Layer            │
+│ ERP • Finance • Banks • HSE • Devices     │
+└───────────────────────────────────────────┘
+```
+
+وفوق كل ذلك:
+
+```text
+Security
+Multi-Tenancy
+Audit
+Privacy
+Localization
+Arabic RTL / English LTR / French LTR
+Configuration
+Observability
+```
+
+## وبذلك نكون وصلنا لنقطة مهمة جدًا
+
+بعد الـ20 Modules، **لا أرى أننا نحتاج Module 21 وظيفيًا الآن**.
+
+الخطوة الصحيحة هي أن نحول الجدول أعلاه إلى **System Master Blueprint v1.0** أكثر تفصيلًا، ثم نشتق منه بالترتيب:
+
+**1. Enterprise Data Model → 2. Database Domains & Tables → 3. Event Catalog → 4. API Catalog → 5. Backend Service Map → 6. Permissions Matrix → 7. Frontend Sitemap → 8. Integration Architecture → 9. Development Roadmap.**
+
+وأقترح أن نبدأ مباشرة في الرسالة التالية بـ **Enterprise Data Model & Database Domain Map**؛ لأن هذه هي النقطة التي ستثبت فعليًا أين يعيش `Employee`, `Position`, `Assignment`, `Contract`, `Attendance`, `Payroll`, `Case`, `Document` وغيرها، وتمنع الـduplication قبل كتابة أي سطر Backend.

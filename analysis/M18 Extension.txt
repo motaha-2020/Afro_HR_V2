@@ -1,0 +1,341 @@
+أيوه، ودي نقطة محورية جدًا. **الـPolicy ما ينفعش تكون مجرد PDF بيتقري**؛ لازم تتحول إلى **Rules قابلة للتنفيذ داخل باقي الـModules**. وبالتالي لما الـPolicy تتغير، التغيير ينعكس على الـModules المتأثرة بطريقة controlled وليس يدويًا Module by Module.
+
+الفكرة تكون كالتالي:
+
+```text
+Policy Document
+↓
+Policy Rule
+↓
+Affected Processes / Modules
+↓
+System Rules
+↓
+Effective Date
+↓
+Testing
+↓
+Approval
+↓
+Deployment
+```
+
+يعني مثلًا لو عندك Policy جديدة تقول:
+
+> أي Overtime فوق 40 ساعة شهريًا يحتاج موافقة Director بدل Project Manager.
+
+فـModule 18 لا يكتفي بحفظ النص. هو ينشئ Rule:
+
+```text
+IF Monthly OT > 40 Hours
+THEN Required Approver = Director
+```
+
+ثم يربطها بـ:
+
+```text
+Module 07 Attendance & OT
+Module 09 Payroll
+Module 17 Analytics
+```
+
+فتأثيرها يكون كالتالي:
+
+* في Module 07: طلب OT فوق 40 ساعة لا يكتمل بدون Director Approval.
+* في Module 09: Payroll لا يدفع OT غير approved.
+* في Module 17: يظهر OT approved / rejected / exception.
+* في Module 18: يسجل Policy Version وApproval وAudit Trail.
+
+وهنا تظهر نقطة مهمة جدًا: **لا نربط الـPolicy مباشرة بالـUI أو بالكود**، بل نضع طبقة اسمها:
+
+```text
+Policy Rule Engine
+```
+
+وكل Module يسألها قبل تنفيذ Transaction.
+
+مثال عملي آخر: لو سياسة الإجازات تغيرت من 21 يوم إلى 30 يوم لفئة معينة، لا نعدل Module 08 يدويًا. نغير Rule:
+
+```text
+Leave Type = Annual
+Employee Grade >= G6
+Effective Date >= 01-Jan-2027
+Annual Entitlement = 30 Days
+```
+
+Module 08 يقرأ القيمة الجديدة تلقائيًا. أما الموظفين الذين كانت لهم معاملات قبل تاريخ التنفيذ، فيستمر تطبيق الـPolicy القديمة عليهم حسب تاريخ المعاملة.
+
+وده مهم جدًا لأننا لازم ندعم:
+
+```text
+Old Policy
+Valid until 31-Dec-2026
+
+New Policy
+Effective from 01-Jan-2027
+```
+
+يعني النظام يعمل **Effective Dating**، وليس replace للسياسة القديمة.
+
+نفس الفكرة مع Payroll. لو بدل خارج القاهرة تغير من:
+
+```text
+300 EGP / Day
+```
+
+إلى:
+
+```text
+400 EGP / Day
+```
+
+ابتداءً من 1 مارس، فالـPayroll الخاص بفبراير يظل يستخدم 300، ومارس يستخدم 400.
+
+والأهم: أي Transaction يتم حفظه مع:
+
+```text
+Policy ID
+Policy Version
+Rule Version
+Effective Date
+```
+
+بحيث لو حصل Audit بعد سنة نعرف بالضبط:
+
+> الحساب ده اتعمل بأي Policy وأي Version.
+
+أما لو الـPolicy الجديدة تغيّر Workflow نفسه، مثلًا كان Hiring Request يحتاج:
+
+```text
+Department Manager
+→ HR
+```
+
+ثم السياسة الجديدة أصبحت:
+
+```text
+Department Manager
+→ HR
+→ Finance
+```
+
+فـModule 18 يحدث **Approval Rule**، وModule 05 يقرأ Workflow الجديد تلقائيًا للطلبات الجديدة فقط.
+
+الطلبات القديمة لا نغيّر مسارها تلقائيًا إلا لو اخترنا Migration Rule.
+
+وهنا نحتاج 3 أنواع من تأثير التغيير:
+
+* **Prospective Change**: يطبق على المعاملات الجديدة فقط.
+* **Retroactive Change**: يعاد تطبيقه على معاملات سابقة.
+* **Transitional Change**: المعاملات الحالية تكمل بالقواعد القديمة، والجديدة تستخدم القاعدة الجديدة.
+
+وفي أغلب HR Policies، الأفضل افتراضيًا يكون Transitional أو Prospective، وليس Retroactive.
+
+كمان لازم يكون عندنا شيء اسمه:
+
+```text
+Impact Analysis
+```
+
+قبل نشر Policy جديدة.
+
+يعني لما HR يعدل Policy، النظام يعرض:
+
+```text
+Affected Modules:
+07 Attendance
+08 Leave
+09 Payroll
+17 Analytics
+
+Affected Employees:
+1,842
+
+Affected Open Transactions:
+126
+
+Affected Payroll Rules:
+3
+
+Affected Approval Workflows:
+2
+```
+
+وبعدها النظام يسأل:
+
+```text
+Apply to:
+New transactions only
+Open transactions
+Historical transactions
+```
+
+ثم يتم الاختبار قبل النشر.
+
+وده سبب إنّي كنت مصر إن Module 18 يكون Cross-System وليس مجرد Governance Dashboard.
+
+الـArchitecture الأفضل عمليًا يكون:
+
+```text
+Module
+↓
+Transaction
+↓
+Policy Rule Service
+↓
+Rule Evaluation
+↓
+Allow / Reject / Approval / Warning
+```
+
+مثلاً:
+
+```text
+Leave Request
+↓
+Ask Policy Engine
+↓
+Is employee eligible?
+How many days?
+What approval?
+What balance rule?
+What notice period?
+↓
+Return decision
+```
+
+نفس الشيء مع:
+
+```text
+Hiring
+Salary Change
+Promotion
+Allowance
+Overtime
+Contract Renewal
+Offboarding
+Performance
+Training
+```
+
+وبالتالي الـModules لا تحتوي Business Rules hard-coded قدر الإمكان.
+
+ودي من أهم القرارات المعمارية في النظام كله.
+
+أنا أقترح كمان نضيف داخل Module 18 شاشة اسمها:
+
+# Policy Impact Matrix
+
+مثلاً:
+
+| Policy             | Rule               | Module | Process          | Effect        |
+| ------------------ | ------------------ | ------ | ---------------- | ------------- |
+| Leave Policy       | Annual Entitlement | 08     | Leave Request    | 21 → 30 Days  |
+| OT Policy          | Approval Limit     | 07     | OT Approval      | PM → Director |
+| Allowance Policy   | Outside Cairo Rate | 09     | Payroll          | 300 → 400     |
+| Hiring Policy      | Approval Chain     | 05     | Hiring Request   | Add Finance   |
+| Offboarding Policy | Clearance Required | 16     | Final Settlement | Hard Block    |
+
+وده يخليك تشوف بشكل مباشر:
+
+**أي Policy بتأثر على إيه في النظام.**
+
+وأقوى شيء ممكن نعمله بعد ذلك هو **Policy Dependency Map**:
+
+```text
+Policy
+├── Rules
+├── Modules
+├── Workflows
+├── Fields
+├── Calculations
+├── Approvals
+├── Notifications
+└── Reports
+```
+
+بحيث لو غيرت Policy، النظام يقولك قبل النشر بالضبط ما الذي سيتغير.
+
+مثال كامل: سياسة بدل الموقع.
+
+```text
+Policy:
+Field Location Allowance
+
+Old:
+Cairo = 0
+Outside Cairo = 300/day
+
+New:
+Cairo = 100/day
+Outside Cairo = 450/day
+Remote Site = 650/day
+```
+
+التأثير يصبح:
+
+```text
+Module 07
+→ Capture actual location
+
+Module 09
+→ Calculate allowance
+
+Module 17
+→ Forecast people cost
+
+Module 18
+→ Validate policy application
+```
+
+ولو لم يكن Location Data موجودًا في Module 07، النظام يجب أن يظهر:
+
+> Policy cannot be activated because required field "Work Location" is missing from the source process.
+
+ودي نقطة مهمة جدًا: **Policy Change ممكن يكشف إن الـData Model الحالي غير كافي**.
+
+فالـPolicy Engine لا يعمل فقط Rules، لكنه يعمل أيضًا Dependency Validation.
+
+أفضل تصميم عندي هو أن كل Policy Change تمر على:
+
+```text
+Draft
+↓
+Rule Mapping
+↓
+Impact Analysis
+↓
+Dependency Check
+↓
+Simulation
+↓
+Approval
+↓
+Future Effective Date
+↓
+Publish
+↓
+Monitor
+```
+
+وممكن حتى نضيف Simulation قبل التفعيل:
+
+> لو السياسة الجديدة اتطبقت على آخر 3 شهور، كانت تكلفة الـAllowances زادت كام؟
+
+مثلاً:
+
+```text
+Historical Cost: 8.2M
+New Policy Simulation: 10.7M
+Impact: +2.5M / +30.5%
+```
+
+وده يربط Module 18 مباشرة بـModule 17.
+
+فالخلاصة: **الـPolicy لا “تغير Modules” نفسها، بل تغيّر Rules مركزية تستخدمها الـModules.** وده أفضل معماريًا، لأنك تمنع وجود نفس الـBusiness Rule مكتوب 4 مرات في 4 Modules.
+
+أقترح نثبت كقاعدة معمارية رسمية للنظام:
+
+> **No critical HR business rule should be hard-coded inside an individual module when it can be centrally governed through the Policy & Rules Engine.**
+
+ودي بصراحة من أهم القواعد اللي هتخلي النظام يعيش سنوات من غير ما كل تعديل Policy يتحول لمشروع Software Development جديد.

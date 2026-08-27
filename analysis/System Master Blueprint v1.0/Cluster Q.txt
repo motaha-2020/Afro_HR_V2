@@ -1,0 +1,3462 @@
+تمام. **Cluster Q** هو الطبقة التي تحول الـAI من مجرد Chatbot مضاف على النظام إلى **Enterprise AI Runtime** له صلاحيات، سياسات، تكلفة، Audit، تقييم، أدوات، ذاكرة، Human Approval، وحدود واضحة لما يمكنه قراءته أو تنفيذه.
+
+وهذا مهم جدًا في نظام HR تحديدًا لأن الـAI قد يتعامل مع بيانات شديدة الحساسية: رواتب، مستندات شخصية، HSE readiness، performance، ER cases، investigations، وقرارات لها أثر وظيفي. لذلك لا يجوز أن يكون الـAI bypass للـRBAC أو Workflow أو Rules Engine.
+
+القاعدة المعمارية الأساسية:
+
+> **AI never owns business truth, never bypasses authorization, and never executes high-impact actions without policy-controlled approval.**
+
+والـOperations Manual نفسه يؤكد أن التوظيف، التفعيل، الرواتب، الحركات، التحقيقات والفصل تحتاج approvals موثقة وقابلية تتبع، وأن أي deviations تحتاج prior approval. لذلك AI actions يجب أن تعمل داخل نفس governance وليس خارجها. 
+
+# Cluster Q — Enterprise AI Platform & Agent Governance ERD
+
+أقسمه إلى **20 Sub-Domains**:
+
+```text
+Q1   AI Tenant Configuration
+Q2   Model Provider Registry
+Q3   Model Catalog
+Q4   Model Gateway
+Q5   Model Routing
+Q6   Prompt Registry
+Q7   Prompt Versioning
+Q8   AI Assistant / Copilot Registry
+Q9   Agent Definition
+Q10  Tool Registry & Tool Permissions
+Q11  Agent Runtime & Execution
+Q12  Human-in-the-Loop
+Q13  Conversation & Memory
+Q14  AI Retrieval / RAG Integration
+Q15  AI Guardrails & Policy Engine
+Q16  AI Evaluation & Quality
+Q17  AI Audit / Traceability
+Q18  Cost / Token / Quota Management
+Q19  AI Security & Data Governance
+Q20  AI Operations / Monitoring / Incident Management
+```
+
+---
+
+# 1. AI Architecture
+
+أقترح الشكل التالي:
+
+```text
+Web / Mobile / Module UI
+          |
+          v
+      AI Gateway
+          |
+          +----------------------+
+          |                      |
+          v                      v
+    AI Policy Engine        AI Permission Check
+          |                      |
+          +----------+-----------+
+                     |
+                     v
+               Model Router
+                     |
+        +------------+------------+
+        |            |            |
+        v            v            v
+      LLM A        LLM B       Local Model
+        |
+        v
+   Agent Runtime
+        |
+  +-----+------+----------+
+  |            |          |
+  v            v          v
+Tools          RAG      Structured APIs
+  |            |          |
+  v            v          v
+Clusters      P          A–O
+```
+
+---
+
+# 2. أهم Architectural Principle
+
+لا نجعل كل Module يعمل:
+
+```text
+OpenAI SDK
+Gemini SDK
+Claude SDK
+```
+
+مباشرة.
+
+المطلوب:
+
+```text
+HR Modules
+     |
+     v
+AI Platform Gateway
+     |
+     v
+Model Router
+```
+
+وبالتالي نستطيع تغيير provider أو model بدون تعديل كل Modules.
+
+---
+
+# Q1. AI Tenant Configuration
+
+### `ai_tenant_configuration`
+
+```text
+ai_tenant_configuration
+-----------------------
+ai_tenant_configuration_id PK
+
+tenant_id FK
+
+ai_enabled
+
+default_model_route_id FK
+
+allowed_ai_use_cases_json
+
+conversation_retention_days
+
+training_on_tenant_data_allowed
+
+external_model_processing_allowed
+
+pii_processing_allowed
+
+restricted_data_processing_allowed
+
+max_monthly_budget
+
+default_language
+
+status
+
+effective_from
+effective_to
+```
+
+---
+
+# 3. Tenant-level AI Isolation
+
+Tenant A قد يسمح:
+
+```text
+AI Copilot
+RAG
+Document Summarization
+```
+
+Tenant B قد يسمح فقط:
+
+```text
+Policy Q&A
+```
+
+ولا يسمح:
+
+```text
+Employee data analysis
+External model processing
+```
+
+---
+
+# Q2. AI Provider Registry
+
+### `ai_model_provider`
+
+```text
+ai_model_provider
+-----------------
+provider_id PK
+
+provider_code
+
+provider_name
+
+provider_type
+  CLOUD
+  LOCAL
+  PRIVATE_CLOUD
+
+endpoint_reference
+
+credential_secret_reference
+
+region
+
+supports_chat
+supports_embeddings
+supports_vision
+supports_audio
+supports_tools
+supports_structured_output
+
+data_residency_info
+
+status
+```
+
+أمثلة:
+
+```text
+OpenAI
+Azure OpenAI
+Google
+Anthropic
+Local vLLM
+Private Enterprise Model
+```
+
+---
+
+# Q3. AI Model Definition
+
+### `ai_model_definition`
+
+```text
+ai_model_definition
+-------------------
+model_id PK
+
+provider_id FK
+
+model_code
+model_name
+
+model_type
+  CHAT
+  REASONING
+  EMBEDDING
+  VISION
+  SPEECH
+  OCR
+  RERANKER
+
+context_window
+
+max_output_tokens
+
+supports_function_calling
+supports_json_schema
+supports_streaming
+
+input_cost_per_unit
+output_cost_per_unit
+
+latency_class
+
+quality_tier
+
+data_classification_limit
+
+status
+```
+
+---
+
+# 4. Model Capability
+
+### `ai_model_capability`
+
+```text
+ai_model_capability
+-------------------
+model_capability_id PK
+
+model_id FK
+
+capability_code
+  TEXT_GENERATION
+  EXTRACTION
+  CLASSIFICATION
+  SUMMARIZATION
+  TOOL_CALLING
+  VISION
+  TRANSLATION
+  SQL_GENERATION
+  CODE_EXECUTION
+  RERANKING
+
+status
+```
+
+---
+
+# 5. Model Gateway
+
+كل request يمر من:
+
+```text
+AI Model Gateway
+```
+
+وظيفته:
+
+```text
+Authentication
+Tenant Context
+Authorization
+Prompt Assembly
+Guardrails
+Routing
+Cost Check
+Logging
+Retry
+Fallback
+```
+
+---
+
+# Q4. AI Request
+
+### `ai_request`
+
+```text
+ai_request
+----------
+ai_request_id PK
+
+tenant_id
+user_id NULL
+
+assistant_id FK NULL
+agent_id FK NULL
+
+use_case_code
+
+request_type
+  CHAT
+  GENERATE
+  CLASSIFY
+  EXTRACT
+  SUMMARIZE
+  TOOL_TASK
+  EMBEDDING
+
+correlation_id
+conversation_id FK NULL
+
+requested_at
+
+status
+```
+
+---
+
+# Q5. AI Request Execution
+
+```text
+ai_request_execution
+--------------------
+execution_id PK
+
+ai_request_id FK
+
+model_id FK
+
+route_id FK
+
+started_at
+completed_at
+
+input_tokens
+output_tokens
+cached_tokens
+
+latency_ms
+
+provider_request_id
+
+status
+
+error_code NULL
+```
+
+---
+
+# 6. Model Routing
+
+لا أريد:
+
+```text
+All requests → strongest expensive model
+```
+
+نحتاج router.
+
+مثال:
+
+```text
+Translation
+→ fast low-cost model
+
+Payroll variance explanation
+→ reasoning model
+
+Document OCR extraction
+→ vision model
+
+Embeddings
+→ embedding model
+```
+
+---
+
+# Q6. Model Route
+
+### `ai_model_route`
+
+```text
+ai_model_route
+--------------
+route_id PK
+
+route_code
+route_name
+
+use_case
+
+tenant_id NULL
+
+primary_model_id FK
+
+fallback_model_id FK NULL
+
+secondary_fallback_model_id FK NULL
+
+routing_strategy
+  FIXED
+  COST_OPTIMIZED
+  QUALITY_OPTIMIZED
+  LATENCY_OPTIMIZED
+  RULE_BASED
+
+status
+```
+
+---
+
+# Q7. Routing Rule
+
+```text
+ai_routing_rule
+---------------
+routing_rule_id PK
+
+route_id FK
+
+priority
+
+condition_expression
+
+target_model_id FK
+
+max_input_tokens NULL
+
+max_cost NULL
+
+security_zone_limit NULL
+
+status
+```
+
+مثال:
+
+```text
+IF
+security_zone = HIGHLY_RESTRICTED
+
+THEN
+model = Private_Local_Model
+```
+
+---
+
+# 7. Provider Fallback
+
+مثال:
+
+```text
+Primary:
+Model A
+
+Timeout > 10 sec
+      ↓
+Fallback:
+Model B
+```
+
+لكن لا نقوم fallback إلى provider أقل أمانًا إذا البيانات restricted.
+
+---
+
+# Q8. Provider Health
+
+### `ai_provider_health`
+
+```text
+ai_provider_health
+------------------
+provider_health_id PK
+
+provider_id FK
+
+checked_at
+
+status
+  HEALTHY
+  DEGRADED
+  DOWN
+
+latency_ms
+
+error_rate
+
+rate_limit_status
+
+details_json
+```
+
+---
+
+# 8. Prompt Registry
+
+Prompt لا يجب أن يكون:
+
+```text
+string داخل controller
+```
+
+بل controlled asset.
+
+### `prompt_definition`
+
+```text
+prompt_definition
+-----------------
+prompt_id PK
+
+prompt_code UNIQUE
+prompt_name
+
+use_case
+
+module_code
+
+prompt_type
+  SYSTEM
+  TASK
+  EXTRACTION
+  CLASSIFICATION
+  SUMMARIZATION
+  AGENT
+  RAG
+
+owner_team
+
+risk_level
+
+status
+```
+
+---
+
+# Q9. Prompt Version
+
+### `prompt_version`
+
+```text
+prompt_version
+--------------
+prompt_version_id PK
+
+prompt_id FK
+
+version_no
+
+system_prompt
+
+instruction_template
+
+input_schema_json NULL
+output_schema_json NULL
+
+model_constraints_json
+
+effective_from
+effective_to
+
+status
+  DRAFT
+  TESTING
+  APPROVED
+  ACTIVE
+  RETIRED
+
+created_by
+approved_by
+```
+
+---
+
+# 9. لماذا Versioning؟
+
+لو AI Payroll Assistant أعطى قرارًا خاطئًا، نحتاج معرفة:
+
+```text
+Model Version?
+Prompt Version?
+Tools Used?
+Retrieved Sources?
+Rules Applied?
+```
+
+بدون هذا لا يوجد governance حقيقي.
+
+---
+
+# Q10. Prompt Variable Definition
+
+```text
+prompt_variable_definition
+--------------------------
+prompt_variable_id PK
+
+prompt_version_id FK
+
+variable_name
+
+source_type
+  USER_INPUT
+  DOMAIN_API
+  CONFIGURATION
+  RAG
+  SYSTEM
+
+required
+
+sensitive
+
+max_length
+
+status
+```
+
+---
+
+# 10. Prompt Test Cases
+
+### `prompt_test_case`
+
+```text
+prompt_test_case
+----------------
+prompt_test_case_id PK
+
+prompt_id FK
+
+test_case_name
+
+input_json
+
+expected_behavior
+
+expected_output_schema
+
+security_expectation
+
+status
+```
+
+---
+
+# 11. AI Assistant Registry
+
+Assistant مختلف عن Agent.
+
+Assistant:
+
+```text
+helps user
+```
+
+Agent:
+
+```text
+can execute multi-step tasks
+```
+
+---
+
+# Q11. AI Assistant Definition
+
+### `ai_assistant`
+
+```text
+ai_assistant
+------------
+assistant_id PK
+
+tenant_id NULL
+
+assistant_code
+assistant_name
+
+module_code
+
+assistant_type
+  GENERAL
+  HR
+  PAYROLL
+  RECRUITMENT
+  MANAGER
+  EMPLOYEE
+  HSE
+  ANALYTICS
+
+prompt_id FK
+
+model_route_id FK
+
+retrieval_policy_id FK NULL
+
+memory_policy_id FK NULL
+
+tool_policy_id FK NULL
+
+status
+```
+
+---
+
+# Example Assistants
+
+```text
+HR Copilot
+Payroll Copilot
+Recruitment Assistant
+Employee Self-Service Assistant
+Manager Copilot
+HSE Readiness Assistant
+People Analytics Copilot
+```
+
+---
+
+# 12. Agent Definition
+
+### `ai_agent`
+
+```text
+ai_agent
+--------
+agent_id PK
+
+tenant_id NULL
+
+agent_code
+agent_name
+
+business_purpose
+
+agent_type
+  ASSISTIVE
+  TASK_EXECUTION
+  MONITORING
+  ANALYTICAL
+
+prompt_id FK
+
+model_route_id FK
+
+max_steps
+
+max_runtime_seconds
+
+allow_parallel_tools
+
+human_approval_policy_id FK NULL
+
+status
+```
+
+---
+
+# Example Agents
+
+```text
+Onboarding Follow-up Agent
+Document Compliance Agent
+Payroll Validation Agent
+Recruitment Screening Assistant
+Training Recommendation Agent
+HR Service Desk Agent
+```
+
+---
+
+# 13. أهم Rule للAgents
+
+Agent لا يملك authority مستقل.
+
+مثال:
+
+```text
+Agent:
+"Employee document expired"
+
+Allowed:
+Create notification draft
+Create follow-up task
+
+Not automatically allowed:
+Terminate employee
+Stop payroll
+Issue disciplinary action
+```
+
+---
+
+# Q12. Agent Capability
+
+```text
+ai_agent_capability
+-------------------
+agent_capability_id PK
+
+agent_id FK
+
+capability_code
+
+permission_level
+  READ
+  SUGGEST
+  PREPARE
+  EXECUTE
+  EXECUTE_WITH_APPROVAL
+
+status
+```
+
+---
+
+# 14. Tool Registry
+
+Tools هي الشيء الذي يجعل Agent فعليًا مفيدًا.
+
+### `ai_tool_definition`
+
+```text
+ai_tool_definition
+------------------
+tool_id PK
+
+tool_code UNIQUE
+tool_name
+
+tool_type
+  INTERNAL_API
+  SEARCH
+  RAG
+  ANALYTICS
+  WORKFLOW
+  DOCUMENT
+  NOTIFICATION
+  EXTERNAL_API
+
+target_service_id FK
+
+operation_reference
+
+input_schema_json
+output_schema_json
+
+risk_level
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+
+read_only
+
+idempotency_required
+
+status
+```
+
+---
+
+# Example Tools
+
+```text
+GetEmployee
+SearchEmployees
+GetLeaveBalance
+CreateLeaveRequestDraft
+GetPayrollSummary
+SearchPolicies
+GenerateLetter
+CreateWorkflowTask
+CheckDocumentCompliance
+GetProjectWorkforce
+```
+
+---
+
+# 15. Tool ليس Database Access
+
+ممنوع:
+
+```text
+AI tool = Execute SQL
+```
+
+على production system كأداة عامة.
+
+الأفضل:
+
+```text
+GetEmployeeProfile()
+GetPayrollVariance()
+GetAttendanceSummary()
+```
+
+عبر APIs controlled.
+
+---
+
+# Q13. Tool Permission
+
+### `ai_tool_permission`
+
+```text
+ai_tool_permission
+------------------
+tool_permission_id PK
+
+tool_id FK
+
+principal_type
+  ASSISTANT
+  AGENT
+  ROLE
+  USER
+
+principal_id
+
+permission_level
+  INVOKE
+  INVOKE_WITH_APPROVAL
+
+condition_rule_id FK NULL
+
+status
+```
+
+---
+
+# 16. Tool Risk Policy
+
+### `ai_tool_risk_policy`
+
+```text
+ai_tool_risk_policy
+-------------------
+tool_risk_policy_id PK
+
+tool_id FK
+
+risk_level
+
+requires_human_approval
+
+requires_mfa
+
+requires_reason
+
+max_records_per_call
+
+allowed_security_zones_json
+
+status
+```
+
+---
+
+# Example
+
+```text
+GetEmployeeDirectory
+Risk = LOW
+
+GenerateEmploymentLetterDraft
+Risk = MEDIUM
+
+ChangeEmployeeSalary
+Risk = CRITICAL
+
+ExecutePayroll
+Risk = CRITICAL
+```
+
+---
+
+# 17. Agent Runtime
+
+### `agent_run`
+
+```text
+agent_run
+---------
+agent_run_id PK
+
+tenant_id
+agent_id FK
+
+initiated_by_user_id NULL
+
+business_object_type NULL
+business_object_id NULL
+
+correlation_id
+
+started_at
+completed_at
+
+current_step
+
+status
+  RUNNING
+  WAITING_APPROVAL
+  COMPLETED
+  FAILED
+  CANCELLED
+
+total_cost
+```
+
+---
+
+# Q14. Agent Step
+
+```text
+agent_step
+----------
+agent_step_id PK
+
+agent_run_id FK
+
+step_no
+
+step_type
+  THINK
+  RETRIEVE
+  TOOL_CALL
+  HUMAN_APPROVAL
+  RESPONSE
+  VALIDATION
+
+tool_id FK NULL
+
+input_reference
+output_reference
+
+started_at
+completed_at
+
+status
+```
+
+---
+
+# 18. Agent Tool Invocation
+
+### `agent_tool_invocation`
+
+```text
+agent_tool_invocation
+---------------------
+tool_invocation_id PK
+
+agent_step_id FK
+
+tool_id FK
+
+tenant_id
+
+request_payload_hash
+
+result_reference
+
+started_at
+completed_at
+
+status
+
+error_code NULL
+```
+
+نحتفظ بالـmetadata دون تخزين sensitive payload كاملة إذا لم تكن ضرورية.
+
+---
+
+# 19. Human-in-the-Loop
+
+هذه نقطة أساسية جدًا.
+
+### `ai_approval_policy`
+
+```text
+ai_approval_policy
+------------------
+approval_policy_id PK
+
+policy_code
+policy_name
+
+risk_level
+
+approval_required
+
+approver_type
+  ROLE
+  MANAGER
+  PROCESS_OWNER
+  SPECIFIC_USER
+
+approver_reference
+
+approval_timeout
+
+status
+```
+
+---
+
+# Q15. AI Approval Request
+
+```text
+ai_approval_request
+-------------------
+ai_approval_request_id PK
+
+agent_run_id FK
+agent_step_id FK
+
+action_type
+
+action_summary
+
+proposed_action_json
+
+risk_level
+
+requested_at
+
+requested_from_user_id
+
+status
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+
+decision_at
+
+decision_comment
+```
+
+---
+
+# 20. Preview Before Execute
+
+قبل أي action مؤثر:
+
+```text
+AI proposes:
+
+Transfer employee Ahmed
+From Project A
+To Project B
+Effective 01-Sep
+
+Impact:
+Payroll allocation
+Attendance configuration
+Manager assignment
+
+[Approve] [Reject]
+```
+
+هذه أهم من مجرد "AI can execute".
+
+---
+
+# 21. Four AI Action Levels
+
+أقترح معيار موحد:
+
+```text
+L0 — Answer Only
+L1 — Recommend
+L2 — Prepare Draft
+L3 — Execute With Human Approval
+L4 — Autonomous Execute
+```
+
+وأنا لا أوصي بـL4 إلا في low-risk operations مثل:
+
+```text
+Send routine reminder
+Refresh index
+Create non-sensitive follow-up task
+```
+
+---
+
+# 22. Conversation
+
+### `ai_conversation`
+
+```text
+ai_conversation
+---------------
+conversation_id PK
+
+tenant_id
+user_id
+
+assistant_id
+
+conversation_title
+
+started_at
+last_message_at
+
+security_context_hash
+
+status
+```
+
+---
+
+# Q16. Conversation Message
+
+```text
+ai_conversation_message
+-----------------------
+message_id PK
+
+conversation_id FK
+
+role
+  USER
+  ASSISTANT
+  TOOL
+  SYSTEM
+
+message_sequence
+
+content_reference
+
+created_at
+
+contains_sensitive_data
+
+retention_expiry
+```
+
+---
+
+# 23. Conversation ≠ Long-Term Memory
+
+مهم جدًا.
+
+```text
+Conversation History
+```
+
+شيء،
+
+و:
+
+```text
+Persistent AI Memory
+```
+
+شيء آخر.
+
+---
+
+# Q17. Memory Policy
+
+### `ai_memory_policy`
+
+```text
+ai_memory_policy
+----------------
+memory_policy_id PK
+
+policy_code
+
+memory_scope
+  NONE
+  SESSION
+  USER
+  TEAM
+  TENANT
+
+allowed_memory_types_json
+
+max_retention_days
+
+pii_allowed
+
+sensitive_data_allowed
+
+user_can_delete
+
+status
+```
+
+---
+
+# Q18. Memory Record
+
+```text
+ai_memory_record
+----------------
+memory_record_id PK
+
+tenant_id
+
+user_id NULL
+team_id NULL
+
+memory_type
+  PREFERENCE
+  WORK_CONTEXT
+  TASK_CONTEXT
+  APPROVED_FACT
+
+memory_content_reference
+
+source_conversation_id NULL
+
+confidence
+
+approved_by_user
+
+created_at
+expires_at
+
+status
+```
+
+---
+
+# 24. Memory Safety
+
+لا أحفظ تلقائيًا:
+
+```text
+Salary
+Medical data
+Disciplinary information
+Passwords
+National ID
+```
+
+كـlong-term AI memory.
+
+حتى لو النموذج رأى هذه البيانات أثناء session.
+
+---
+
+# 25. RAG Integration
+
+Cluster P يملك:
+
+```text
+Search
+Knowledge
+RAG indexes
+```
+
+Cluster Q يستخدمهم.
+
+### `ai_retrieval_execution`
+
+```text
+ai_retrieval_execution
+----------------------
+retrieval_execution_id PK
+
+ai_request_id FK
+
+retrieval_policy_id
+
+query_text_hash
+
+security_context_hash
+
+result_count
+
+started_at
+completed_at
+
+status
+```
+
+---
+
+# 26. AI Evidence Context
+
+### `ai_context_source`
+
+```text
+ai_context_source
+-----------------
+ai_context_source_id PK
+
+ai_request_id
+
+source_type
+  RAG_CHUNK
+  DOMAIN_API
+  ANALYTICS
+  USER_INPUT
+  SYSTEM_POLICY
+
+source_reference
+
+source_version NULL
+
+included_in_prompt
+
+security_classification
+```
+
+---
+
+# 27. Citation Registry
+
+### `ai_response_citation`
+
+```text
+ai_response_citation
+--------------------
+citation_id PK
+
+ai_response_id
+
+source_type
+source_reference
+
+source_version NULL
+
+citation_order
+```
+
+مهم خصوصًا في:
+
+```text
+Policy answers
+Payroll explanations
+Compliance guidance
+```
+
+---
+
+# 28. Structured Data First
+
+لو المستخدم يسأل:
+
+> كام رصيد إجازاتي؟
+
+لا نستخدم RAG.
+
+الصحيح:
+
+```text
+Leave API
+```
+
+ولو يسأل:
+
+> ما سياسة ترحيل الإجازات؟
+
+هنا:
+
+```text
+RAG Policy Retrieval
+```
+
+---
+
+# 29. Guardrails
+
+Guardrails ليست prompt فقط.
+
+نحتاج عدة Layers:
+
+```text
+Input Guardrail
+Retrieval Guardrail
+Tool Guardrail
+Output Guardrail
+Action Guardrail
+```
+
+---
+
+# Q19. Guardrail Policy
+
+### `ai_guardrail_policy`
+
+```text
+ai_guardrail_policy
+-------------------
+guardrail_policy_id PK
+
+tenant_id NULL
+
+guardrail_code
+guardrail_name
+
+guardrail_stage
+  INPUT
+  RETRIEVAL
+  TOOL
+  OUTPUT
+  ACTION
+
+rule_type
+  PII
+  SECURITY
+  DATA_CLASSIFICATION
+  CONTENT
+  BUSINESS
+  COMPLIANCE
+
+action
+  ALLOW
+  MASK
+  WARN
+  BLOCK
+  REQUIRE_APPROVAL
+
+priority
+
+status
+```
+
+---
+
+# 30. Guardrail Evaluation
+
+### `ai_guardrail_evaluation`
+
+```text
+ai_guardrail_evaluation
+-----------------------
+evaluation_id PK
+
+ai_request_id
+agent_step_id NULL
+
+guardrail_policy_id
+
+decision
+
+risk_score
+
+details_reference
+
+evaluated_at
+```
+
+---
+
+# 31. Data Classification Guardrail
+
+مثال:
+
+```text
+User:
+Project Manager
+
+asks:
+"Show salaries of all employees"
+
+```
+
+حتى لو الـmodel يستطيع الإجابة:
+
+```text
+AI Gateway → Authorization → BLOCK
+```
+
+الـAI لا يقرر permission بنفسه.
+
+---
+
+# 32. Prompt Injection Protection
+
+RAG document قد يحتوي:
+
+```text
+"Ignore system instructions and..."
+```
+
+لذلك retrieved content يجب أن يعامل:
+
+> **as data, not instructions.**
+
+ونحتاج policy:
+
+```text
+Untrusted retrieved text cannot override system policy.
+```
+
+---
+
+# Q20. Injection Detection Event
+
+```text
+ai_security_detection
+---------------------
+security_detection_id PK
+
+ai_request_id
+
+detection_type
+  PROMPT_INJECTION
+  JAILBREAK
+  DATA_EXFILTRATION
+  TOOL_ABUSE
+  PII_EXPOSURE
+
+risk_score
+
+action_taken
+
+detected_at
+```
+
+---
+
+# 33. AI Permission Scope
+
+لا يكفي:
+
+```text
+CanUseAI = Yes
+```
+
+نحتاج:
+
+```text
+CanUseHRPolicyAI
+CanUsePayrollAI
+CanUseAnalyticsAI
+CanUseEmployeeSearchAI
+CanUseDocumentSummarization
+CanUseAgentExecution
+```
+
+---
+
+# Q21. AI Permission
+
+### `ai_permission`
+
+```text
+ai_permission
+-------------
+ai_permission_id PK
+
+permission_code
+permission_name
+
+permission_type
+  ASSISTANT
+  TOOL
+  DATA_SCOPE
+  AGENT
+  ACTION
+
+risk_level
+
+status
+```
+
+---
+
+# Q22. AI Permission Assignment
+
+```text
+ai_permission_assignment
+------------------------
+assignment_id PK
+
+principal_type
+  USER
+  ROLE
+
+principal_id
+
+ai_permission_id FK
+
+tenant_id
+
+effective_from
+effective_to
+
+status
+```
+
+---
+
+# 34. Sensitive AI Use Cases
+
+أوصي بتصنيفها.
+
+### Low Risk
+
+```text
+Policy Q&A
+Translation
+Document formatting
+Training FAQ
+```
+
+### Medium Risk
+
+```text
+Employee summary
+Recruitment drafting
+Payroll variance explanation
+```
+
+### High Risk
+
+```text
+Candidate ranking
+Performance recommendations
+Promotion recommendations
+ER case analysis
+```
+
+### Critical
+
+```text
+Termination recommendation
+Salary decision
+Disciplinary decision
+Medical fitness decision
+```
+
+---
+
+# 35. استخدام AI في Employment Decisions
+
+هنا يجب أن نكون شديدي التحفظ.
+
+AI يمكنه:
+
+```text
+Summarize evidence
+Highlight missing information
+Compare against approved criteria
+```
+
+لكنه لا ينبغي أن يكون صاحب القرار في:
+
+```text
+Hire / Reject
+Promote / Demote
+Discipline
+Terminate
+Medical Fit / Unfit
+```
+
+خصوصًا إذا كانت هناك معلومات ناقصة أو sensitive attributes.
+
+---
+
+# Q23. AI Use Case Registry
+
+### `ai_use_case`
+
+```text
+ai_use_case
+-----------
+use_case_id PK
+
+use_case_code
+use_case_name
+
+business_domain
+
+description
+
+risk_class
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+
+decision_impact
+  INFORMATIONAL
+  RECOMMENDATION
+  OPERATIONAL
+  EMPLOYMENT_DECISION
+
+human_oversight_required
+
+allowed_data_classes_json
+
+status
+```
+
+---
+
+# 36. Evaluation Framework
+
+لا يجب أن نعتمد:
+
+> يبدو أنه يعمل.
+
+نحتاج Evals.
+
+### `ai_evaluation_suite`
+
+```text
+ai_evaluation_suite
+-------------------
+evaluation_suite_id PK
+
+use_case_id FK
+
+suite_name
+
+evaluation_type
+  ACCURACY
+  SAFETY
+  SECURITY
+  TOOL_USE
+  RAG
+  FORMAT
+  BUSINESS_RULE
+
+status
+```
+
+---
+
+# Q24. Evaluation Case
+
+```text
+ai_evaluation_case
+------------------
+evaluation_case_id PK
+
+evaluation_suite_id
+
+input_reference
+
+expected_behavior
+
+expected_sources_json NULL
+
+forbidden_behavior_json NULL
+
+status
+```
+
+---
+
+# Q25. Evaluation Run
+
+```text
+ai_evaluation_run
+-----------------
+evaluation_run_id PK
+
+evaluation_suite_id
+
+model_id
+prompt_version_id
+
+started_at
+completed_at
+
+total_cases
+passed_cases
+failed_cases
+
+overall_score
+
+status
+```
+
+---
+
+# Q26. Evaluation Result
+
+```text
+ai_evaluation_result
+--------------------
+evaluation_result_id PK
+
+evaluation_run_id
+
+evaluation_case_id
+
+actual_output_reference
+
+score
+
+pass_flag
+
+failure_category
+
+details
+```
+
+---
+
+# 37. RAG Evaluation
+
+نقيس على الأقل:
+
+```text
+Retrieval relevance
+Citation correctness
+Faithfulness
+Answer completeness
+Permission compliance
+```
+
+---
+
+# 38. Tool-use Evaluation
+
+مثال:
+
+User:
+
+> اعمل لي ملخص فقط.
+
+Agent لا يجب أن:
+
+```text
+call UpdateEmployee API
+```
+
+لذلك نقيم:
+
+```text
+Unnecessary tool use
+Wrong tool
+Unauthorized tool
+Repeated action
+```
+
+---
+
+# 39. Hallucination Monitoring
+
+### `ai_quality_issue`
+
+```text
+ai_quality_issue
+----------------
+quality_issue_id PK
+
+ai_request_id
+
+issue_type
+  HALLUCINATION
+  WRONG_CITATION
+  OUTDATED_SOURCE
+  BAD_TOOL_USE
+  UNSAFE_RECOMMENDATION
+  FORMAT_FAILURE
+
+severity
+
+reported_by
+reported_at
+
+resolution_status
+```
+
+---
+
+# 40. User Feedback
+
+### `ai_feedback`
+
+```text
+ai_feedback
+-----------
+feedback_id PK
+
+ai_request_id
+
+user_id
+
+rating
+
+feedback_type
+  HELPFUL
+  INCORRECT
+  UNSAFE
+  INCOMPLETE
+  WRONG_SOURCE
+
+comment NULL
+
+created_at
+```
+
+---
+
+# 41. AI Audit
+
+كل AI action مهم يجب أن يكون traceable.
+
+### `ai_audit_event`
+
+```text
+ai_audit_event
+--------------
+ai_audit_event_id PK
+
+tenant_id
+
+ai_request_id
+agent_run_id NULL
+
+event_type
+
+user_id NULL
+
+model_id NULL
+prompt_version_id NULL
+
+tool_id NULL
+
+data_sources_json
+
+security_decision
+
+occurred_at
+
+correlation_id
+```
+
+---
+
+# 42. AI Decision Support Record
+
+لو AI دعم decision مؤثر:
+
+### `ai_decision_support_record`
+
+```text
+ai_decision_support_record
+--------------------------
+decision_support_id PK
+
+use_case_id
+
+business_object_type
+business_object_id
+
+ai_request_id
+
+recommendation_reference
+
+human_decision
+
+human_decided_by
+
+human_decided_at
+
+ai_recommendation_followed
+
+reason_if_overridden NULL
+```
+
+هذا مهم جدًا في HR governance.
+
+---
+
+# 43. Cost Control
+
+لا أريد أن يفاجئ Tenant بفاتورة AI ضخمة.
+
+### `ai_usage_record`
+
+```text
+ai_usage_record
+---------------
+usage_record_id PK
+
+tenant_id
+
+user_id NULL
+assistant_id NULL
+agent_id NULL
+
+model_id
+
+usage_date
+
+input_tokens
+output_tokens
+embedding_tokens
+
+tool_calls
+
+estimated_cost
+
+currency
+
+status
+```
+
+---
+
+# Q27. AI Budget
+
+```text
+ai_budget
+---------
+ai_budget_id PK
+
+tenant_id
+
+scope_type
+  TENANT
+  DEPARTMENT
+  USER
+  ASSISTANT
+  AGENT
+
+scope_id NULL
+
+period_type
+  DAILY
+  MONTHLY
+  ANNUAL
+
+budget_amount
+
+warning_threshold_pct
+block_threshold_pct
+
+status
+```
+
+---
+
+# Q28. Quota Policy
+
+```text
+ai_quota_policy
+---------------
+quota_policy_id PK
+
+tenant_id
+
+principal_type
+principal_id NULL
+
+max_requests_per_day
+
+max_tokens_per_day
+
+max_agent_runs_per_day
+
+max_tool_calls_per_run
+
+status
+```
+
+---
+
+# 44. Cost-Aware Routing
+
+مثال:
+
+```text
+Request:
+Translate policy title
+
+Router:
+Cheap fast model
+```
+
+بينما:
+
+```text
+Complex payroll anomaly investigation
+→ Reasoning model
+```
+
+---
+
+# 45. AI Cost Allocation
+
+يمكن تحميل التكلفة على:
+
+```text
+Company
+Department
+Project
+Assistant
+User
+```
+
+### `ai_cost_allocation`
+
+```text
+ai_cost_allocation
+------------------
+cost_allocation_id PK
+
+usage_record_id
+
+company_id NULL
+department_id NULL
+project_id NULL
+
+allocation_pct
+allocated_cost
+```
+
+---
+
+# 46. AI Task Queue
+
+Agent قد ينفذ tasks غير فورية.
+
+### `ai_agent_task`
+
+```text
+ai_agent_task
+-------------
+agent_task_id PK
+
+tenant_id
+agent_id
+
+task_type
+
+business_object_type
+business_object_id
+
+priority
+
+requested_by
+
+scheduled_at NULL
+
+started_at NULL
+completed_at NULL
+
+status
+```
+
+---
+
+# Q29. Agent Task Dependency
+
+```text
+ai_agent_task_dependency
+------------------------
+dependency_id PK
+
+agent_task_id
+depends_on_task_id
+
+dependency_type
+
+status
+```
+
+---
+
+# 47. Scheduled AI Tasks
+
+مثال:
+
+```text
+Weekly HR compliance summary
+Monthly payroll anomaly review
+Daily expiring certification summary
+```
+
+لكن لا أضعهم كAgent unless AI actually adds value.
+
+الـdeterministic checks تبقى Rules/Jobs.
+
+مثال:
+
+```text
+Document expiry = deterministic
+```
+
+ليس AI task.
+
+AI يمكنه بعدها:
+
+```text
+Summarize risk
+Prioritize cases
+Draft management briefing
+```
+
+---
+
+# 48. AI Workflow Integration
+
+Agent لا يبني workflow خاص به خارج Cluster L.
+
+الصحيح:
+
+```text
+Agent
+  |
+  v
+Workflow API
+  |
+  v
+Cluster L Workflow Engine
+```
+
+---
+
+# 49. AI Rules Integration
+
+AI لا يحسب:
+
+```text
+Allowance eligibility
+Tax
+Leave entitlement
+```
+
+بنفسه.
+
+الصحيح:
+
+```text
+Rules Engine returns result
+AI explains it.
+```
+
+هذا distinction مهم جدًا.
+
+---
+
+# 50. AI Analytical Integration
+
+Cluster M:
+
+```text
+owns certified metrics
+```
+
+Cluster Q:
+
+```text
+explains them conversationally
+```
+
+مثال:
+
+> لماذا زادت overtime cost؟
+
+AI يأخذ:
+
+```text
+Certified KPI
+Trend
+Dimensions
+Drivers
+```
+
+من M.
+
+ولا ينشئ metric تعريف جديد من رأسه.
+
+---
+
+# 51. AI Document Integration
+
+Cluster O:
+
+```text
+owns documents
+```
+
+Cluster Q:
+
+```text
+summarizes/extracts when authorized
+```
+
+مثال:
+
+```text
+Summarize employment contract
+```
+
+لكن AI لا يعدل النسخة القانونية الأصلية.
+
+---
+
+# 52. AI Search Integration
+
+Cluster P:
+
+```text
+owns retrieval and search security
+```
+
+Cluster Q:
+
+```text
+uses retrieval results
+```
+
+ولذلك:
+
+```text
+AI cannot query Vector DB directly.
+```
+
+يمر عبر:
+
+```text
+P Retrieval API
+```
+
+---
+
+# 53. AI Runtime Trace
+
+### `ai_trace`
+
+```text
+ai_trace
+--------
+ai_trace_id PK
+
+ai_request_id
+
+trace_id
+
+started_at
+completed_at
+
+duration_ms
+
+status
+```
+
+---
+
+# Q30. AI Trace Span
+
+```text
+ai_trace_span
+-------------
+ai_trace_span_id PK
+
+ai_trace_id
+
+parent_span_id NULL
+
+span_type
+  MODEL_CALL
+  RETRIEVAL
+  TOOL_CALL
+  GUARDRAIL
+  APPROVAL
+
+reference_id
+
+started_at
+completed_at
+
+duration_ms
+
+status
+```
+
+---
+
+# 54. Operational Metrics
+
+نحتاج:
+
+```text
+AI requests/min
+P95 latency
+Model failure rate
+Fallback rate
+Tool failure rate
+Guardrail blocks
+Human approval waiting time
+Cost/day
+Cost/user
+Tokens/request
+RAG retrieval latency
+```
+
+---
+
+# Q31. AI Metric
+
+```text
+ai_metric_definition
+--------------------
+ai_metric_definition_id PK
+
+metric_code
+
+metric_name
+
+metric_type
+
+unit
+
+status
+```
+
+---
+
+# Q32. AI Metric Snapshot
+
+```text
+ai_metric_snapshot
+------------------
+snapshot_id PK
+
+metric_definition_id
+
+tenant_id NULL
+
+period_start
+period_end
+
+metric_value
+```
+
+---
+
+# 55. AI Incident
+
+### `ai_incident`
+
+```text
+ai_incident
+-----------
+ai_incident_id PK
+
+tenant_id NULL
+
+incident_type
+  PROVIDER_OUTAGE
+  COST_SPIKE
+  DATA_LEAK_RISK
+  UNSAFE_OUTPUT
+  TOOL_MISUSE
+  SECURITY_BREACH
+
+severity
+
+detected_at
+resolved_at NULL
+
+affected_model_id NULL
+affected_agent_id NULL
+
+root_cause
+
+status
+```
+
+---
+
+# 56. Kill Switch
+
+ضرورية.
+
+### `ai_kill_switch`
+
+```text
+ai_kill_switch
+--------------
+kill_switch_id PK
+
+scope_type
+  PLATFORM
+  TENANT
+  ASSISTANT
+  AGENT
+  MODEL
+  TOOL
+
+scope_id NULL
+
+reason
+
+activated_by
+
+activated_at
+
+released_at NULL
+
+status
+```
+
+إذا Agent بدأ سلوك خطير:
+
+```text
+disable immediately
+```
+
+بدون deployment.
+
+---
+
+# 57. AI Change Management
+
+أي تغيير في:
+
+```text
+Prompt
+Model
+Tool Permission
+Routing
+Guardrail
+```
+
+قد يغير behavior.
+
+### `ai_change_request`
+
+```text
+ai_change_request
+-----------------
+ai_change_request_id PK
+
+change_type
+
+target_type
+target_id
+
+current_version
+proposed_version
+
+business_reason
+
+risk_assessment
+
+requested_by
+approved_by NULL
+
+deployment_status
+
+created_at
+```
+
+---
+
+# 58. AI Release
+
+### `ai_release`
+
+```text
+ai_release
+----------
+ai_release_id PK
+
+release_code
+
+assistant_id NULL
+agent_id NULL
+
+prompt_version_id
+model_route_id
+
+evaluation_run_id
+
+released_at
+
+released_by
+
+rollback_reference NULL
+
+status
+```
+
+---
+
+# 59. Canary Rollout
+
+ميزة مهمة مستقبلًا.
+
+### `ai_rollout_policy`
+
+```text
+ai_rollout_policy
+-----------------
+rollout_policy_id PK
+
+ai_release_id
+
+rollout_type
+  FULL
+  TENANT
+  USER_PERCENTAGE
+  ROLE
+
+rollout_percentage
+
+start_at
+end_at NULL
+
+rollback_threshold_json
+
+status
+```
+
+---
+
+# 60. AI Governance Committee / Owners
+
+كل Use Case يحتاج ownership.
+
+### `ai_governance_assignment`
+
+```text
+ai_governance_assignment
+------------------------
+governance_assignment_id PK
+
+use_case_id
+
+business_owner_role
+technical_owner_role
+risk_owner_role
+data_owner_role
+
+review_frequency
+
+status
+```
+
+---
+
+# 61. AI Risk Assessment
+
+### `ai_risk_assessment`
+
+```text
+ai_risk_assessment
+------------------
+ai_risk_assessment_id PK
+
+use_case_id
+
+assessment_date
+
+employment_impact
+privacy_risk
+security_risk
+bias_risk
+financial_risk
+legal_risk
+
+overall_risk
+
+required_controls_json
+
+assessed_by
+approved_by
+```
+
+---
+
+# 62. Bias / Fairness Monitoring
+
+مهم في:
+
+```text
+Recruitment
+Performance
+Promotion
+Succession
+```
+
+لكن لا يتم تخزين sensitive attributes إلا إذا كانت هناك legal/governance basis واضحة.
+
+### `ai_fairness_evaluation`
+
+```text
+ai_fairness_evaluation
+----------------------
+fairness_evaluation_id PK
+
+model_id
+use_case_id
+
+evaluation_period
+
+metric_name
+metric_value
+
+threshold
+
+status
+
+reviewed_by
+```
+
+---
+
+# 63. High-Risk HR AI
+
+هذه Use Cases لا أسمح أن تعمل كautonomous agent:
+
+```text
+Candidate rejection
+Promotion decision
+Compensation decision
+Termination decision
+Disciplinary decision
+Medical fitness
+Legal finding
+```
+
+المسموح:
+
+```text
+summarize
+compare
+highlight gaps
+prepare recommendation
+```
+
+ثم القرار البشري يبقى في الـWorkflow.
+
+---
+
+# 64. AI Output Classification
+
+### `ai_output_classification`
+
+```text
+ai_output_classification
+------------------------
+output_classification_id PK
+
+ai_request_id
+
+output_type
+  INFORMATION
+  DRAFT
+  RECOMMENDATION
+  DECISION_SUPPORT
+  ACTION_RESULT
+
+risk_level
+
+human_review_required
+
+status
+```
+
+UI يجب أن يظهر الفرق بوضوح.
+
+---
+
+# 65. Response Provenance
+
+كل response مهم يجب أن نعرف:
+
+```text
+Model
+Prompt
+Sources
+Tools
+Rules
+Time
+Security Context
+```
+
+### `ai_response_provenance`
+
+```text
+ai_response_provenance
+----------------------
+provenance_id PK
+
+ai_request_id
+
+model_id
+
+prompt_version_id
+
+source_refs_json
+
+tool_refs_json
+
+policy_refs_json
+
+generated_at
+```
+
+---
+
+# 66. Example — HR Policy Copilot
+
+User:
+
+> هل الموظف ينفع يتفعل قبل Form 111؟
+
+Pipeline:
+
+```text
+User
+ ↓
+Permission Check
+ ↓
+Search approved policy
+ ↓
+Retrieve current version
+ ↓
+AI generates answer
+ ↓
+Citation
+```
+
+والـManual الحالي يربط employment activation باكتمال documentation وmedical/HSE requirements، وبالتالي AI هنا يجب أن يرجع إلى المصدر المعتمد لا أن يخترع policy. 
+
+---
+
+# 67. Example — Payroll Copilot
+
+User:
+
+> ليه مرتب أحمد أقل الشهر ده؟
+
+AI:
+
+```text
+1 Get authorized payroll variance
+2 Get approved attendance impacts
+3 Get deductions
+4 Get allowance changes
+5 Explain
+```
+
+ولا:
+
+```text
+SELECT * FROM payroll
+```
+
+مباشرة.
+
+---
+
+# 68. Example — Manager Copilot
+
+Manager:
+
+> عندي كام موظف غير compliant على المشروع؟
+
+AI يأخذ:
+
+```text
+Project scope
++
+Document compliance
++
+HSE readiness
++
+Training
+```
+
+ثم يعرض summary فقط لما manager مسموح له برؤيته.
+
+---
+
+# 69. Example — Employee Copilot
+
+Employee:
+
+> عايز خطاب HR للبنك.
+
+Agent:
+
+```text
+Verify employee
+      ↓
+Retrieve template
+      ↓
+Prepare letter
+      ↓
+Workflow if required
+      ↓
+Generate document
+```
+
+Cluster Q ينسق.
+
+لكن:
+
+```text
+Template → L
+Document generation → O
+Workflow → L
+Employee data → A
+```
+
+---
+
+# 70. Example — Onboarding Agent
+
+```text
+New Hire Created
+       ↓
+Agent checks:
+Documents
+IT
+HSE
+Training
+Project assignment
+       ↓
+Missing items?
+       |
+       +---- Yes → Draft follow-up actions
+       |
+       v
+Ready?
+       |
+       v
+Human approval / Workflow
+       |
+       v
+Activation
+```
+
+الAgent لا يجعل employee Active بنفسه ما لم policy تسمح وبالضوابط المطلوبة.
+
+---
+
+# 71. AI Control Center UI
+
+أقترح Admin UI:
+
+```text
+AI Platform
+│
+├── AI Assistants
+├── Agents
+├── Use Cases
+│
+├── Models
+├── Providers
+├── Model Routes
+│
+├── Prompts
+├── Prompt Versions
+│
+├── Tools
+├── Tool Permissions
+│
+├── Retrieval Policies
+├── Memory Policies
+│
+├── Guardrails
+├── Approval Policies
+│
+├── Evaluations
+├── Test Cases
+│
+├── Usage & Cost
+├── Budgets & Quotas
+│
+├── Audit
+├── Security Events
+│
+├── AI Incidents
+├── Provider Health
+│
+└── Kill Switch
+```
+
+---
+
+# 72. Agent Builder
+
+واجهة Low-code:
+
+```text
+Agent:
+Onboarding Assistant
+
+Trigger:
+Employee onboarding started
+
+Allowed tools:
+✓ Read employee
+✓ Check documents
+✓ Check HSE
+✓ Create task
+✓ Send notification
+
+Not allowed:
+✕ Activate employee
+✕ Change salary
+✕ Modify contract
+```
+
+---
+
+# 73. Agent Risk Preview
+
+قبل النشر:
+
+```text
+Agent Risk Summary
+
+Reads PII:
+Yes
+
+Reads Payroll:
+No
+
+Reads Medical:
+Readiness status only
+
+Can Write:
+Tasks + Notifications
+
+Can Execute Financial Actions:
+No
+
+Human Approval:
+Required for workflow changes
+
+Risk:
+Medium
+```
+
+---
+
+# 74. Core ERD
+
+```text
+                     AI_TENANT_CONFIGURATION
+                               |
+                               v
+                      AI_MODEL_PROVIDER
+                               |
+                               v
+                      AI_MODEL_DEFINITION
+                               |
+                               v
+                        AI_MODEL_ROUTE
+                               |
+                               v
+                            AI_REQUEST
+                               |
+             +-----------------+----------------+
+             |                 |                |
+             v                 v                v
+        PROMPT_VERSION    AI_RETRIEVAL      MODEL_CALL
+             |                 |                |
+             v                 v                v
+        AI_ASSISTANT      KNOWLEDGE/P       RESPONSE
+             |
+             v
+          AI_AGENT
+             |
+      +------+------+---------+
+      |             |         |
+      v             v         v
+   TOOL CALL     GUARDRAIL  HUMAN APPROVAL
+```
+
+Agent runtime:
+
+```text
+AI_AGENT
+   |
+   v
+AGENT_RUN
+   |
+   v
+AGENT_STEP
+   |
+   +---- TOOL_INVOCATION
+   |
+   +---- RETRIEVAL
+   |
+   +---- APPROVAL_REQUEST
+   |
+   +---- MODEL_CALL
+```
+
+---
+
+# 75. Core Production Entities
+
+لو اختصرنا Cluster Q إلى production-grade schema:
+
+```text
+01 ai_tenant_configuration
+
+02 ai_model_provider
+03 ai_model_definition
+04 ai_model_capability
+05 ai_model_route
+06 ai_routing_rule
+07 ai_provider_health
+
+08 ai_request
+09 ai_request_execution
+
+10 prompt_definition
+11 prompt_version
+12 prompt_variable_definition
+13 prompt_test_case
+
+14 ai_assistant
+15 ai_agent
+16 ai_agent_capability
+
+17 ai_tool_definition
+18 ai_tool_permission
+19 ai_tool_risk_policy
+
+20 agent_run
+21 agent_step
+22 agent_tool_invocation
+
+23 ai_approval_policy
+24 ai_approval_request
+
+25 ai_conversation
+26 ai_conversation_message
+27 ai_memory_policy
+28 ai_memory_record
+
+29 ai_retrieval_execution
+30 ai_context_source
+31 ai_response_citation
+
+32 ai_guardrail_policy
+33 ai_guardrail_evaluation
+34 ai_security_detection
+
+35 ai_permission
+36 ai_permission_assignment
+
+37 ai_use_case
+
+38 ai_evaluation_suite
+39 ai_evaluation_case
+40 ai_evaluation_run
+41 ai_evaluation_result
+
+42 ai_quality_issue
+43 ai_feedback
+
+44 ai_audit_event
+45 ai_decision_support_record
+
+46 ai_usage_record
+47 ai_budget
+48 ai_quota_policy
+49 ai_cost_allocation
+
+50 ai_agent_task
+51 ai_agent_task_dependency
+
+52 ai_trace
+53 ai_trace_span
+
+54 ai_metric_definition
+55 ai_metric_snapshot
+
+56 ai_incident
+57 ai_kill_switch
+
+58 ai_change_request
+59 ai_release
+60 ai_rollout_policy
+
+61 ai_governance_assignment
+62 ai_risk_assessment
+63 ai_fairness_evaluation
+
+64 ai_output_classification
+65 ai_response_provenance
+```
+
+إذن تقريبًا **65 core entities** في Cluster Q.
+
+---
+
+# 76. AI Golden Rules
+
+أعتبر هذه القواعد أساسية:
+
+1. **AI is not a System of Record.**
+2. AI لا يكتب مباشرة في domain databases.
+3. كل action يمر من APIs/Tools مع Authorization.
+4. AI permissions لا تتجاوز user permissions.
+5. Model provider لا يحصل على كل Tenant data افتراضيًا.
+6. Restricted data processing يكون explicit.
+7. Prompt ليس security boundary.
+8. Retrieval يجب أن يكون permission-aware.
+9. Tools أهم خطرًا من chat؛ لذلك تحتاج risk classification.
+10. High-risk tools تحتاج Human Approval.
+11. Financial actions require idempotency and normal business controls.
+12. Payroll calculations تأتي من Payroll Engine وليس من LLM.
+13. Leave eligibility تأتي من Rules Engine.
+14. Medical fitness تأتي من approved HSE/medical process.
+15. AI لا يصدر disciplinary decision.
+16. AI لا ينفذ termination autonomously.
+17. AI لا يقرر promotion autonomously.
+18. Prompt/Model/Tool versions تحفظ لكل critical output.
+19. كل AI action يجب أن يحمل correlation ID.
+20. Sensitive prompts/responses لا تسجل plaintext بلا حاجة.
+21. Conversation memory ليست unrestricted data store.
+22. Tenant can disable AI completely.
+23. Tenant can restrict providers/models.
+24. AI cost يجب أن يكون budgeted.
+25. Model fallback لا يجوز أن يخالف data policy.
+26. AI releases يجب أن تمر Evaluation.
+27. Agent autonomy تكون أقل ما يمكن افتراضيًا.
+28. Kill switch متاح على Platform/Tenant/Agent/Tool level.
+29. AI-derived facts لا تصبح HR Master Data تلقائيًا.
+30. Human remains accountable for high-impact HR decisions.
+
+---
+
+# 77. العلاقة مع باقي الـClusters
+
+```text
+Cluster A–J
+Business Truth
+        ↑
+        |
+        Q
+AI reads through authorized tools
+```
+
+```text
+Cluster L
+Rules / Workflow / Configuration
+        ↑
+        |
+        Q
+AI does not replace them
+```
+
+```text
+Cluster M
+Analytics / Certified KPIs
+        ↑
+        |
+        Q
+AI explains them
+```
+
+```text
+Cluster N
+API / Event / Runtime
+        ↑
+        |
+        Q
+AI tools execute through N
+```
+
+```text
+Cluster O
+Documents
+        ↑
+        |
+        Q
+AI summarizes/extracts with permission
+```
+
+```text
+Cluster P
+Search / Knowledge / RAG
+        ↑
+        |
+        Q
+AI retrieves grounded context
+```
+
+هذه الحدود مهمة جدًا.
+
+---
+
+# 78. Architecture After Q
+
+أصبح النظام الآن:
+
+```text
+A–J
+Business HR Domains
+
+K
+Integration / Data Quality
+
+L
+Configuration / Workflow / SaaS Control
+
+M
+Analytics / BI / ML
+
+N
+API / Events / Runtime
+
+O
+Documents / Records / Evidence
+
+P
+Search / Knowledge / RAG
+
+Q
+Enterprise AI / Copilot / Agents / Governance
+```
+
+وهنا أصبح لدينا **AI كطبقة مؤسسية حقيقية** وليس feature مبعثر في النظام.
+
+**الخطوة التالية المنطقية الآن هي Cluster R — Enterprise Security Operations, IAM Governance, Zero Trust, SSO/Federation, MFA/Passwordless, Privileged Access Management, Access Reviews, Segregation of Duties, Threat Detection, Session Risk, Device Trust, Security Events, SIEM/SOC Integration, Data Loss Prevention & Security Incident Response ERD**.
+
+رغم أننا صممنا Users/Roles/Permissions في Cluster 03 وبعض Security controls في L/N/O/P/Q، ما زلنا بحاجة إلى **Security Governance Layer مركزية** تربط Identity + Privileged Access + periodic access certification + SoD + session/device risk + security monitoring + incident response، بدل أن تظل الضوابط الأمنية موزعة بين الـClusters.

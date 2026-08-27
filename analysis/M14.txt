@@ -1,0 +1,1954 @@
+تمام. **Module 14 منطقي جدًا بعد Module 13**، وأنا أوافق على الفصل الوظيفي الذي اقترحته تحديدًا: لا يجب أن يصبح **Employee Relations / Case Management** صندوقًا لكل طلب HR يومي.
+
+الـOperations Manual الحالي بالفعل يضع ضمن HR Operations نشاط **“Handle employee requests / Resolve HR operational issues / Coordinate with support departments”**، لكن بدون Service Catalog واضح، Ticket Lifecycle، SLA Engine، Routing أو Employee Self-Service.  كما أن الهيكل الحالي يفصل عمليًا بين **HR Operations، Personnel، Payroll، وER & Compliance**، وبالتالي يمكن للنظام توجيه كل نوع طلب إلى الـowner الصحيح بدل تجميع كل شيء عند شخص واحد. 
+
+# Module 14 — HR Service Desk, Employee Requests, Letters, Documents & Employee Self-Service
+
+## 14.1 الهدف الأساسي
+
+إنشاء **Single HR Service Entry Point** لكل موظف ومدير.
+
+الموظف لا يحتاج أن يعرف:
+
+> هل أذهب إلى Personnel؟
+> Payroll؟
+> HR Operations؟
+> ER؟
+> Administration؟
+
+هو فقط يختار:
+
+> **I Need HR Help / طلب خدمة من الموارد البشرية**
+
+والنظام يتولى:
+
+**Request → Classification → Routing → SLA → Processing → Approval → Fulfillment → Employee Confirmation → Closure**
+
+مع الاحتفاظ بخط فصل واضح:
+
+**Normal HR Request → Module 14**
+
+بينما:
+
+**Complaint / Grievance / Harassment / Misconduct / Formal Dispute / Investigation → Module 13**
+
+---
+
+# 14.2 Service Catalog
+
+بدل Ticket مفتوح فقط، نبني **HR Service Catalog قابل للإعداد لكل Company**.
+
+مثلاً:
+
+### A. Letters & Certificates
+
+مثل:
+
+* HR Letter
+* Employment Certificate
+* Salary Certificate
+* Salary Transfer Letter
+* Bank Letter
+* Experience Certificate
+* Employment Verification
+* Embassy Letter
+* Visa Letter
+* Social Insurance Letter
+* Medical Insurance Letter
+* Project Assignment Letter
+* To Whom It May Concern
+* Arabic Certificate
+* English Certificate
+* French Certificate
+* Custom HR Letter
+
+وهذه النقطة مرتبطة مباشرة بالـManual، الذي يتضمن بالفعل مثلًا **Payroll bank letter issuance** أثناء onboarding. 
+
+---
+
+### B. Employee Data Change Requests
+
+مثل تغيير:
+
+* Mobile Number
+* Personal Email
+* Address
+* Emergency Contact
+* Marital Status
+* Bank Account
+* Bank Name
+* IBAN
+* Academic Qualification
+* Professional Certificate
+* National ID
+* Passport
+* Military Status
+* Syndicate Information
+* Social Insurance Data
+* Tax Information
+
+لكن يجب ألا يتم تعديل **Employee Master Data مباشرة** بمجرد إرسال الطلب.
+
+الصحيح:
+
+**Request → Evidence → Validation → Approval → Master Data Update → Audit Log**
+
+---
+
+# 14.3 Document Requests & Document Submission
+
+هناك فرق مهم بين:
+
+**Employee requesting a document**
+
+و
+
+**HR requesting a document from employee**
+
+لذلك نحتاج كلا الاتجاهين.
+
+## Employee → HR
+
+مثلاً:
+
+> أحتاج نسخة العقد.
+
+أو:
+
+> أحتاج شهادة خبرة.
+
+## HR → Employee
+
+مثلاً:
+
+> National ID expired.
+
+> Please upload renewed ID.
+
+> Professional License will expire in 30 days.
+
+وهذا امتداد مباشر لمتطلبات الـManual، الذي يطلب من HR Operations متابعة:
+
+* Missing documents
+* Social Insurance
+* Medical Insurance
+* Contract renewals
+* Employee records
+
+بشكل مستمر. 
+
+---
+
+# 14.4 Employee Document Wallet
+
+كل Employee يكون لديه:
+
+**My Documents**
+
+ويشاهد فقط المستندات المسموح له بمشاهدتها.
+
+مثلاً:
+
+| Document               | Status        |
+| ---------------------- | ------------- |
+| Employment Contract    | Active        |
+| National ID            | Valid         |
+| Medical Insurance Card | Active        |
+| Social Insurance       | Active        |
+| Professional License   | Expiring Soon |
+| HSE Certificate        | Valid         |
+| Training Certificate   | Valid         |
+
+مع:
+
+* Issue Date
+* Expiry Date
+* Uploaded Date
+* Verified By
+* Verification Status
+* Version
+* Confidentiality Level
+
+والملفات الأصلية تبقى controlled حسب RBAC.
+
+---
+
+# 14.5 Document Status Engine
+
+كل Document يمكن أن يكون:
+
+**Requested → Uploaded → Under Review → Verified → Rejected → Expiring Soon → Expired → Replaced → Archived**
+
+مثلاً:
+
+```text
+National ID
+Expiry: 20/09/2026
+
+30 Days Before
+↓
+Notification
+
+Employee Uploads New ID
+↓
+Personnel Validation
+↓
+Approved
+↓
+Employee Master Updated
+↓
+Old Version Archived
+```
+
+ولا نحذف النسخة القديمة.
+
+---
+
+# 14.6 General HR Inquiry
+
+الموظف يستطيع السؤال عن:
+
+* Payroll
+* Leave
+* Attendance
+* Allowances
+* Benefits
+* Medical Insurance
+* Contracts
+* Company Policies
+* Training
+* Career
+* Transfers
+* Project Assignment
+* HR Documents
+
+لكن هذه ليست كلها Cases.
+
+مثلاً:
+
+> “لماذا تم خصم 500 جنيه؟”
+
+قد تبدأ كـ:
+
+**Payroll Inquiry**
+
+ثم يتم توجيهها إلى Payroll.
+
+أما:
+
+> “تم خصم مبلغ تعسفي بسبب انتقام مديري مني.”
+
+فهذا قد يتحول إلى:
+
+**Formal Complaint → Module 13**
+
+---
+
+# 14.7 Benefits Requests
+
+Service Catalog خاص بالـBenefits.
+
+مثل:
+
+* Medical Insurance Addition
+* Medical Insurance Card
+* Medical Insurance Replacement
+* Family Member Addition
+* Medical Network Inquiry
+* Benefit Eligibility
+* Transportation Request
+* Mobile Allowance Request
+* Meal Allowance Inquiry
+* Accommodation Benefit
+* Project Allowance Inquiry
+
+لكن Module 14 هنا هو:
+
+**Request / Workflow Layer**
+
+بينما الحساب المالي نفسه يظل داخل:
+
+**Module 09 — Payroll & Compensation**
+
+---
+
+# 14.8 Payroll Service Requests
+
+مثل:
+
+* Salary Inquiry
+* Payslip Request
+* Salary Certificate
+* Missing Salary
+* Wrong Deduction
+* Missing Allowance
+* OT Inquiry
+* Bonus Inquiry
+* KPI Bonus Inquiry
+* Bank Transfer Failure
+* Bank Account Update
+
+لكن Module 14 **لا يعيد حساب Payroll**.
+
+بل يرسل request إلى Module 09.
+
+مثلاً:
+
+```text
+Employee
+↓
+Missing Allowance Request
+↓
+Service Desk
+↓
+Payroll Queue
+↓
+Module 09 Payroll Transaction Investigation
+↓
+Result
+↓
+Module 14
+↓
+Employee
+```
+
+---
+
+# 14.9 Attendance & Leave Requests
+
+نفس المبدأ.
+
+مثل:
+
+* Attendance Correction
+* Missing Check-in
+* Missing Check-out
+* Wrong Absence
+* Shift Issue
+* Roster Inquiry
+* Leave Balance Inquiry
+* Leave Cancellation
+* Holiday Issue
+
+Module 14 هو **واجهة الخدمة** فقط.
+
+Source of Truth يظل:
+
+**Module 07 / Module 08**
+
+---
+
+# 14.10 Employment & Personnel Requests
+
+مثل:
+
+* Contract Copy
+* Contract Amendment Inquiry
+* Contract Renewal Status
+* Social Insurance Inquiry
+* Medical Insurance Status
+* Employee File Update
+* Personal Document Submission
+* Job Title Correction
+* Reporting Manager Correction
+* Work Location Correction
+* Project Assignment Correction
+
+وهذا يتوافق جيدًا مع الهيكل الحالي الذي يحتوي Personnel Section مستقلًا. 
+
+---
+
+# 14.11 Project / Field Employee Requests
+
+وهذه مهمة جدًا لطبيعة Afro.
+
+الموظف Field يمكن أن يرسل طلب:
+
+* PPE Replacement
+* Uniform Request
+* ID Card
+* Site Access Letter
+* Customer Access Letter
+* SIM / Mobile Request
+* Tools Request
+* Accommodation Issue
+* Transportation Issue
+* Site Assignment Issue
+* Project Transfer Inquiry
+
+لكن بعض هذه الطلبات قد لا تكون HR owner.
+
+النظام يعمل:
+
+**HR Front Door → Functional Routing**
+
+مثلاً:
+
+```text
+Employee
+↓
+PPE Replacement
+↓
+HR Service Desk
+↓
+HSE / Operations
+```
+
+أو:
+
+```text
+Laptop Issue
+↓
+IT Service Queue
+```
+
+حتى لو في المستقبل أصبح لدينا Service Desk موحد للشركة.
+
+---
+
+# 14.12 Request Classification Engine
+
+كل Request يحتوي:
+
+**Service Category**
+
+مثلاً:
+
+```text
+Personnel
+Payroll
+Attendance
+Leave
+Benefits
+Documents
+Letters
+Employee Data
+Medical
+Training
+Career
+Project HR
+HR Operations
+General Inquiry
+```
+
+ثم:
+
+**Service Type**
+
+ثم:
+
+**Sub-Type**
+
+مثال:
+
+```text
+Payroll
+ └── Allowances
+      └── Missing Field Allowance
+```
+
+---
+
+# 14.13 Request Priority
+
+لا أريد ترك Priority للموظف بالكامل.
+
+الموظف يمكن أن يحدد urgency، لكن النظام يقرر Actual Priority.
+
+مثلاً:
+
+**P0 — Critical**
+
+* Salary not received for whole payroll
+* Employee cannot access critical site due HR issue
+* Legal deadline
+* Employee activation blocker
+
+**P1 — High**
+
+* Salary payment issue
+* Urgent embassy letter
+* Medical insurance blocking treatment
+* Joining documentation issue
+
+**P2 — Normal**
+
+* HR Letter
+* Data Change
+* Leave Inquiry
+
+**P3 — Low**
+
+* General Inquiry
+* Information request
+
+---
+
+# 14.14 SLA Engine
+
+كل Service له:
+
+* First Response SLA
+* Processing SLA
+* Approval SLA
+* Resolution SLA
+
+مثال:
+
+| Service            | Response | Completion |
+| ------------------ | -------: | ---------: |
+| Salary Certificate |    4 hrs |       1 WD |
+| Employment Letter  |    4 hrs |       1 WD |
+| Contract Copy      |    8 hrs |       2 WD |
+| Data Change        |    8 hrs |       2 WD |
+| Payroll Complaint  |    4 hrs |       3 WD |
+| Medical Request    |    4 hrs |       2 WD |
+| General Inquiry    |    8 hrs |       2 WD |
+
+والـSLA يكون configurable حسب:
+
+* Company
+* Country
+* Business Unit
+* Service
+* Priority
+* Employee Type
+* Project
+* Customer
+
+---
+
+# 14.15 SLA Clock Logic
+
+النظام يحتاج فعليًا:
+
+```text
+SLA Start
+SLA Pause
+SLA Resume
+SLA Breach
+SLA Escalation
+```
+
+مثلاً:
+
+إذا HR طلب مستند من الموظف:
+
+**Waiting for Employee**
+
+لا نحسبه ضد HR SLA.
+
+وإذا HR ينتظر Finance:
+
+يمكن حسب Policy:
+
+**Internal SLA continues**
+
+أو:
+
+**Parent SLA pauses + Child SLA starts**
+
+---
+
+# 14.16 Routing Engine
+
+Routing لا يكون manual فقط.
+
+النظام يحدد المسؤول تلقائيًا بناءً على:
+
+```text
+Company
+Country
+Business Unit
+Department
+Project
+Client
+Location
+Employee Category
+Service Type
+```
+
+مثلاً:
+
+```text
+Employee
+Company: Afro Egypt
+Project: Huawei
+Service: HR Operations
+
+↓
+Huawei HR Operations Queue
+```
+
+وهذا مناسب جدًا للهيكل الحالي، لأن الـOrg Chart يظهر HR Operations مقسمة عمليًا إلى **Huawei & Nokia** و**Ericsson**. 
+
+---
+
+# 14.17 Queues
+
+ننشئ Queues مثل:
+
+**Personnel Queue**
+
+**Payroll Queue**
+
+**HR Operations — Huawei/Nokia**
+
+**HR Operations — Ericsson**
+
+**Employee Relations Queue**
+
+**OD Queue**
+
+**Talent Acquisition Queue**
+
+**IT Support Queue**
+
+**Finance Support Queue**
+
+**HSE Queue**
+
+---
+
+# 14.18 Ownership
+
+كل Ticket يحتوي:
+
+**Functional Owner**
+
+مثلاً Payroll.
+
+و:
+
+**Assigned Agent**
+
+مثلاً Payroll Specialist.
+
+و:
+
+**Backup Agent**
+
+و:
+
+**Supervisor**
+
+---
+
+# 14.19 Load Balancing
+
+Routing يمكن أن يكون:
+
+* Round Robin
+* Least Loaded
+* Territory Based
+* Project Based
+* Dedicated HRBP
+* Manual Assignment
+
+---
+
+# 14.20 Request Workflow Engine
+
+لا نريد Workflow ثابت.
+
+Service Administrator يستطيع إعداد Workflow.
+
+مثال Salary Certificate:
+
+```text
+Employee Request
+↓
+Automatic Data Validation
+↓
+HR Verification
+↓
+Generate Certificate
+↓
+Digital Approval
+↓
+PDF Generated
+↓
+Employee Download
+↓
+Closed
+```
+
+بينما Bank Account Change:
+
+```text
+Employee Request
+↓
+Upload Bank Evidence
+↓
+Personnel Validation
+↓
+Payroll Approval
+↓
+Update Employee Master
+↓
+Effective Payroll Date
+↓
+Employee Notification
+↓
+Closed
+```
+
+---
+
+# 14.21 Dynamic Forms
+
+كل Service له form خاص.
+
+Salary Letter مثلًا:
+
+* Language
+* Recipient
+* Purpose
+* Salary Display?
+* Gross / Net?
+* Allowances Included?
+* Embassy Name
+* Number of Copies
+
+ولا نظهر Fields غير مطلوبة.
+
+---
+
+# 14.22 Letters Template Engine
+
+نحتاج Template Builder.
+
+Template variables مثل:
+
+```text
+{{EmployeeName}}
+{{EmployeeArabicName}}
+{{HRCode}}
+{{NationalID}}
+{{PositionTitle}}
+{{Department}}
+{{JoiningDate}}
+{{GrossSalary}}
+{{NetSalary}}
+{{CompanyName}}
+{{IssueDate}}
+```
+
+---
+
+# 14.23 Languages
+
+كما اتفقنا في النظام كله:
+
+**Arabic / English / French**
+
+مثلاً Employee يختار:
+
+> Salary Certificate — English
+
+فيتم توليدها بالقالب الإنجليزي.
+
+والعربية RTL.
+
+---
+
+# 14.24 Digital Document Generation
+
+النظام يولد:
+
+**PDF**
+
+مع:
+
+* Company Header
+* Logo
+* Authorized Signature
+* QR Verification
+* Unique Document Number
+* Issue Date
+* Expiry if needed
+
+---
+
+# 14.25 QR Verification
+
+ميزة مهمة جدًا.
+
+الشهادة تحتوي:
+
+```text
+Document ID: AFRO-HR-2026-004532
+```
+
+وQR.
+
+عند Scan:
+
+```text
+Document Valid
+Employee: ********
+Document: Employment Certificate
+Issued: 10 Aug 2026
+Status: Active
+```
+
+مع عدم كشف معلومات حساسة غير ضرورية.
+
+---
+
+# 14.26 Digital Signature
+
+يمكن إعداد:
+
+* HR Manager Signature
+* Personnel Head
+* Payroll Head
+* Authorized Signatory
+
+حسب نوع المستند.
+
+مع **Delegation of Authority**.
+
+---
+
+# 14.27 Employee Self-Service Portal
+
+Employee Dashboard يكون بسيطًا جدًا:
+
+### My HR
+
+**Request a Service**
+
+**My Requests**
+
+**My Documents**
+
+**My Letters**
+
+**My Profile**
+
+**My Payroll**
+
+**My Attendance**
+
+**My Leave**
+
+**My Benefits**
+
+**My Training**
+
+**My Career**
+
+**HR Help Center**
+
+وهنا Module 14 يصبح فعليًا **واجهة الموظف الرئيسية** حتى لو البيانات تأتي من Modules مختلفة.
+
+---
+
+# 14.28 Manager Self-Service
+
+المدير أيضًا يحتاج MSS.
+
+مثلاً:
+
+**My Team**
+
+يستطيع:
+
+* Request Employee Transfer
+* Employee Data Change
+* Project Assignment
+* Shift Change
+* Replacement Request
+* HR Letter
+* Contract Renewal Request
+* Employee Status Inquiry
+* Personnel Request
+
+لكن بصلاحيات مختلفة.
+
+---
+
+# 14.29 Request on Behalf of Employee
+
+بعض الفنيين قد لا يستخدمون النظام دائمًا.
+
+لذلك:
+
+**Supervisor / HR Operations** يستطيع إنشاء Request نيابة عن Employee.
+
+لكن النظام يسجل:
+
+```text
+Requester: Employee
+Created By: HR Operations
+```
+
+حتى نحافظ على audit.
+
+---
+
+# 14.30 Mobile-Friendly Design
+
+بالذات Field Workforce.
+
+الموظف يستطيع:
+
+1. اختيار الخدمة.
+2. تصوير المستند بالموبايل.
+3. Upload.
+4. Submit.
+5. متابعة Status.
+
+بدون شاشات معقدة.
+
+---
+
+# 14.31 WhatsApp / Email Intake — Future Option
+
+يمكن لاحقًا استقبال:
+
+**Email → Ticket**
+
+أو:
+
+**WhatsApp Business → Ticket**
+
+لكن الأفضل ألا نجعل WhatsApp هو النظام نفسه.
+
+يكون فقط Channel.
+
+الـSystem يبقى **System of Record**.
+
+---
+
+# 14.32 Ticket Lifecycle
+
+الـStandard Status:
+
+```text
+Draft
+Submitted
+Received
+Assigned
+In Progress
+Pending Employee
+Pending Manager
+Pending HR
+Pending Other Department
+Pending Approval
+Resolved
+Employee Confirmation
+Closed
+Cancelled
+Rejected
+Reopened
+Escalated
+```
+
+---
+
+# 14.33 Parent / Child Requests
+
+ميزة مهمة.
+
+مثلاً:
+
+Employee Transfer Request قد ينتج:
+
+```text
+Parent:
+Employee Transfer
+
+Children:
+→ Personnel Update
+→ Payroll Update
+→ Project Update
+→ Access Update
+→ Attendance Profile Update
+```
+
+ولا يتم إغلاق Parent حتى تنتهي الـchildren المطلوبة.
+
+---
+
+# 14.34 Request Dependencies
+
+مثلاً:
+
+Bank Change لا يمكن Complete قبل:
+
+**Bank Evidence Verified**
+
+أو:
+
+Salary Letter لا يمكن إصدارها إذا:
+
+**Employee Status = Terminated**
+
+إلا بصلاحية خاصة.
+
+---
+
+# 14.35 Approval Engine
+
+بعض الخدمات لا تحتاج Approval.
+
+مثلاً:
+
+**Contract Copy**
+
+لكن:
+
+**Bank Change**
+
+قد يحتاج Payroll Verification.
+
+و:
+
+**Personal Data Critical Change**
+
+قد يحتاج Personnel.
+
+ويمكن إعداد:
+
+```text
+No Approval
+
+Single Approval
+
+Sequential Approval
+
+Parallel Approval
+
+Conditional Approval
+```
+
+---
+
+# 14.36 Escalation to Module 13
+
+وهذه من أهم أجزاء التصميم.
+
+يجب وجود زر:
+
+> **Convert to Formal ER Case**
+
+لكن لا يستطيع الجميع استخدامه.
+
+مثلاً employee أرسل:
+
+**General HR Concern**
+
+Agent يكتشف أنه يتضمن:
+
+* Harassment
+* Discrimination
+* Retaliation
+* Bullying
+* Serious misconduct
+* Formal grievance
+* Wage dispute requiring investigation
+* Policy violation
+* Abuse of authority
+
+فيتم:
+
+```text
+Module 14 Ticket
+↓
+Controlled Escalation
+↓
+Module 13 Case
+```
+
+ويأخذ Module 13:
+
+* Request ID
+* Requester
+* Original Description
+* Attachments
+* Timeline
+* Communications
+
+ثم تصبح البيانات Restricted.
+
+---
+
+# 14.37 Confidentiality Boundary
+
+بعد التحويل إلى Module 13:
+
+لا يظل كل HR Service Desk يرى المحتوى.
+
+Module 14 يعرض فقط:
+
+```text
+Escalated to ER Case
+Case Ref: Confidential
+Status: Under Review
+```
+
+بدون Investigation Notes.
+
+---
+
+# 14.38 Reverse Referral
+
+Module 13 يستطيع أيضًا أن يقول:
+
+> This is not an ER Case.
+
+ثم:
+
+```text
+Return to Module 14
+```
+
+مثلاً الموظف عمل Complaint:
+
+> “لم يصلني Payslip.”
+
+هذا ليس ER Case.
+
+يعود إلى Payroll Service.
+
+---
+
+# 14.39 Knowledge Base
+
+Module 14 لا يجب أن يكون Tickets فقط.
+
+نعمل:
+
+**HR Knowledge Center**
+
+مثل:
+
+* How to request leave
+* Payroll calendar
+* Allowance policy
+* Employee documents required
+* Medical insurance
+* Bank account update
+* Attendance rules
+* HR letters
+* Offboarding process
+* FAQ
+
+---
+
+# 14.40 Deflection Before Ticket Creation
+
+قبل Create Ticket:
+
+الموظف يكتب:
+
+> “عاوز شهادة مرتب.”
+
+النظام يعرض:
+
+> Salary Certificate can be requested here.
+
+ثم يفتح form الصحيح.
+
+وبالتالي نقلل Tickets manual.
+
+---
+
+# 14.41 AI HR Assistant
+
+يمكن إضافة AI ولكن بقيود واضحة.
+
+AI يستطيع:
+
+* Understand request intent
+* Suggest service
+* Answer from approved HR policies
+* Summarize ticket
+* Suggest routing
+* Draft response
+* Detect missing information
+* Suggest knowledge article
+* Translate Arabic / English / French
+
+لكن **لا يقرر**:
+
+* Disciplinary decision
+* Salary change
+* Legal decision
+* Payroll adjustment
+* Promotion
+* Termination
+
+---
+
+# 14.42 AI Classification Example
+
+Employee writes:
+
+> “أنا حساب البنك بتاعي اتغير وعاوز المرتب يتحول على الحساب الجديد.”
+
+AI:
+
+```text
+Category:
+Payroll
+
+Service:
+Bank Account Change
+
+Required:
+Bank Account Certificate / IBAN
+
+Owner:
+Personnel → Payroll
+
+Priority:
+P2
+```
+
+---
+
+# 14.43 AI Risk Detection
+
+لو كتب:
+
+> “المدير هددني لو اشتكيت.”
+
+النظام لا يتعامل معها كـGeneral Inquiry.
+
+يعمل:
+
+**Sensitive Content Flag**
+
+ويعرض Route to:
+
+**Module 13 — Employee Relations**
+
+لكن بدون auto-creating disciplinary judgment.
+
+---
+
+# 14.44 Notifications
+
+Notifications عبر:
+
+* In-App
+* Email
+* Push
+* SMS optional
+
+مثلاً:
+
+```text
+Request #HR-10483
+Salary Certificate
+Completed
+```
+
+أو:
+
+```text
+Action Required:
+Upload updated National ID.
+```
+
+---
+
+# 14.45 Reminder Engine
+
+مثلاً:
+
+Pending Employee لمدة 3 أيام:
+
+Day 1 → Reminder
+
+Day 3 → Reminder
+
+Day 7 → Auto Close أو Escalation حسب service.
+
+---
+
+# 14.46 Employee Satisfaction
+
+بعد Closure:
+
+**Was your request resolved?**
+
+👍 Yes
+
+👎 No
+
+وممكن:
+
+**1–5 Rating**
+
+مع optional comment.
+
+---
+
+# 14.47 Reopen Rules
+
+Employee يستطيع Reopen خلال مثلًا:
+
+**3 Business Days**
+
+بعدها يحتاج New Request.
+
+Configurable.
+
+---
+
+# 14.48 Service Desk Agent Workspace
+
+Agent يرى:
+
+**My Queue**
+
+**Unassigned**
+
+**Due Today**
+
+**SLA At Risk**
+
+**Breached**
+
+**Waiting Employee**
+
+**Escalated**
+
+**Recently Resolved**
+
+مثلاً:
+
+```text
+38 Open
+7 Due Today
+3 SLA At Risk
+1 Breached
+12 Waiting Employee
+```
+
+---
+
+# 14.49 Bulk Actions
+
+HR يستطيع:
+
+* Assign
+* Reassign
+* Change Priority
+* Add Internal Note
+* Request Documents
+* Merge Duplicate Tickets
+* Close
+* Escalate
+
+حسب permissions.
+
+---
+
+# 14.50 Internal Notes vs Employee Messages
+
+فرق أساسي.
+
+### Public Comment
+
+يراه الموظف.
+
+### Internal Note
+
+HR فقط.
+
+مثلاً:
+
+```text
+Internal:
+Payroll confirmed adjustment will reflect next cycle.
+```
+
+لا يظهر للموظف إلا إذا agent أرسل formal response.
+
+---
+
+# 14.51 Attachments Security
+
+الملف له:
+
+```text
+Employee Visible
+HR Only
+Restricted
+Highly Confidential
+```
+
+وذلك يتوافق مع Policy Compliance في الـManual، الذي ينص على سرية بيانات الموظفين والرواتب والـdisciplinary documentation وقصر الوصول على authorized personnel. 
+
+---
+
+# 14.52 RBAC
+
+مثلاً:
+
+### Employee
+
+يرى Requests الخاصة به فقط.
+
+### Direct Manager
+
+يرى Manager Requests المسموحة لفريقه.
+
+ولا يرى:
+
+* Employee personal complaints
+* Salary private cases
+* ER confidential cases
+
+### HR Operations
+
+يرى Project / Operational HR Requests الخاصة بنطاقه.
+
+### Personnel
+
+يرى:
+
+* Employee Data
+* Documents
+* Contracts
+* Letters
+* Insurance records
+
+### Payroll
+
+يرى:
+
+* Payroll requests
+* Compensation related items
+
+### ER & Compliance
+
+يرى requests المحالة رسميًا له.
+
+### HR Manager
+
+Cross-functional visibility حسب policy.
+
+### Super Admin
+
+System configuration، وليس بالضرورة business confidential content.
+
+وهذا distinction مهم جدًا.
+
+**System Admin ≠ Permission to read every HR Case.**
+
+---
+
+# 14.53 Field-Level Permissions
+
+حتى داخل Ticket.
+
+مثلاً Payroll يرى:
+
+```text
+Salary
+Bank
+Deduction
+```
+
+لكن IT لا يحتاج رؤية Salary.
+
+IT Child Task يرى فقط:
+
+```text
+Employee
+HR Code
+System Access Request
+```
+
+---
+
+# 14.54 Service Catalog Configuration
+
+Admin يستطيع تحديد لكل Service:
+
+```text
+Service Name
+Category
+Description
+Eligibility
+Required Fields
+Required Attachments
+Owner
+Routing Rule
+Approval Workflow
+SLA
+Priority
+Automation
+Document Template
+Employee Visibility
+Retention Period
+Escalation Policy
+```
+
+---
+
+# 14.55 Eligibility Rules
+
+مثلاً:
+
+**Experience Certificate**
+
+متاحة فقط:
+
+```text
+Employee Status = Terminated
+```
+
+أو حسب company policy.
+
+بينما:
+
+**Salary Certificate**
+
+Employee Status:
+
+```text
+Active
+```
+
+---
+
+# 14.56 Multi-Company SaaS
+
+كل Tenant يمكن أن يملك:
+
+* Own Catalog
+* Own SLA
+* Own Letter Templates
+* Own Approvers
+* Own HR Teams
+* Own Policies
+* Own Languages
+* Own Branding
+
+ولا نفرض Process واحد على كل الشركات.
+
+---
+
+# 14.57 Integration Map
+
+Module 14 يصبح Hub مرتبطًا تقريبًا بكل النظام.
+
+```text
+                 Employee
+                     │
+                     ▼
+              Module 14
+           HR Service Desk
+                     │
+ ┌───────────────────┼────────────────────┐
+ ▼                   ▼                    ▼
+Personnel          Payroll              ER
+Employee Core      Module 09           Module 13
+ │                   │                    │
+ ▼                   ▼                    ▼
+Documents        Pay Resolution       Formal Cases
+ │
+ ├── Attendance Module 07
+ ├── Leave Module 08
+ ├── Learning Module 11
+ ├── Career Module 12
+ └── Onboarding Module 06
+```
+
+---
+
+# 14.58 Analytics
+
+HR Management يحتاج:
+
+### Service KPIs
+
+* Total Requests
+* Requests by Category
+* Requests per Employee
+* Open Requests
+* Resolved Requests
+* SLA Compliance %
+* SLA Breach %
+* Average Response Time
+* Average Resolution Time
+* Reopen Rate
+* First Contact Resolution
+* Employee Satisfaction
+* Backlog
+* Aging
+* Escalation Rate
+* Module 13 Conversion Rate
+
+---
+
+# 14.59 Operational Analytics
+
+مثلاً:
+
+```text
+Top HR Requests
+1. Salary Certificate  1,320
+2. Attendance Correction 870
+3. Medical Insurance 650
+4. Payroll Inquiry 510
+5. Contract Copy 390
+```
+
+هذا يخبرنا أين HR يستهلك وقته.
+
+---
+
+# 14.60 Root-Cause Analytics
+
+وهنا يصبح النظام مفيدًا للإدارة وليس Ticket Tool فقط.
+
+مثلاً نجد:
+
+> 1,200 attendance correction requests / month.
+
+هذه ليست مشكلة Service Desk.
+
+هذه إشارة أن:
+
+**Attendance Process / Device / Roster / Policy فيه مشكلة.**
+
+أو:
+
+> 400 Missing Allowance Requests.
+
+قد تكشف مشكلة في:
+
+**Project → Payroll data handoff.**
+
+---
+
+# 14.61 HR Workload Analytics
+
+بما أن Org Chart الحالي موزع إلى تخصصات واضحة، يمكن قياس workload لكل team. 
+
+مثلاً:
+
+```text
+Personnel       1,820 requests
+Payroll         1,260
+HR Operations     980
+ER                 55
+OD                 82
+```
+
+هذا مفيد جدًا لاحقًا في manpower planning لـPeople & Culture نفسها.
+
+---
+
+# 14.62 SLA Heatmap
+
+حسب:
+
+* Service
+* Project
+* HR Agent
+* Company
+* Location
+
+مثلاً:
+
+| Service              | SLA Compliance |
+| -------------------- | -------------: |
+| HR Letters           |            97% |
+| Employee Data Change |            94% |
+| Payroll Inquiry      |            82% |
+| Medical Insurance    |            76% |
+
+فتظهر bottlenecks فورًا.
+
+---
+
+# 14.63 Audit Trail
+
+كل Request يحتفظ بـ:
+
+```text
+Created By
+Created At
+Assigned To
+Reassigned By
+Status Changes
+Approval Actions
+Documents
+Field Changes
+Messages
+Internal Notes
+SLA Events
+Escalations
+Closure
+Reopen
+```
+
+ولا يجوز حذف Audit History.
+
+وهذا متوافق مباشرة مع الـManual، الذي يشترط أن تكون People & Culture activities **fully traceable through appropriate documentation and system records**. 
+
+---
+
+# 14.64 Data Retention
+
+يتم تحديد retention حسب:
+
+* Request Type
+* Country
+* Legal Requirement
+* Company Policy
+
+ولا نعامل General Inquiry بنفس retention الخاص بـER Investigation.
+
+---
+
+# 14.65 Suggested Core Data Model
+
+أهم Entities:
+
+```text
+HRServiceCategory
+HRService
+HRServiceForm
+HRServiceField
+
+HRRequest
+HRRequestStatus
+HRRequestPriority
+HRRequestAssignment
+HRRequestMessage
+HRRequestInternalNote
+
+HRRequestAttachment
+HRRequestApproval
+HRRequestSLA
+HRRequestSLAEvent
+
+HRQueue
+HRRoutingRule
+
+DocumentType
+EmployeeDocument
+DocumentVersion
+
+LetterTemplate
+GeneratedLetter
+DigitalSignature
+
+KnowledgeArticle
+FAQ
+
+EmployeeSatisfactionSurvey
+
+Escalation
+ERCaseLink
+
+Notification
+Reminder
+
+ServiceEligibilityRule
+ServiceAutomationRule
+```
+
+---
+
+# 14.66 أهم Business Rules
+
+أضع هنا مجموعة Rules أعتبرها أساسية من أول نسخة:
+
+**BR-14-01**
+كل request يجب أن يكون له unique number.
+
+مثلاً:
+
+`HRREQ-2026-000154`
+
+**BR-14-02**
+كل request يجب أن يكون له owner.
+
+**BR-14-03**
+SLA يبدأ عند submission أو receipt حسب configuration.
+
+**BR-14-04**
+لا يجوز تعديل Employee Master Data مباشرة من ticket دون approval workflow.
+
+**BR-14-05**
+كل مستند Employee يجب أن يكون version-controlled.
+
+**BR-14-06**
+لا يجوز حذف attachment بعد استخدامه في approved transaction؛ يمكن archive فقط.
+
+**BR-14-07**
+Formal grievance لا يتم التعامل معها داخل general service desk.
+
+**BR-14-08**
+عند تحويل request إلى Module 13، تطبق ER confidentiality automatically.
+
+**BR-14-09**
+Payroll request لا يستطيع Module 14 تعديل Payroll Calculation مباشرة.
+
+**BR-14-10**
+Agent لا يستطيع إغلاق request بدون Resolution Code.
+
+**BR-14-11**
+كل SLA breach يجب أن يسجل.
+
+**BR-14-12**
+Employee يجب أن يستطيع تتبع request status ما لم تكن restricted.
+
+**BR-14-13**
+كل Auto-generated letter يجب أن يحمل unique verification reference.
+
+**BR-14-14**
+Admin technical access لا يعني access إلى confidential HR content.
+
+---
+
+# 14.67 Resolution Codes
+
+مهمة للـanalytics.
+
+مثلاً:
+
+```text
+Resolved
+Data Corrected
+Document Issued
+Payment Correct
+Payment Adjusted
+Employee Error
+Manager Error
+HR Error
+System Error
+Policy Explanation
+Duplicate
+Not Eligible
+Transferred
+Escalated to ER
+Cancelled by Employee
+```
+
+---
+
+# 14.68 Dashboards
+
+### Employee Dashboard
+
+```text
+My Open Requests        3
+Waiting for Me          1
+Completed This Month    4
+My Documents           12
+Expiring Soon           1
+```
+
+### HR Operations Dashboard
+
+```text
+Open                   187
+Due Today               34
+SLA Risk                16
+Breached                  5
+Waiting Employees       42
+```
+
+### HR Manager Dashboard
+
+```text
+Monthly Requests       4,820
+SLA Compliance           93%
+Avg Resolution          1.8d
+Employee CSAT            4.4
+Escalated ER             0.8%
+Backlog                  214
+```
+
+---
+
+# 14.69 العلاقة مع الـManual الحالي
+
+Module 14 لا يخترع وظيفة بعيدة عن الـManual؛ هو يحول جزءًا موجودًا حاليًا بصورة عامة إلى Operating System واضح.
+
+الـManual الحالي ينص في HR Operations على:
+
+* Handle employee requests.
+* Resolve HR operational issues.
+* Coordinate with support departments.
+* Support employee engagement. 
+
+كما ينص على متابعة employee records والـdocuments والـinsurance والـcontract renewals. 
+
+نحن فقط نحول ذلك من:
+
+> Emails + Calls + WhatsApp + Excel + Personal Follow-up
+
+إلى:
+
+> **Service Catalog + ESS + Ticketing + Routing + SLA + Workflow + Documents + Audit + Analytics**
+
+---
+
+# 14.70 أهم قرار معماري في Module 14
+
+هناك نقطة أعتبرها أساسية جدًا:
+
+**Module 14 يجب ألا يصبح Owner لكل عمليات HR.**
+
+هو:
+
+> **Front Door + Orchestration Layer**
+
+وليس:
+
+> **System of Record لكل شيء.**
+
+بالتالي:
+
+```text
+Payroll truth          → Module 09
+Attendance truth       → Module 07
+Leave truth            → Module 08
+Employee Core truth    → Module 01
+Documents truth        → Employee Document Repository
+Learning truth         → Module 11
+Career truth           → Module 12
+ER Cases truth         → Module 13
+```
+
+بينما Module 14 يجيب:
+
+> **ماذا طلب الموظف؟ أين ذهب الطلب؟ من مسؤول عنه؟ متى يجب إنهاؤه؟ ماذا حدث؟ وهل تم حل المشكلة؟**
+
+وهذه المعمارية ستمنع تكرار البيانات بشكل كبير.
+
+---
+
+## النتيجة بعد Module 14
+
+وصلنا الآن تقريبًا إلى Employee Lifecycle متكامل جدًا:
+
+**01** Employee Core
+→ **02** Organization & Job Architecture
+→ **03** Identity / Roles / Security
+→ **04** …
+→ **05** Recruitment & ATS
+→ **06** Onboarding & Activation
+→ **07** Attendance / Shifts / Field Workforce
+→ **08** Leave & Availability
+→ **09** Payroll & Compensation
+→ **10** Performance Management
+→ **11** Learning / Competency / Certification
+→ **12** Career / Talent / Succession / Mobility
+→ **13** Employee Relations / Grievances / Investigations
+→ **14** **HR Service Desk / ESS / Requests / Letters / Documents**
+
+والـModule الذي أراه منطقيًا بعد ذلك هو **Module 15 — Employee Documents, Contracts, Personnel Administration, Social Insurance, Medical Insurance & Compliance Management** لكن بشرط أن نفصله عن Module 14: **Module 14 يستقبل الطلب ويُدير الخدمة، بينما Module 15 يصبح الـsystem of record لكل Personnel Administration والوثائق القانونية والتعاقدية والتأمينات والتجديدات والـexpiry compliance**. وهذا مناسب جدًا لأن الـManual الحالي يعطي Personnel مسؤوليات كبيرة في هذه المنطقة لكنها ما زالت موزعة بين onboarding وHR Operations وoffboarding. 

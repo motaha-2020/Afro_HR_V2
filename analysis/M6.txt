@@ -1,0 +1,3274 @@
+# Module 06 — Onboarding, Pre-Employment Compliance & Employee Activation
+
+هذا الـModule يبدأ **بعد قبول الـJob Offer** مباشرة، ويحوّل الموظف من:
+
+```text
+Accepted Candidate
+```
+
+إلى:
+
+```text
+Fully Activated Employee
+```
+
+الـPeople & Culture Operations Manual يعرّف الـOnboarding كعملية تبدأ فور قبول العرض وتستمر حتى يتم تفعيل الموظف في أنظمة الشركة والـPayroll والمشروع ومنصات العميل، مع التأكد من الجاهزية التشغيلية والالتزام. 
+
+والـManual يحدد 9 مراحل أساسية:
+
+```text
+01 Onboarding Initiation
+02 Hiring Notification
+03 Document Collection
+04 Contracting & Compliance
+05 System Registration
+06 Equipment Preparation
+07 HSE Requirements
+08 Orientation & Induction
+09 Employment Activation
+```
+
+وهذه ستكون الـBackbone الرسمية للـModule. 
+
+---
+
+# 6.1 Module Objective
+
+الهدف ليس مجرد:
+
+```text
+Upload Documents
++
+Create Employee
+```
+
+بل بناء **Onboarding Control Engine** يتحقق أن الموظف لا يبدأ العمل قبل استيفاء المتطلبات الخاصة به.
+
+النموذج:
+
+```text
+Offer Accepted
+      ↓
+Onboarding Case
+      ↓
+Compliance Requirements
+      ↓
+Documents
+      ↓
+Contract
+      ↓
+Systems
+      ↓
+Assets
+      ↓
+Medical / HSE
+      ↓
+Orientation
+      ↓
+Deployment Readiness
+      ↓
+Employment Activation
+```
+
+---
+
+# 6.2 Main Components
+
+```text
+01 Onboarding Case Management
+02 Hiring Notification
+03 Pre-Employment Checklist
+04 Document Collection
+05 Document Verification
+06 Contract Management
+07 Insurance Registration
+08 Payroll Preparation
+09 System Provisioning
+10 Email & Account Creation
+11 Asset / Equipment Allocation
+12 Medical Clearance
+13 HSE Requirements
+14 Training & Certification
+15 Orientation & Induction
+16 Customer Requirements
+17 Shadowing & Deployment
+18 Readiness Engine
+19 Employee Activation
+20 SLA & Escalation
+21 Onboarding Analytics
+```
+
+---
+
+# 6.3 Onboarding Trigger
+
+الـOnboarding لا يبدأ يدويًا من الصفر.
+
+يبدأ تلقائيًا عند تحقق:
+
+```text
+Offer Status = Accepted
+AND
+Hiring Approval = Completed
+AND
+Joining Date = Confirmed
+```
+
+ثم:
+
+```text
+Create Onboarding Case
+```
+
+مثلاً:
+
+```text
+ONB-2026-001582
+```
+
+---
+
+# 6.4 Recruitment Handover
+
+Module 05 يرسل تلقائيًا:
+
+```text
+Candidate
+Approved Offer
+Position
+Project
+Manager
+Location
+Employment Type
+Salary
+Allowances
+Joining Date
+Required Certifications
+Customer Requirements
+```
+
+إلى Module 06.
+
+لا إعادة إدخال.
+
+وهذا يتوافق مع الـManual الذي يجعل Talent Acquisition مسؤولًا عن نقل كامل ملف التوظيف المعتمد إلى Personnel وبدء إجراءات الـOnboarding. 
+
+---
+
+# 6.5 Onboarding Case
+
+لكل New Hire:
+
+```text
+Onboarding Case ID
+Employee / Pre-Hire
+Company
+Project
+Position
+Manager
+HR Operations Owner
+Personnel Owner
+Recruiter
+
+Joining Date
+Target Activation Date
+
+Priority
+Status
+Readiness %
+SLA Status
+```
+
+---
+
+# 6.6 Onboarding Status
+
+```text
+Not Started
+Initiated
+Pending Documents
+Pending Verification
+Pending Contract
+Pending Systems
+Pending Equipment
+Pending HSE
+Pending Orientation
+Pending Customer Approval
+Pending Deployment
+Ready for Activation
+Activated
+On Hold
+Cancelled
+Failed
+```
+
+---
+
+# 6.7 Onboarding Initiation
+
+الـManual يحدد أن Talent Acquisition يقوم بـ:
+
+* إصدار Hiring Email المعتمد.
+* إنشاء New Hire Onboarding Template.
+* مشاركة candidate information.
+* إرفاق Job Offer والمستندات.
+* تأكيد Joining Date.
+* التنسيق مع Personnel وIT وHSE وOperations وAdministration.
+
+
+
+النظام يحول ذلك إلى Workflow آلي.
+
+---
+
+# 6.8 Hiring Notification
+
+بدل Email يدوي:
+
+```text
+Generate Hiring Notification
+```
+
+النظام ينشئ Record رسمي.
+
+البيانات المطلوبة في الـManual تشمل:
+
+```text
+English Candidate Name
+Arabic Candidate Name
+National ID Number
+Mobile Number
+Position Title
+Project Code
+Project Name
+Direct Manager
+Work Location
+Net Salary
+Allowances & Benefits
+Social Insurance Number
+Contract Signing Date
+Joining Date
+```
+
+
+
+---
+
+# 6.9 Hiring Notification Recipients
+
+Configurable:
+
+```text
+Personnel
+Talent Acquisition
+HR Operations
+IT
+HSE
+Administration
+Operations
+Payroll
+Project Manager
+Finance
+Security
+Warehouse
+```
+
+حسب نوع الموظف.
+
+ليس كل Department يجب أن يستقبل كل Hiring Notification.
+
+---
+
+# 6.10 Dynamic Onboarding Template
+
+النظام لا يستخدم Checklist واحدة لكل الموظفين.
+
+بل:
+
+```text
+Position
++
+Employment Type
++
+Worker Category
++
+Project
++
+Customer
++
+Country
++
+Location
+```
+
+تحدد Requirements.
+
+مثلاً:
+
+```text
+Office Accountant
+```
+
+يختلف عن:
+
+```text
+Rigger
+```
+
+ويختلف عن:
+
+```text
+Project Manager assigned to Ericsson
+```
+
+---
+
+# 6.11 Example Dynamic Checklist
+
+### Office Employee
+
+```text
+Documents
+Contract
+ERP
+Email
+Laptop
+Orientation
+Payroll
+```
+
+### Field Technician
+
+```text
+Documents
+Contract
+ERP
+Medical
+Skill Certificate
+Professional License
+PPE
+HSE Training
+Project Assignment
+Customer Clearance
+```
+
+### Rigger
+
+```text
+Documents
+Contract
+ERP
+Medical
+Working at Heights
+Risk Assessment
+PPE
+Customer Requirements
+Site Access
+```
+
+---
+
+# 6.12 Pre-Employment Compliance Engine
+
+لكل Employee:
+
+```text
+Requirement
+Required?
+Status
+Owner
+Due Date
+Evidence
+Verified By
+Blocking?
+```
+
+مثلاً:
+
+| Requirement        | Required | Blocking |
+| ------------------ | -------: | -------: |
+| National ID        |      Yes |      Yes |
+| Contract           |      Yes |      Yes |
+| Medical            |      Yes |      Yes |
+| Laptop             |      Yes |       No |
+| Working at Heights |      Yes |      Yes |
+| Corporate Email    |      Yes |    Maybe |
+
+---
+
+# 6.13 Blocking vs Non-Blocking Requirement
+
+مهم جدًا.
+
+مثلاً:
+
+```text
+Medical Clearance
+```
+
+قد يكون:
+
+```text
+Activation Blocking = Yes
+```
+
+بينما:
+
+```text
+Company Business Card
+```
+
+قد يكون:
+
+```text
+Activation Blocking = No
+```
+
+وبالتالي:
+
+```text
+All Blocking Requirements Complete
+→ Ready for Activation
+```
+
+---
+
+# 6.14 Stage 2 — Hiring Notification & Personnel Initiation
+
+الـManual يجعل Personnel مسؤولًا عن:
+
+```text
+Receive Hiring Email
+Issue Hiring Notification
+Open Onboarding Record
+Register Employee in Tracker
+Coordinate Departments
+```
+
+والـOutput:
+
+```text
+Onboarding Record Created
+```
+
+
+
+في النظام هذا يحدث تلقائيًا.
+
+---
+
+# 6.15 Personnel Assignment
+
+يمكن توزيع Onboarding Cases حسب:
+
+```text
+Company
+Location
+Project
+Worker Type
+Customer
+Legal Entity
+```
+
+مثلاً:
+
+```text
+Ericsson
+→ Personnel Specialist A
+
+Huawei/Nokia
+→ Personnel Specialist B
+```
+
+---
+
+# 6.16 Stage 3 — Document Collection
+
+الـManual يحدد أن Personnel مسؤول عن:
+
+```text
+Send Hiring Document Checklist
+Collect Documents
+Verify Validity
+Create Personnel File
+```
+
+والـOutput:
+
+```text
+Verified Employee File
+```
+
+
+
+---
+
+# 6.17 Required Documents
+
+حسب الـManual الحالي:
+
+```text
+Original Computerized Birth Certificate
+
+Original Academic Qualification Certificate
+
+Original Military Service Certificate
+
+Form 6 / Social Insurance Printout
+
+Employment Card (Kaab Amal)
+
+Police Clearance
+issued in name of Afro Egypt
+
+6 Personal Photos
+
+2 Copies National ID
+
+Medical Examination Form 111
+
+Engineers Syndicate Card
+if applicable
+
+Skill Level Assessment Certificate
+for Technicians
+
+Professional Practice License
+for Technicians
+```
+
+
+
+---
+
+# 6.18 Digital Document Checklist
+
+مثال:
+
+```text
+National ID
+✓ Uploaded
+✓ Verified
+
+Birth Certificate
+✓ Received
+✓ Verified
+
+Military Certificate
+⚠ Missing
+
+Medical Form 111
+⏳ Pending
+
+Skill Certificate
+✓ Verified
+```
+
+---
+
+# 6.19 Document Collection Channels
+
+يدعم:
+
+```text
+Employee Self Upload
+HR Upload
+Mobile Camera Upload
+Scanner Upload
+Bulk Upload
+API
+```
+
+مع إمكانية تحديد:
+
+```text
+Original Required
+Copy Accepted
+Digital Copy Accepted
+```
+
+---
+
+# 6.20 Original Document Tracking
+
+لأن بعض المستندات في الـManual مطلوبة كـOriginal.
+
+النظام يجب أن يفرق:
+
+```text
+Digital Copy
+Physical Copy
+Original
+```
+
+مثلاً:
+
+```text
+Academic Certificate
+
+Digital:
+Uploaded
+
+Original:
+Received by Personnel
+```
+
+---
+
+# 6.21 Physical Document Custody
+
+لكل Original Document:
+
+```text
+Received By
+Received Date
+Storage Location
+File Number
+Returned?
+Return Date
+Acknowledgment
+```
+
+وهذا مهم أيضًا عند Offboarding.
+
+---
+
+# 6.22 Document Verification
+
+الموظف قد يرفع مستندًا لكن هذا لا يعني أنه Approved.
+
+Statuses:
+
+```text
+Missing
+Uploaded
+Under Review
+Verified
+Rejected
+Expired
+Waived
+```
+
+---
+
+# 6.23 Rejection Reasons
+
+مثلاً:
+
+```text
+Unreadable
+Expired
+Incorrect Document
+Name Mismatch
+Missing Page
+Not Original
+Invalid Certification
+Wrong Issuing Authority
+```
+
+---
+
+# 6.24 Conditional Document Rules
+
+مثلاً:
+
+```text
+IF Position Category = Engineer
+THEN Engineers Syndicate Card Required
+```
+
+والـManual يحددها "if applicable". 
+
+---
+
+# 6.25 Technician Rule
+
+```text
+IF Worker Category = Technician
+THEN
+
+Skill Level Assessment
++
+Professional Practice License
+```
+
+وهي متطلبات مذكورة صراحة في الـManual. 
+
+---
+
+# 6.26 Document Expiry
+
+بعض Documents لها:
+
+```text
+Issue Date
+Expiry Date
+```
+
+النظام يحسب:
+
+```text
+Valid
+Expiring
+Expired
+```
+
+ولا يكتفي بحالة Onboarding فقط؛ تنتقل المتابعة لاحقًا إلى Module 04 / HR Operations.
+
+---
+
+# 6.27 Document Completeness Score
+
+مثلاً:
+
+```text
+Documents
+8 / 10
+
+Completion:
+80%
+```
+
+لكن أهم من النسبة:
+
+```text
+Blocking Missing Documents: 2
+```
+
+---
+
+# 6.28 Stage 4 — Contracting & Compliance
+
+الـManual يحدد:
+
+```text
+Employment Contract
+Social Insurance Form 1
+NDA if applicable
+Employee Handbook
+Employee Handbook Acknowledgment
+Medical Insurance
+Payroll Bank Letter
+Payroll Registration
+```
+
+
+
+كل واحدة تصبح Task / Requirement مستقلة.
+
+---
+
+# 6.29 Contract Generation
+
+Contract لا يعاد كتابته يدويًا لكل موظف.
+
+النظام يستخدم Templates حسب:
+
+```text
+Legal Entity
+Country
+Employment Type
+Position
+Grade
+Contract Type
+Language
+```
+
+---
+
+# 6.30 Contract Data
+
+```text
+Contract Number
+Contract Type
+Start Date
+End Date
+Probation
+Position
+Location
+Salary Reference
+Benefits
+Notice Period
+Working Hours
+```
+
+---
+
+# 6.31 Contract Workflow
+
+```text
+Draft Generated
+      ↓
+Personnel Review
+      ↓
+HR Approval
+      ↓
+Employee Signature
+      ↓
+Company Signature
+      ↓
+Active Contract
+```
+
+---
+
+# 6.32 Digital vs Physical Signature
+
+ندعم:
+
+```text
+Digital Signature
+Electronic Acceptance
+Physical Signature
+Uploaded Signed Copy
+```
+
+حسب Legal/Company Policy.
+
+---
+
+# 6.33 Contract Blocking Rule
+
+مثلاً:
+
+```text
+Contract Signed = No
+```
+
+النتيجة:
+
+```text
+Employment Activation Blocked
+```
+
+والـManual نفسه يشترط إتمام contractual obligations قبل activation. 
+
+---
+
+# 6.34 NDA
+
+Dynamic Rule:
+
+```text
+IF
+Position Requires NDA
+OR
+Project Requires NDA
+THEN
+NDA Required
+```
+
+---
+
+# 6.35 Employee Handbook
+
+النظام يوفر:
+
+```text
+Handbook Version
+Read Status
+Acknowledgment
+Timestamp
+```
+
+مثلاً:
+
+```text
+Employee Handbook v3.2
+Acknowledged:
+10-Aug-2026 10:42
+```
+
+---
+
+# 6.36 Policy Acknowledgments
+
+يمكن إضافة:
+
+```text
+Code of Conduct
+Information Security
+Data Protection
+HSE Policy
+Vehicle Policy
+Travel Policy
+Customer Policy
+```
+
+---
+
+# 6.37 Social Insurance
+
+الـManual يذكر:
+
+```text
+Form 1 effective from joining date
+and submission within 1 week
+```
+
+
+
+النظام يتابع:
+
+```text
+Form 1 Required
+Prepared
+Submitted
+Submission Date
+Insurance Number
+Activated
+```
+
+---
+
+# 6.38 Insurance SLA
+
+مثلاً:
+
+```text
+Joining:
+10-Aug
+
+Submission Due:
+17-Aug
+```
+
+Dashboard:
+
+```text
+Due in 2 days
+```
+
+---
+
+# 6.39 Medical Insurance
+
+الـManual يذكر أن التسجيل يكون effective from joining date وأن issuance يتم خلال أسبوع. 
+
+نتابع:
+
+```text
+Provider
+Category
+Request Date
+Activation Date
+Card Issued
+Card Number
+```
+
+---
+
+# 6.40 Payroll Bank Letter
+
+Task:
+
+```text
+Bank Letter Required
+```
+
+States:
+
+```text
+Not Required
+Pending
+Issued
+Delivered
+Account Opened
+Bank Data Received
+Verified
+```
+
+---
+
+# 6.41 Payroll Registration
+
+لا يعني Payroll calculation.
+
+بل:
+
+```text
+Payroll Eligible
+Payroll Group
+Payroll ID
+Bank Status
+Salary Effective Date
+```
+
+---
+
+# 6.42 Stage 5 — System Setup
+
+الـManual يحدد:
+
+```text
+Create Employee Profile in ERP
+Generate HR Code
+Update Employee Records
+Send Corporate Email Creation to IT
+Send System Access Provisioning to IT
+```
+
+Responsible:
+
+```text
+Personnel & Talent Acquisition
+```
+
+
+
+---
+
+# 6.43 Employee Creation
+
+عند الوصول لهذه المرحلة:
+
+```text
+Pre-Hire
+      ↓
+Employee Master Record
+```
+
+في Module 04.
+
+لكن status يظل:
+
+```text
+Pending Activation
+```
+
+ولا يصبح Active تلقائيًا.
+
+---
+
+# 6.44 HR Code Generation
+
+يتم استدعاء Module 04:
+
+```text
+Generate HR Code
+```
+
+مرة واحدة فقط.
+
+---
+
+# 6.45 ERP Registration
+
+إذا Nama ERP integrated:
+
+```text
+Create Employee
+      ↓
+Nama ERP
+      ↓
+ERP Employee ID
+      ↓
+Sync Back
+```
+
+ويظهر:
+
+```text
+Nama ERP
+✓ Registered
+
+ERP ID:
+NMA-104782
+```
+
+---
+
+# 6.46 Integration Failure Handling
+
+مثلاً:
+
+```text
+ERP Registration Failed
+```
+
+لا نخفي الخطأ.
+
+يسجل:
+
+```text
+Error
+Retry Count
+Last Attempt
+Owner
+```
+
+مثلاً:
+
+```text
+⚠ ERP Sync Failed
+Duplicate employee code
+```
+
+---
+
+# 6.47 Corporate Email Creation
+
+Task إلى IT:
+
+```text
+Create:
+firstname.lastname@company.com
+```
+
+Statuses:
+
+```text
+Requested
+Provisioning
+Created
+Failed
+Delivered
+```
+
+---
+
+# 6.48 System Access Provisioning
+
+هنا الربط مع Module 03.
+
+يتم توليد Access Requirements من:
+
+```text
+Position
+Role
+Project
+Customer
+```
+
+مثلاً:
+
+```text
+Employee Portal
+✓
+
+ERP
+✓
+
+Project System
+✓
+
+Finance System
+✕
+
+Customer Portal
+Pending
+```
+
+---
+
+# 6.49 Principle of Least Privilege
+
+Onboarding لا يعطي المستخدم كل الصلاحيات بمجرد أن Position = Manager.
+
+بل:
+
+```text
+Position
+→ Suggested Roles
+→ Approval
+→ Provisioning
+```
+
+ثم Module 03 يتحكم فعليًا في Access.
+
+---
+
+# 6.50 Access Activation Timing
+
+بعض الأنظمة يمكن إنشاؤها مسبقًا:
+
+```text
+Account Created
+```
+
+لكن:
+
+```text
+Login Disabled Until Joining Date
+```
+
+ميزة مهمة.
+
+---
+
+# 6.51 Stage 6 — Equipment & Operational Preparation
+
+الـManual يذكر Equipment Allocation حسب الدور:
+
+```text
+Laptop
+Mobile Phone & Bucket
+PPE Tools
+Uniform
+Access Card
+Other Tools
+```
+
+
+
+النظام يجعلها Role-Based Equipment Profile.
+
+---
+
+# 6.52 Equipment Profile by Position
+
+مثلاً:
+
+### Project Manager
+
+```text
+Laptop
+Mobile
+SIM
+Access Card
+PPE
+```
+
+### Technician
+
+```text
+Uniform
+Helmet
+Safety Shoes
+Vest
+Tools
+PPE
+Access Card
+```
+
+---
+
+# 6.53 Equipment Request Workflow
+
+```text
+Requirement Generated
+      ↓
+Warehouse / IT / Admin
+      ↓
+Reservation
+      ↓
+Issue
+      ↓
+Employee Acknowledgment
+```
+
+---
+
+# 6.54 Equipment Availability
+
+قبل Joining:
+
+```text
+Laptop
+Available ✓
+
+Mobile
+Available ✓
+
+PPE
+Out of Stock ⚠
+```
+
+ويظهر Operational Risk.
+
+---
+
+# 6.55 Asset Reservation
+
+يمكن حجز Asset للموظف قبل Joining:
+
+```text
+Laptop LT-10934
+Reserved for:
+Ahmed Mohamed
+```
+
+---
+
+# 6.56 Asset Handover
+
+عند التسليم:
+
+```text
+Asset
+Serial Number
+Condition
+Issued Date
+Issued By
+Employee Acceptance
+Photo
+Document
+```
+
+---
+
+# 6.57 Access Card
+
+يتابع:
+
+```text
+Request
+Printed
+Activated
+Delivered
+Card Number
+```
+
+---
+
+# 6.58 Operational Readiness
+
+الـManual يعتبر Output لهذه المرحلة:
+
+```text
+Operational Readiness
+```
+
+
+
+لكن نحن سنحسبها بدقة بدل Boolean واحد.
+
+---
+
+# 6.59 Stage 7 — HSE Requirements
+
+الـManual يحدد Medical Examination mandatory لبعض الوظائف، ومنها:
+
+```text
+CM/PM Engineers
+CM/PM Riggers
+```
+
+ويحدد Safety Courses حسب role. 
+
+---
+
+# 6.60 HSE Requirement Engine
+
+```text
+Position
++
+Project
++
+Customer
++
+Work Type
+```
+
+ينتج:
+
+```text
+Medical
+Fire Fighting
+First Aid
+Electrical Safety
+Risk Assessment
+Working at Heights
+```
+
+---
+
+# 6.61 Medical Examination
+
+Profile:
+
+```text
+Medical Required?
+Appointment
+Provider
+Examination Date
+Result
+Expiry
+Attachment
+```
+
+Result:
+
+```text
+Fit
+Fit with Restrictions
+Temporarily Unfit
+Unfit
+Pending
+```
+
+---
+
+# 6.62 Medical Gate
+
+مثلاً:
+
+```text
+Safety Sensitive = Yes
+AND
+Medical != Fit
+```
+
+النتيجة:
+
+```text
+Deployment Blocked
+```
+
+وهو يتماشى مع الـManual الذي يمنع deployment للوظائف الحساسة قبل استكمال medical examinations ومتطلبات HSE. 
+
+---
+
+# 6.63 HSE Training
+
+لكل Course:
+
+```text
+Course
+Required
+Scheduled Date
+Completed Date
+Score
+Certificate
+Expiry
+Provider
+```
+
+---
+
+# 6.64 HSE Certificate Expiration
+
+مثلاً:
+
+```text
+Working at Heights
+Expires:
+15-Sep-2026
+```
+
+سيستمر النظام في المتابعة حتى بعد onboarding.
+
+---
+
+# 6.65 Customer-Specific HSE
+
+مثلاً:
+
+```text
+Ericsson HSE Induction
+Huawei Safety Passport
+Nokia Customer Certification
+```
+
+تضاف كRequirements منفصلة.
+
+---
+
+# 6.66 HSE SLA
+
+الـManual يحدد لهذه المرحلة:
+
+```text
+P0 = 10–15 Working Days
+P1 = 20–25 Working Days
+```
+
+
+
+يمكن تحميلها Default وتعديلها من Tenant Configuration.
+
+---
+
+# 6.67 Stage 8 — Orientation & Induction
+
+الـManual يقسمها إلى:
+
+### HR Orientation
+
+```text
+Company Policies
+Benefits
+Code of Conduct
+HR Procedures
+```
+
+### HSE Orientation
+
+```text
+Safety Requirements
+Emergency Procedures
+Site Regulations
+```
+
+### Operational Induction
+
+```text
+Project Requirements
+Reporting Lines
+Site Procedures
+```
+
+
+
+---
+
+# 6.68 Orientation Sessions
+
+النظام يدعم:
+
+```text
+Individual Session
+Group Session
+Online Session
+Recorded Course
+Classroom
+Site Induction
+```
+
+---
+
+# 6.69 Orientation Scheduling
+
+يمكن جمع:
+
+```text
+20 New Hires
+```
+
+في:
+
+```text
+New Joiner Orientation
+15-Aug-2026
+```
+
+بدل 20 جلسة منفصلة.
+
+---
+
+# 6.70 Attendance & Completion
+
+لكل Orientation:
+
+```text
+Assigned
+Invited
+Attended
+Completed
+Failed
+No Show
+Rescheduled
+```
+
+---
+
+# 6.71 Knowledge Confirmation
+
+بعد Orientation يمكن:
+
+```text
+Quiz
+Acknowledgment
+Checklist
+```
+
+مثلاً:
+
+```text
+Code of Conduct Quiz
+Score: 90%
+Pass
+```
+
+---
+
+# 6.72 Operational Induction
+
+يتم بواسطة:
+
+```text
+Operations
+Project Manager
+Direct Manager
+```
+
+ويتأكد الموظف من:
+
+```text
+Project
+Role
+Reporting Line
+Working Hours
+Site Rules
+Escalation
+Targets
+Tools
+```
+
+---
+
+# 6.73 Manager Confirmation
+
+Manager يؤكد:
+
+```text
+Employee has received operational induction
+```
+
+مع:
+
+```text
+Date
+Comments
+```
+
+---
+
+# 6.74 Stage 9 — Employment Activation
+
+الـManual يحدد Activation Requirements:
+
+```text
+Documentation completed
+Contracts signed
+HSE requirements completed
+Medical clearance obtained
+Systems ready
+Required certificates submitted
+```
+
+والـOutput:
+
+```text
+Employee Activated
+```
+
+
+
+هذه تصبح Rule Engine لا Manual Checkbox.
+
+---
+
+# 6.75 Activation Readiness Engine
+
+المعادلة:
+
+```text
+READY =
+Mandatory Documents Complete
+AND
+Contract Signed
+AND
+Mandatory HSE Complete
+AND
+Medical Clearance Passed
+AND
+Blocking Systems Ready
+AND
+Mandatory Certificates Valid
+AND
+Required Approvals Complete
+```
+
+---
+
+# 6.76 Activation Matrix
+
+مثال:
+
+```text
+Documents             ✓
+Contract              ✓
+Social Insurance      ✓
+ERP                    ✓
+Corporate Email       ✓
+Laptop                 ✓
+Medical                ✓
+HSE                    ✓
+Customer Induction    ✕
+```
+
+Result:
+
+```text
+91% Complete
+
+BLOCKED
+Reason:
+Customer Induction Missing
+```
+
+---
+
+# 6.77 Readiness Score vs Activation Gate
+
+هذه نقطة مهمة.
+
+موظف قد يكون:
+
+```text
+Readiness Score = 95%
+```
+
+لكن Missing Requirement واحد Blocking.
+
+إذن:
+
+```text
+Activation = NO
+```
+
+النسبة ليست هي القرار.
+
+---
+
+# 6.78 Activation Approval
+
+بعد اكتمال Requirements:
+
+```text
+System:
+Ready for Activation
+```
+
+ثم حسب Policy:
+
+```text
+Personnel Approval
+HR Operations Confirmation
+Manager Confirmation
+```
+
+ثم:
+
+```text
+ACTIVATE
+```
+
+---
+
+# 6.79 Activation Date
+
+نفرق:
+
+```text
+Joining Date
+Activation Date
+Deployment Date
+Payroll Effective Date
+```
+
+قد تكون مختلفة.
+
+مثال:
+
+```text
+Joining Date:
+10-Aug
+
+Activation:
+10-Aug
+
+HSE Deployment:
+20-Aug
+
+Project Deployment:
+23-Aug
+```
+
+---
+
+# 6.80 Supportive Functions
+
+الـManual يذكر أن بعض Supportive Functions قد يتم تفعيلها في نفس اليوم. 
+
+لذلك لا نفرض 25 يومًا على الجميع.
+
+Rules تحدد:
+
+```text
+Fast Track
+Standard
+Safety Sensitive
+Customer Controlled
+```
+
+---
+
+# 6.81 Onboarding Paths
+
+### Fast Track
+
+```text
+Office Employee
+Same Day / Short Cycle
+```
+
+### Standard
+
+```text
+Normal Employee
+```
+
+### HSE Intensive
+
+```text
+Field / Safety Sensitive
+```
+
+### Customer Controlled
+
+```text
+Requires external customer clearance
+```
+
+---
+
+# 6.82 Shadowing Period
+
+الـHR Operations section في الـManual ينص على متابعة minimum two-week shadowing period مع الفريق، ثم تأكيد جاهزية الموظف للعمل بصورة مستقلة. 
+
+لذلك نضيف:
+
+```text
+Shadowing Start
+Shadowing End
+Assigned Buddy
+Assigned Team
+Manager Assessment
+Employee Confirmation
+```
+
+---
+
+# 6.83 Buddy / Mentor
+
+اختياري:
+
+```text
+New Employee
+      ↓
+Buddy
+```
+
+يساعد في:
+
+```text
+Orientation
+Systems
+Work Process
+Team Introduction
+```
+
+---
+
+# 6.84 Shadowing Status
+
+```text
+Not Required
+Planned
+In Progress
+Completed
+Extended
+Failed
+```
+
+---
+
+# 6.85 Deployment Readiness
+
+بعد Shadowing:
+
+```text
+Employee
++
+Direct Manager
+```
+
+يؤكدان أن الموظف:
+
+```text
+Ready to Work Independently
+```
+
+حسب ما ورد في HR Operations workflow. 
+
+---
+
+# 6.86 Deployment Status
+
+```text
+Not Ready
+Pending
+Ready
+Scheduled
+Deployed
+Deployment Blocked
+```
+
+---
+
+# 6.87 Customer Portal / External Activation
+
+لأن الموظفين قد يحتاجون Customer Systems:
+
+```text
+Customer
+Portal
+Customer ID
+Access Request
+Status
+Expiry
+```
+
+مثلاً:
+
+```text
+Ericsson ID
+Pending Approval
+```
+
+---
+
+# 6.88 Customer Clearance
+
+قد يشمل:
+
+```text
+Customer Interview
+Safety Approval
+Certificate
+Medical
+Background Check
+Site Badge
+Portal User
+```
+
+Configurable.
+
+---
+
+# 6.89 Onboarding Owner Model
+
+لا يجب أن يكون Person واحد مسؤولًا عن كل شيء.
+
+مثلاً:
+
+```text
+Talent Acquisition
+→ Initiation
+
+Personnel
+→ Documents / Contract / Insurance
+
+IT
+→ Systems / Laptop
+
+Administration
+→ Access Card / Uniform
+
+HSE
+→ Medical / Training
+
+Operations
+→ Project Deployment
+
+Direct Manager
+→ Operational Induction
+
+HR Operations
+→ Overall Follow-up
+```
+
+وهذا يعكس توزيع المسؤوليات في الـManual. 
+
+---
+
+# 6.90 RACI per Requirement
+
+مثلاً:
+
+| Requirement        | Responsible      | Approver      |
+| ------------------ | ---------------- | ------------- |
+| Contract           | Personnel        | HR            |
+| Laptop             | IT               | IT Manager    |
+| PPE                | Operations/Admin | Operations    |
+| Medical            | HSE              | HSE           |
+| ERP                | Personnel        | System        |
+| Project Assignment | Operations       | PM            |
+| Activation         | HR               | Authorized HR |
+
+---
+
+# 6.91 SLA Engine
+
+كل Task له:
+
+```text
+Created
+Start
+Due
+Completed
+SLA Status
+```
+
+مثال من الـManual:
+
+```text
+Equipment Preparation
+
+P0:
+1–2 Working Days
+
+P1:
+3–5 Working Days
+```
+
+
+
+---
+
+# 6.92 Working-Day Calendar
+
+SLA يحترم:
+
+```text
+Weekend
+Public Holidays
+Company Holidays
+Location Calendar
+```
+
+---
+
+# 6.93 SLA Risk Indicator
+
+```text
+Green
+Within SLA
+
+Amber
+80% SLA Used
+
+Red
+SLA Breached
+```
+
+---
+
+# 6.94 Escalation
+
+مثلاً:
+
+```text
+Laptop Pending
+Due Tomorrow
+→ IT Reminder
+```
+
+بعد breach:
+
+```text
+→ IT Manager
+→ HR Operations
+```
+
+---
+
+# 6.95 Joining Risk Detection
+
+مثلاً:
+
+```text
+Joining in 2 Days
+```
+
+لكن:
+
+```text
+Contract Missing
+Laptop Missing
+Medical Pending
+```
+
+النظام يصدر:
+
+```text
+HIGH RISK JOINER
+```
+
+---
+
+# 6.96 Joining Day Checklist
+
+مثلاً:
+
+```text
+Employee Arrival
+ID Verification
+Contract Signature
+Orientation
+Laptop Handover
+Access Card
+Manager Introduction
+Attendance Registration
+```
+
+---
+
+# 6.97 No-Show on Joining
+
+لو Candidate Accepted Offer لكنه لم يحضر:
+
+```text
+Joining No-Show
+```
+
+Workflow:
+
+```text
+Notify TA
+Notify Personnel
+Stop Activation
+Cancel Asset Reservation
+Disable Pending Accounts
+Return Vacancy to Recruitment
+```
+
+---
+
+# 6.98 Joining Date Change
+
+إذا تم تغيير Joining Date:
+
+```text
+10-Aug
+→
+17-Aug
+```
+
+يتم Recalculate:
+
+```text
+Tasks
+SLA
+Account Activation
+Asset Reservation
+Orientation
+Medical Appointment
+```
+
+---
+
+# 6.99 Onboarding Hold
+
+أسباب:
+
+```text
+Missing Documents
+Customer Delay
+Medical Issue
+Background Check
+Visa
+Project Delay
+Candidate Request
+Budget Hold
+```
+
+مع:
+
+```text
+Hold Start
+Reason
+Owner
+Resume Date
+```
+
+---
+
+# 6.100 Onboarding Cancellation
+
+مثلاً:
+
+```text
+Candidate withdrew
+Project cancelled
+Failed medical
+Failed compliance
+Offer withdrawn
+```
+
+Workflow:
+
+```text
+Cancel Case
+Revoke Pending Access
+Cancel Equipment
+Inform Payroll
+Return Requisition Vacancy
+```
+
+---
+
+# 6.101 Employee Self-Service Onboarding Portal
+
+قبل Joining يمكن Candidate / Pre-Hire دخول Portal محدود.
+
+يرى:
+
+```text
+Welcome
+Required Documents
+Tasks
+Joining Date
+Office Location
+Contact Person
+Offer
+Policies
+Orientation
+Progress
+```
+
+---
+
+# 6.102 Pre-Hire Portal Security
+
+لا يحصل على Employee Access الكامل.
+
+Account Type:
+
+```text
+Pre-Hire User
+```
+
+صلاحيات فقط:
+
+```text
+Own Onboarding
+Upload Documents
+View Tasks
+Accept Policies
+View Offer
+```
+
+---
+
+# 6.103 Mobile-Friendly Onboarding
+
+مهم جدًا للعمالة الميدانية.
+
+يدعم:
+
+```text
+Upload National ID
+Upload Certificate
+Take Photo
+Sign Acknowledgment
+View Appointment
+Receive OTP
+```
+
+من الموبايل.
+
+---
+
+# 6.104 Notifications
+
+قنوات:
+
+```text
+In-App
+Email
+SMS
+Mobile Push
+```
+
+ويمكن لاحقًا WhatsApp حسب التكامل.
+
+---
+
+# 6.105 Employee Notifications
+
+مثل:
+
+```text
+Please upload your National ID.
+
+Your medical examination is scheduled.
+
+Your joining date is tomorrow.
+
+Your contract is ready for signature.
+```
+
+---
+
+# 6.106 Department Notifications
+
+مثلاً:
+
+```text
+New Employee joins in 3 days.
+
+Laptop not prepared.
+
+Medical clearance pending.
+
+System access request overdue.
+```
+
+---
+
+# 6.107 Onboarding Tasks Board
+
+لكل HR Operations:
+
+```text
+To Do
+In Progress
+Blocked
+Overdue
+Completed
+```
+
+---
+
+# 6.108 Onboarding Calendar
+
+يعرض:
+
+```text
+Joining Dates
+Medical Exams
+HSE Courses
+Orientations
+Contract Signing
+Deployment Dates
+```
+
+---
+
+# 6.109 Bulk Onboarding
+
+مهم جدًا في المشاريع.
+
+مثلاً:
+
+```text
+100 Technicians
+joining same week
+```
+
+النظام يدعم:
+
+```text
+Bulk Create Cases
+Bulk Assign Orientation
+Bulk Medical Scheduling
+Bulk HSE Course
+Bulk Equipment Request
+Bulk Notification
+```
+
+---
+
+# 6.110 Cohort Onboarding
+
+نسمي مجموعة:
+
+```text
+Cohort:
+Ericsson Technicians Aug-2026
+```
+
+عدد:
+
+```text
+75 Employees
+```
+
+ونتابعها كوحدة واحدة.
+
+---
+
+# 6.111 Batch Orientation
+
+```text
+Orientation Session:
+15-Aug
+
+Capacity:
+40
+
+Assigned:
+40
+```
+
+ثم Session ثانية للباقي.
+
+---
+
+# 6.112 Bulk Document Status
+
+HR يرى:
+
+```text
+75 Joiners
+
+National ID       75/75
+Birth Certificate 70/75
+Medical           43/75
+Skill Certificate 68/75
+```
+
+---
+
+# 6.113 Onboarding Dashboard
+
+مثال:
+
+```text
+Active Onboarding Cases       184
+
+Joining This Week              42
+Joining Next Week              37
+
+Ready for Activation           31
+Blocked                        28
+Overdue                        19
+
+Document Completion            91%
+System Readiness               87%
+HSE Readiness                  73%
+Equipment Readiness            81%
+```
+
+---
+
+# 6.114 Readiness Dashboard
+
+By Project:
+
+| Project  | Joiners | Ready | Blocked |
+| -------- | ------: | ----: | ------: |
+| Ericsson |      60 |    42 |      18 |
+| Huawei   |      35 |    31 |       4 |
+| Nokia    |      20 |    17 |       3 |
+
+---
+
+# 6.115 Bottleneck Dashboard
+
+مثلاً:
+
+```text
+Top Onboarding Blockers
+
+Medical Clearance          23
+Missing Documents          18
+Customer Approval          14
+Laptop Availability         8
+HSE Training                7
+ERP Registration            3
+```
+
+هذه Dashboard مهمة جدًا إداريًا.
+
+---
+
+# 6.116 Average Onboarding Time
+
+```text
+Offer Accepted
+      ↓
+Activated
+```
+
+نقيس:
+
+```text
+Average
+Median
+P90
+```
+
+حسب:
+
+```text
+Project
+Position
+Worker Category
+HR Owner
+Customer
+```
+
+---
+
+# 6.117 Stage Duration Analytics
+
+مثلاً:
+
+```text
+Document Collection     2.8 Days
+Contracting             1.2 Days
+Systems                 1.5 Days
+Equipment               3.4 Days
+HSE                    11.2 Days
+Orientation             2.1 Days
+```
+
+نكتشف أين المشكلة.
+
+---
+
+# 6.118 First-Day Readiness KPI
+
+مؤشر مهم:
+
+```text
+Employees Fully Ready on Joining Day
+÷
+Total Joiners
+```
+
+مثلاً:
+
+```text
+82%
+```
+
+---
+
+# 6.119 Onboarding Completion Rate
+
+```text
+Completed Onboarding
+÷
+Started Onboarding
+```
+
+---
+
+# 6.120 SLA Compliance
+
+```text
+Personnel     96%
+IT            81%
+HSE           74%
+Administration 89%
+Operations    92%
+```
+
+---
+
+# 6.121 Data Quality Checks
+
+قبل Activation:
+
+```text
+Missing HR Code
+Missing Manager
+No Project
+No Location
+Duplicate National ID
+Missing Contract
+No Bank Details
+Missing Required Certificate
+```
+
+---
+
+# 6.122 Activation Exceptions
+
+لو الإدارة تريد تفعيل Employee رغم Requirement ناقص:
+
+لا نسمح بمجرد الضغط على:
+
+```text
+Override
+```
+
+بل:
+
+```text
+Activation Exception Request
+      ↓
+Missing Requirement
+      ↓
+Business Reason
+      ↓
+Risk
+      ↓
+Authorized Approval
+      ↓
+Temporary Exception
+```
+
+---
+
+# 6.123 Exception Expiry
+
+مثلاً:
+
+```text
+Temporary Customer Certificate Exception
+Valid Until:
+20-Aug
+```
+
+إذا لم يتم حلها:
+
+```text
+Employee Access / Deployment Review
+```
+
+---
+
+# 6.124 Audit Trail
+
+كل Requirement يسجل:
+
+```text
+Created
+Assigned
+Changed
+Uploaded
+Verified
+Rejected
+Approved
+Completed
+Overridden
+```
+
+مثال:
+
+```text
+Medical Clearance
+
+Status:
+Pending → Fit
+
+Changed By:
+HSE Officer
+
+Date:
+15-Aug-2026
+
+Evidence:
+MED-1528.pdf
+```
+
+---
+
+# 6.125 Sensitive Document Security
+
+National ID، medical، contracts وغيرها يجب ألا تظهر لكل المشاركين.
+
+مثلاً:
+
+```text
+IT
+```
+
+يرى:
+
+```text
+Employee Name
+Position
+Laptop Requirement
+Corporate Email
+```
+
+ولا يرى:
+
+```text
+Salary
+Medical Result
+National ID Copy
+Bank Account
+```
+
+---
+
+# 6.126 Department-Specific Views
+
+### Personnel
+
+```text
+Documents
+Contracts
+Insurance
+HR Code
+```
+
+### IT
+
+```text
+Accounts
+Laptop
+Email
+Access
+```
+
+### HSE
+
+```text
+Medical
+Training
+Certificates
+```
+
+### Operations
+
+```text
+Project
+Deployment
+Equipment
+```
+
+### Manager
+
+```text
+Joining
+Orientation
+Readiness
+Deployment
+```
+
+---
+
+# 6.127 No Overexposure in Hiring Notification
+
+Hiring Notification قد تحتوي Net Salary حسب الـManual، لكن ليس معنى ذلك أن كل recipient يجب أن يرى Salary داخل النظام. 
+
+هذه نقطة تصميم مهمة.
+
+نخزن Notification كStructured Data ثم نطبق:
+
+```text
+Field-Level Permission
+```
+
+بدل توزيع Email كامل للجميع.
+
+---
+
+# 6.128 Integration With Module 03
+
+عند:
+
+```text
+Employment Activated
+```
+
+Module 03:
+
+```text
+Activate User
+Activate Approved Roles
+Start Sessions Allowed
+```
+
+وعند عدم الاكتمال:
+
+```text
+User remains Pending / Restricted
+```
+
+---
+
+# 6.129 Integration With Module 04
+
+Module 04 يحصل على:
+
+```text
+Employee
+Contract
+Documents
+Bank
+Insurance
+HSE
+Certifications
+Project
+Manager
+Location
+```
+
+بصورة نهائية.
+
+---
+
+# 6.130 Integration With Payroll
+
+بعد:
+
+```text
+Payroll Registration Complete
+```
+
+يتم إرسال:
+
+```text
+Employee ID
+HR Code
+Salary Effective Date
+Bank
+Payroll Group
+Project Cost Allocation
+```
+
+لاحقًا إلى Payroll Module.
+
+---
+
+# 6.131 Integration With Attendance
+
+عند Employee Activation:
+
+```text
+Register Attendance Identity
+```
+
+مثلاً:
+
+```text
+Fingerprint ID
+Mobile Attendance
+QR
+Face Recognition
+Supervisor Attendance
+```
+
+حسب Policy اللاحقة.
+
+---
+
+# 6.132 Integration With Assets
+
+كل Asset issued:
+
+```text
+Employee Custody
+```
+
+ويظهر في Employee Profile.
+
+---
+
+# 6.133 Integration With Training
+
+HSE courses وغيرها تتحول لاحقًا إلى:
+
+```text
+Training History
+Certification History
+```
+
+---
+
+# 6.134 Integration With HR Operations
+
+الـManual ينص على أن HR Operations يستلم الموظف من Personnel بعد إتمام onboarding ثم يتابع activation، project assignment، work location، readiness وshadowing. 
+
+إذن نهاية Module 06 يجب أن تطلق:
+
+```text
+HR Operations Handover
+```
+
+---
+
+# 6.135 HR Operations Handover Package
+
+```text
+Employee
+Project
+Manager
+Location
+Activation Status
+Outstanding Non-Blocking Items
+Assets
+System Access
+HSE
+Customer Status
+Shadowing Requirement
+Deployment Date
+```
+
+---
+
+# 6.136 Data Model
+
+Core Tables:
+
+```text
+OnboardingCases
+OnboardingTemplates
+OnboardingStages
+
+OnboardingRequirements
+RequirementRules
+RequirementStatuses
+
+OnboardingTasks
+TaskAssignments
+TaskEscalations
+
+HiringNotifications
+
+OnboardingDocuments
+DocumentVerifications
+PhysicalDocumentCustody
+
+Contracts
+ContractSignatures
+PolicyAcknowledgments
+
+InsuranceRegistrations
+PayrollRegistrations
+
+SystemProvisioningRequests
+SystemAccounts
+
+EquipmentRequirements
+EquipmentRequests
+EquipmentIssues
+
+MedicalExaminations
+HSERequirements
+HSETrainingRecords
+
+OrientationSessions
+OrientationParticipants
+
+CustomerClearances
+
+ShadowingAssignments
+DeploymentReadiness
+
+ActivationRequests
+ActivationApprovals
+ActivationExceptions
+```
+
+---
+
+# 6.137 Core Business Rules
+
+```text
+01. Onboarding cannot start without an accepted offer or authorized exception.
+
+02. Every onboarding case must belong to one tenant.
+
+03. Requirements must be generated dynamically from employee/job/project rules.
+
+04. Uploaded document does not equal verified document.
+
+05. Blocking requirements must be completed before activation.
+
+06. Safety-sensitive employees cannot be deployed without required medical/HSE clearance.
+
+07. Contract signature must be tracked separately from contract generation.
+
+08. System accounts may be provisioned before joining but access may remain disabled.
+
+09. No Active Employee status until activation criteria are satisfied.
+
+10. Joining Date, Activation Date and Deployment Date must remain separate.
+
+11. Exceptions require approval and expiry controls.
+
+12. Every onboarding action must be auditable.
+
+13. Salary and sensitive personal data must not be exposed to unrelated onboarding teams.
+
+14. Onboarding completion must trigger handover to HR Operations.
+
+15. No-show or cancelled joiners must trigger rollback of pending provisioning.
+```
+
+---
+
+# 6.138 Full Practical Example
+
+نفترض:
+
+```text
+Ahmed Hassan
+Fiber Technician
+Ericsson Project
+Joining: 20-Aug-2026
+```
+
+## Recruitment
+
+```text
+Offer Accepted
+```
+
+Module 05 creates:
+
+```text
+Pre-Hire
+```
+
+ثم:
+
+```text
+ONB-2026-00187
+```
+
+---
+
+## Requirements Generated
+
+```text
+National ID             Required
+Birth Certificate       Required
+Military Certificate    Required
+Skill Certificate       Required
+Professional License    Required
+
+Contract                Required
+
+ERP                     Required
+HR Code                 Required
+
+Uniform                 Required
+PPE                     Required
+
+Medical                 Required
+First Aid               Required
+Working at Heights      Required
+
+Ericsson Safety         Required
+
+Operational Induction   Required
+```
+
+---
+
+## Initial Status
+
+```text
+Documents        60%
+Contract          0%
+Systems           0%
+Equipment         0%
+HSE              20%
+Orientation       0%
+
+Overall:
+21%
+
+Status:
+IN PROGRESS
+```
+
+---
+
+## Day 3
+
+```text
+Documents        100%
+Contract         100%
+Systems           80%
+Equipment         100%
+HSE               60%
+```
+
+Problem:
+
+```text
+Working at Heights
+Pending
+```
+
+Result:
+
+```text
+Activation:
+BLOCKED
+```
+
+---
+
+## Day 8
+
+```text
+Working at Heights
+Completed
+
+Medical
+Fit
+
+Ericsson Induction
+Completed
+```
+
+Readiness:
+
+```text
+100%
+```
+
+System:
+
+```text
+READY FOR ACTIVATION
+```
+
+---
+
+## Activation
+
+Personnel approves.
+
+System executes:
+
+```text
+Employment Status → Active
+
+User Access → Active
+
+Payroll → Eligible
+
+Project Assignment → Active
+
+Attendance → Enabled
+
+HR Operations Handover → Created
+```
+
+---
+
+# 6.139 Onboarding Command Center
+
+واجهة الإدارة:
+
+```text
+ONBOARDING COMMAND CENTER
+---------------------------------
+
+Active Cases             182
+Joining This Week         38
+Ready for Activation      27
+Blocked                   31
+Overdue                   14
+
+Readiness
+Documents                 92%
+Contracts                 95%
+Systems                   88%
+Equipment                 84%
+HSE                       71%
+Orientation               86%
+
+TOP BLOCKERS
+Medical                    16
+HSE Training               12
+Missing Documents          11
+Customer Approval           8
+Laptop                      5
+ERP                         3
+```
+
+---
+
+# 6.140 العلاقة مع الـOperations Manual
+
+هذا التصميم يحافظ على المراحل الواردة في الـManual، لكنه يحولها من Email/Tracker/Manual Coordination إلى Workflow قابل للقياس والحوكمة.
+
+الـManual يحدد صراحة:
+
+```text
+Talent Acquisition
+→ Initiates
+
+Personnel
+→ Documents + Contract + Registration
+
+IT / Operations / Administration
+→ Equipment & Access
+
+HSE
+→ Medical & Safety
+
+HR / HSE / Operations
+→ Orientation
+
+HR
+→ Employment Activation
+```
+
+
+
+كما أن قواعد الـPolicy Compliance تنص على عدم تفعيل الموظف في systems أو project أو payroll قبل استكمال mandatory onboarding requirements، وعلى منع deployment للوظائف الحساسة قبل استكمال medical وHSE وcertifications. 
+
+لذلك **Activation Gate** في هذا الـModule ليس Feature إضافية؛ هو أحد أهم Controls في النظام كله.
+
+---
+
+# Module 06 Final Scope
+
+```text
+Recruitment Handover
++
+Onboarding Case
++
+Dynamic Checklist
++
+Document Collection
++
+Document Verification
++
+Physical File Tracking
++
+Contracting
++
+Policy Acknowledgment
++
+Social Insurance
++
+Medical Insurance
++
+Payroll Registration
++
+ERP Registration
++
+HR Code
++
+Email Creation
++
+System Access
++
+Equipment
++
+PPE
++
+Medical Clearance
++
+HSE Training
++
+Orientation
++
+Customer Clearance
++
+Shadowing
++
+Deployment Readiness
++
+Employee Activation
++
+SLA
++
+Escalation
++
+Exceptions
++
+Audit
++
+Analytics
+```
+
+**Module 07 المنطقي بعده: Attendance, Time, Shifts, Rosters & Field Workforce Tracking**، لأن الموظف بعد ما أصبح Activated، أول عملية تشغيل يومية فعلية تبدأ بتحديد أين يعمل، متى يعمل، وكيف يتم إثبات الحضور لكل نوع موظف ومشروع.

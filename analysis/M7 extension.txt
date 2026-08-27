@@ -1,0 +1,1458 @@
+تمام. الأفضل **ما نخليش بدل القاهرة/خارج القاهرة Hardcoded**، بل نبني داخل Module 07 جزء مستقل ومرن اسمه:
+
+# 07.60 — Location-Based Allowances, Field Allowances & Mobility Rules
+
+ويكون مرتبطًا بـ:
+
+**Employee + Project + Work Location + Distance + Assignment Type + Attendance + Shift + Policy**
+
+وده مناسب جدًا لطبيعة Afro لأن الـOperations Manual عنده أصلًا **Allowances Workflow** منفصل، وفيه تجميع بيانات البدلات من المشروعات، إعداد Allowance Sheet، التحقق من الاستحقاق، ثم الإرسال للمالية. 
+
+لكن إحنا هنخلي النظام أذكى بحيث **يولد الاستحقاق تلقائيًا من قواعد التشغيل** بدل الاعتماد الكامل على Excel أو إدخال يدوي.
+
+---
+
+# 07.60.1 Allowance Rule Engine
+
+ننشئ:
+
+**Allowance Policies**
+
+وكل شركة تقدر تعمل Rules مختلفة.
+
+مثلاً:
+
+### Policy 01
+
+**Cairo Field Allowance**
+
+### Policy 02
+
+**Outside Cairo Allowance**
+
+### Policy 03
+
+**Remote Site Allowance**
+
+### Policy 04
+
+**Travel Allowance**
+
+### Policy 05
+
+**Night Shift Allowance**
+
+### Policy 06
+
+**Accommodation Allowance**
+
+### Policy 07
+
+**Transportation Allowance**
+
+### Policy 08
+
+**Meal Allowance**
+
+### Policy 09
+
+**Per Diem**
+
+### Policy 10
+
+**Hardship Allowance**
+
+---
+
+# 07.60.2 Allowance Rule Structure
+
+كل Rule يحتوي على:
+
+```text
+Allowance Name
+Allowance Code
+Company
+Employee Category
+Job / Grade
+Project
+Customer
+Location
+Governorate
+City
+Zone
+Distance
+Assignment Type
+Shift Type
+Work Mode
+Minimum Hours
+Minimum Days
+Calculation Method
+Value
+Currency
+Maximum Limit
+Effective From
+Effective To
+Approval Required
+Taxable / Non-Taxable
+Payroll Code
+Cost Center
+Project Cost Allocation
+```
+
+---
+
+# 07.60.3 Cairo / Outside Cairo Logic
+
+بدل ما نقول فقط:
+
+**Inside Cairo / Outside Cairo**
+
+نعملها أكثر مرونة.
+
+مثلاً:
+
+## Location Classification
+
+```text
+Zone A = Greater Cairo
+Zone B = Cairo Periphery
+Zone C = Nearby Governorates
+Zone D = Remote Governorates
+Zone E = Special / Hardship Areas
+```
+
+مثلاً:
+
+### Zone A — Greater Cairo
+
+* Cairo
+* Giza
+* New Cairo
+* 6 October
+* Sheikh Zayed
+
+### Zone B
+
+مثلاً:
+
+* Obour
+* Badr
+* Shorouk
+* 10th of Ramadan
+
+### Zone C
+
+مثلاً:
+
+* Suez
+* Ismailia
+* Sharqia
+* Fayoum
+
+### Zone D
+
+مثلاً:
+
+* Alexandria
+* Minya
+* Assiut
+* Sohag
+
+### Zone E
+
+مثلاً:
+
+* North Sinai
+* South Sinai
+* Red Sea
+* Border Areas
+
+لكن هذه المناطق لا تكون ثابتة في الكود.
+
+Admin يحددها من:
+
+**Allowance Geographic Zones**
+
+---
+
+# 07.60.4 Distance-Based Rules
+
+الأفضل أيضًا دعم المسافة.
+
+مثلاً:
+
+Employee Base Location:
+
+`Cairo HQ`
+
+Work Site:
+
+`Project Site`
+
+النظام يحسب:
+
+**Distance from Base Location**
+
+ثم يطبق Rule.
+
+مثلاً:
+
+| Distance   |   Allowance |
+| ---------- | ----------: |
+| 0–25 km    |       0 EGP |
+| 26–50 km   | 100 EGP/day |
+| 51–100 km  | 200 EGP/day |
+| 101–200 km | 350 EGP/day |
+| >200 km    | 500 EGP/day |
+
+وده يخلي النظام مناسب لأي توسع مستقبلي.
+
+---
+
+# 07.60.5 Base Location Concept
+
+مهم جدًا تحديد:
+
+### Employee Base Location
+
+مثلاً:
+
+Ahmed:
+
+`Cairo HQ`
+
+Mohamed:
+
+`Alexandria Office`
+
+Ali:
+
+`Suez Project Office`
+
+وبالتالي Outside Cairo لا تُحسب بالنسبة إلى القاهرة دائمًا.
+
+بل:
+
+> Outside Employee Base Location
+
+مثلاً موظف أصله Alexandria ويعمل Alexandria:
+
+لا يأخذ Outside Cairo Allowance.
+
+لكن موظف Base Location = Cairo وذهب Alexandria:
+
+قد يستحق.
+
+---
+
+# 07.60.6 Allowance Eligibility Source
+
+البدل يمكن أن يعتمد على واحد أو أكثر من:
+
+* Assigned Project
+* Actual Attendance Location
+* Approved Field Mission
+* Roster
+* Timesheet
+* Supervisor Confirmation
+* Travel Request
+* GPS Attendance
+* Work Order
+* Site Assignment
+
+والأفضل ألا يعتمد فقط على مكان Punch.
+
+---
+
+# 07.60.7 مثال عملي
+
+Ahmed:
+
+Base Location:
+
+`Cairo`
+
+Project:
+
+`Vodafone Alexandria FTTH`
+
+Site:
+
+`Borg El Arab`
+
+Attendance:
+
+08:00–18:00
+
+Location:
+
+Alexandria
+
+Distance:
+
+220 km
+
+Allowance Rule:
+
+```text
+Outside Base Location
+Distance > 200 km
+Minimum Worked Hours = 8
+Allowance = 450 EGP/day
+```
+
+System Result:
+
+```text
+Eligible = Yes
+Allowance = 450 EGP
+Project = Vodafone Alexandria
+Cost Center = VDF-ALX
+```
+
+---
+
+# 07.60.8 Daily vs Monthly vs Fixed Allowance
+
+Calculation Method يكون Configurable.
+
+### Daily
+
+مثلاً:
+
+`300 EGP / worked day`
+
+### Monthly
+
+مثلاً:
+
+`3,000 EGP / month`
+
+### Per Trip
+
+مثلاً:
+
+`500 EGP / trip`
+
+### Per Night
+
+مثلاً:
+
+`400 EGP / overnight stay`
+
+### Per Kilometer
+
+مثلاً:
+
+`X EGP / km`
+
+### Fixed Assignment
+
+مثلاً:
+
+`5,000 EGP for project assignment`
+
+### Percentage
+
+مثلاً:
+
+`10% of basic salary`
+
+### Tiered
+
+حسب المسافة أو عدد الأيام.
+
+---
+
+# 07.60.9 Minimum Hours Rule
+
+مثلاً:
+
+Outside Cairo Allowance:
+
+Requires:
+
+`Worked Hours >= 6`
+
+لو الموظف ذهب الموقع ساعتين فقط:
+
+قد لا يستحق Daily Allowance.
+
+Rule:
+
+```text
+Minimum Working Hours = 6
+```
+
+أو:
+
+```text
+Half-Day Allowance if 3–6 hours
+Full Allowance if >6 hours
+```
+
+---
+
+# 07.60.10 Half-Day Rules
+
+مثلاً:
+
+Full Allowance:
+
+`400 EGP`
+
+Half-Day:
+
+`200 EGP`
+
+Rule:
+
+```text
+0–3h = 0
+3–6h = 50%
+>6h = 100%
+```
+
+---
+
+# 07.60.11 Overnight Rule
+
+لو الموظف خارج القاهرة ولم يرجع نفس اليوم:
+
+يظهر:
+
+**Overnight Assignment**
+
+وقد يستحق:
+
+* Accommodation
+* Dinner
+* Breakfast
+* Per Diem
+* Night Allowance
+
+مثلاً:
+
+```text
+Outside Cairo Daily Allowance = 350
+Accommodation = Company Provided
+Meal Allowance = 250
+Overnight Per Diem = 200
+```
+
+---
+
+# 07.60.12 Company Accommodation Rule
+
+مهم جدًا منع Double Payment.
+
+مثلاً:
+
+إذا:
+
+`Accommodation Provided By Company = Yes`
+
+إذن:
+
+Accommodation Allowance:
+
+`0`
+
+ولو:
+
+`Transportation Provided = Yes`
+
+فـ:
+
+Transport Allowance:
+
+`0`
+
+نفس الفكرة مع:
+
+* Hotel
+* Transportation
+* Meals
+* Fuel
+
+---
+
+# 07.60.13 Allowance Stacking Rules
+
+نحتاج:
+
+**Can Combine With**
+
+مثلاً:
+
+Outside Cairo Allowance
+
+يمكن دمجه مع:
+
+✓ Night Shift Allowance
+✓ Meal Allowance
+
+لكن لا يمكن دمجه مع:
+
+✗ Travel Per Diem
+
+حتى لا يحصل Duplicate Benefit.
+
+---
+
+# 07.60.14 Priority Rules
+
+لو أكثر من Rule ينطبق:
+
+مثلاً:
+
+Distance Rule:
+
+350 EGP
+
+Remote Site Rule:
+
+500 EGP
+
+النظام يحتاج Policy:
+
+```text
+Highest Value Only
+OR
+Add All
+OR
+Rule Priority
+OR
+Specific Rule Overrides General Rule
+```
+
+مثلاً:
+
+Remote Site Allowance
+
+Priority:
+
+100
+
+Outside Cairo:
+
+50
+
+فيطبق Remote Site فقط.
+
+---
+
+# 07.60.15 Geographic Hierarchy
+
+يكون لدينا:
+
+```text
+Country
+→ Governorate
+→ City
+→ District
+→ Zone
+→ Project Site
+```
+
+مثلاً:
+
+Egypt
+
+→ Red Sea
+
+→ Hurghada
+
+→ Project Zone 03
+
+ويستطيع Admin وضع Allowance عند أي Level.
+
+---
+
+# 07.60.16 Polygon Geographic Rules
+
+ميزة قوية:
+
+بدل تحديد City فقط، ممكن Rule يكون له:
+
+**Geographic Polygon**
+
+على الخريطة.
+
+مثلاً منطقة:
+
+`Remote Desert Project`
+
+وأي Site داخل Polygon:
+
+Remote Allowance = 600 EGP/day.
+
+---
+
+# 07.60.17 Assignment Types
+
+القيمة تختلف حسب سبب التواجد.
+
+مثلاً:
+
+### Permanent Assignment
+
+لا يستحق Travel Allowance.
+
+### Temporary Assignment
+
+يستحق.
+
+### Business Mission
+
+يستحق Per Diem.
+
+### Emergency Deployment
+
+قد يستحق Special Allowance.
+
+### Training Assignment
+
+له Rule منفصل.
+
+---
+
+# 07.60.18 Employee Categories
+
+الـRule يمكن تخصيصه لـ:
+
+* Permanent Employee
+* Temporary
+* Daily Worker
+* Project Employee
+* Outsourced
+* Contractor Employee
+* Blue Collar
+* White Collar
+
+مثلاً:
+
+Engineers:
+
+500 EGP/day
+
+Technicians:
+
+350 EGP/day
+
+Drivers:
+
+300 EGP/day
+
+حسب سياسة الشركة.
+
+---
+
+# 07.60.19 Grade-Based Rules
+
+ممكن أيضًا:
+
+| Grade   | Per Diem |
+| ------- | -------: |
+| G1–G3   |      250 |
+| G4–G6   |      350 |
+| G7–G9   |      500 |
+| Manager |      700 |
+
+ويفضل النظام يدعم:
+
+**Grade-specific Override**
+
+لكن لا يفرضه.
+
+---
+
+# 07.60.20 Project Specific Rules
+
+مشروع معين قد يكون له Allowance مختلف.
+
+مثلاً:
+
+Default Outside Cairo:
+
+`350 EGP`
+
+لكن:
+
+`North Sinai Project`
+
+يكون:
+
+`700 EGP`
+
+لذلك:
+
+Project Rule Override.
+
+---
+
+# 07.60.21 Customer Specific Rules
+
+مثلاً:
+
+Huawei Project
+
+لديه Allowance Policy مختلفة عن:
+
+Ericsson
+
+Nokia
+
+Vodafone
+
+لأن العقد التجاري نفسه قد يحتوي على شروط مختلفة.
+
+---
+
+# 07.60.22 Weekend / Holiday Allowance
+
+لو الموظف يعمل خارج القاهرة في:
+
+Friday / Public Holiday
+
+ممكن:
+
+Normal Allowance:
+
+350
+
+Holiday Multiplier:
+
+`1.25`
+
+أو Fixed Additional:
+
+`150 EGP`
+
+---
+
+# 07.60.23 Shift-Based Allowance
+
+مثلاً:
+
+Night Shift:
+
+`100 EGP`
+
+Remote Night Shift:
+
+`150 EGP`
+
+Outside Cairo + Night:
+
+يمكن تطبيق Stacking Rule.
+
+---
+
+# 07.60.24 Travel Time Rule
+
+نحتاج تحديد:
+
+هل وقت السفر يُحسب؟
+
+مثلاً:
+
+Cairo → Alexandria
+
+2.5 Hours
+
+Policy Options:
+
+```text
+Travel Time = Working Time
+Travel Time = Partially Paid
+Travel Time = Non-Working
+Travel Time = Separate Allowance
+```
+
+ودي نقطة مهمة جدًا في شركات المشروعات.
+
+---
+
+# 07.60.25 Transport Allowance
+
+أنواع:
+
+### Fixed Daily Transport
+
+مثلاً:
+
+100 EGP/day
+
+### Distance Based
+
+مثلاً:
+
+`X EGP/km`
+
+### Actual Expense
+
+Employee uploads:
+
+Receipt
+
+### Company Vehicle
+
+No transport allowance.
+
+---
+
+# 07.60.26 Fuel Allowance
+
+لو الموظف يستخدم سيارته:
+
+```text
+Private Vehicle = Yes
+Distance = 160 km
+Rate = 4 EGP/km
+```
+
+Calculated:
+
+`640 EGP`
+
+مع:
+
+Maximum Monthly Cap.
+
+---
+
+# 07.60.27 Meal Allowances
+
+Rules مثل:
+
+Breakfast Eligibility:
+
+Before 07:00
+
+Lunch:
+
+Work > 6 hours
+
+Dinner:
+
+Work after 20:00
+
+مثلاً:
+
+```text
+Lunch = 120 EGP
+Dinner = 150 EGP
+```
+
+---
+
+# 07.60.28 Accommodation Rules
+
+طرق الحساب:
+
+* Fixed amount/night
+* Hotel actual expense
+* Company accommodation
+* Project camp
+* Approved hotel category
+* Max room rate
+
+مثلاً:
+
+Grade G5:
+
+Max Hotel:
+
+`1,500 EGP/night`
+
+---
+
+# 07.60.29 Per Diem
+
+يمكن أن يكون:
+
+```text
+Daily Per Diem
+=
+Meals
++
+Incidental Expenses
++
+Local Transportation
+```
+
+أو مبلغ موحد.
+
+مثلاً:
+
+`600 EGP/day`
+
+---
+
+# 07.60.30 Hardship Allowance
+
+لبعض المناطق أو المشاريع:
+
+مثلاً:
+
+* Desert
+* Border
+* Remote
+* High-risk
+* Difficult living conditions
+
+Rule:
+
+```text
+Hardship Level 1
+Hardship Level 2
+Hardship Level 3
+```
+
+وكل Level له قيمة.
+
+---
+
+# 07.60.31 Site Classification
+
+كل Site يمكن أن يحتوي:
+
+```text
+Location Category
+Urban
+Remote
+Desert
+High Risk
+Customer Premises
+Camp Based
+```
+
+ومنها يشتق Allowance.
+
+---
+
+# 07.60.32 Allowance Request vs Auto Generation
+
+ندعم طريقتين:
+
+### Automatic
+
+Attendance + Assignment يحقق Rules.
+
+النظام يولد Allowance تلقائيًا.
+
+### Manual Request
+
+Employee أو Supervisor يقدم Request.
+
+مثلاً:
+
+Emergency Travel.
+
+لكن يحتاج Supporting Document.
+
+---
+
+# 07.60.33 Auto-Allowance Calculation
+
+Daily Engine يعمل مثل:
+
+```text
+Employee Attendance
+↓
+Assignment
+↓
+Location
+↓
+Distance
+↓
+Shift
+↓
+Project
+↓
+Allowance Rules
+↓
+Eligibility
+↓
+Calculated Allowance
+```
+
+---
+
+# 07.60.34 Allowance Record
+
+كل استحقاق يحتوي:
+
+```text
+Employee
+Date
+Allowance Type
+Policy
+Rule
+Project
+Site
+Location
+Distance
+Calculation Basis
+Quantity
+Rate
+Amount
+Currency
+Source
+Approval Status
+Payroll Status
+Cost Center
+```
+
+---
+
+# 07.60.35 Example
+
+```text
+Employee: Ahmed Hassan
+Date: 10-Aug-2026
+
+Base Location:
+Cairo
+
+Worked Location:
+Suez
+
+Distance:
+135 km
+
+Worked Hours:
+9h
+
+Allowance:
+Outside Base Location
+
+Rate:
+350 EGP/day
+
+Meal:
+120 EGP
+
+Transport:
+Company Vehicle
+
+Accommodation:
+N/A
+
+Total:
+470 EGP
+```
+
+---
+
+# 07.60.36 Approval Workflow
+
+مثلاً:
+
+System Generated
+
+↓
+
+Supervisor Review
+
+↓
+
+Project Manager
+
+↓
+
+HR Operations
+
+↓
+
+Payroll
+
+أو:
+
+للـAuto-Approved Rules:
+
+System
+
+↓
+
+HR Validation
+
+↓
+
+Payroll.
+
+---
+
+# 07.60.37 Exception Workflow
+
+مثلاً:
+
+Ahmed حضر في Alexandria.
+
+لكن Assigned Project:
+
+Cairo.
+
+النظام لا يحسب Allowance تلقائيًا.
+
+ينشئ:
+
+> **Location Assignment Mismatch**
+
+Supervisor يجب أن يوضح السبب.
+
+---
+
+# 07.60.38 Payroll Integration
+
+في نهاية الشهر:
+
+Module 07 ينتج:
+
+```text
+Employee
+Allowance Type
+Eligible Days
+Rate
+Gross Amount
+Project
+Cost Center
+Approval
+```
+
+ويرسلها إلى Payroll.
+
+وده يتماشى مع الـManual الحالي الذي يجعل Payroll مسؤولًا عن إعداد Allowance Sheet والتحقق من الاستحقاق ثم إرسال طلب التمويل إلى Finance. 
+
+---
+
+# 07.60.39 Project Cost Allocation
+
+ودي مهمة جدًا.
+
+مثلاً:
+
+Ahmed أخذ:
+
+Outside Cairo Allowance:
+
+3,500 EGP
+
+بسبب Project A.
+
+لا يجب تحميلها على General HR Cost.
+
+بل:
+
+```text
+Project A
+→ Labor Related Cost
+→ Employee Allowances
+→ 3,500 EGP
+```
+
+---
+
+# 07.60.40 Split Allocation
+
+لو نفس اليوم:
+
+4 hours Project A
+
+4 hours Project B
+
+يمكن Rule يسمح بتوزيع:
+
+Allowance:
+
+`50% / 50%`
+
+أو:
+
+Primary Project يتحمل 100%.
+
+---
+
+# 07.60.41 Allowance Caps
+
+ندعم:
+
+* Daily Cap
+* Weekly Cap
+* Monthly Cap
+* Trip Cap
+* Project Cap
+
+مثلاً:
+
+Outside Cairo Allowance:
+
+Max:
+
+`7,500 EGP/month`
+
+---
+
+# 07.60.42 Budget Control
+
+Project Manager يرى:
+
+Allowance Budget:
+
+`100,000 EGP`
+
+Consumed:
+
+`72,500`
+
+Forecast:
+
+`118,000`
+
+Variance:
+
+`+18,000`
+
+فتظهر Early Warning.
+
+---
+
+# 07.60.43 Retroactive Changes
+
+لو Allowance Rate تغير:
+
+Old Rate:
+
+350
+
+New:
+
+450
+
+Effective:
+
+1-Aug-2026
+
+النظام لا يغير التاريخ السابق عشوائيًا.
+
+بل يستخدم:
+
+**Policy Versioning**
+
+---
+
+# 07.60.44 Policy Versioning
+
+مثلاً:
+
+```text
+Outside Cairo Policy
+Version 1
+01-Jan → 31-Jul
+350 EGP
+
+Version 2
+From 01-Aug
+450 EGP
+```
+
+يحافظ على Audit والـPayroll History.
+
+---
+
+# 07.60.45 Currency
+
+Multi-country مستقبلًا:
+
+* EGP
+* SAR
+* USD
+* EUR
+* MGA
+* إلخ
+
+لكل Policy:
+
+Currency.
+
+---
+
+# 07.60.46 Employee Allowance Dashboard
+
+الموظف يرى:
+
+### August
+
+Outside Cairo:
+
+8 days
+
+Rate:
+
+350
+
+Amount:
+
+2,800
+
+Meal:
+
+600
+
+Night:
+
+300
+
+Total:
+
+3,700 EGP
+
+Status:
+
+Approved for Payroll.
+
+---
+
+# 07.60.47 Manager Dashboard
+
+Project Manager يرى:
+
+This Month:
+
+Employees with Allowance:
+
+`64`
+
+Outside Cairo Days:
+
+`312`
+
+Estimated Cost:
+
+`128,400 EGP`
+
+Pending Approval:
+
+`18`
+
+Rejected:
+
+`3`
+
+Budget Variance:
+
+`+6.4%`
+
+---
+
+# 07.60.48 HR Allowance Control
+
+HR يرى:
+
+* Auto Generated
+* Manual Requests
+* Exceptions
+* Duplicate Allowances
+* Excessive Allowance
+* Outside Policy
+* Pending Approvals
+* Payroll Ready
+
+---
+
+# 07.60.49 Anti-Duplicate Controls
+
+مثلاً Employee لديه:
+
+Travel Allowance
+
+وOutside Cairo Allowance
+
+لنفس اليوم.
+
+النظام يتحقق من:
+
+**Mutually Exclusive Rules**
+
+ويمنع Duplicate Payment.
+
+---
+
+# 07.60.50 أهم Configuration Screen
+
+أقترح شاشة:
+
+# Allowance Rule Builder
+
+تكون مثل:
+
+```text
+IF
+
+Employee Type = Technician
+
+AND
+Work Location != Base Location
+
+AND
+Distance > 100 km
+
+AND
+Worked Hours >= 6
+
+AND
+Company Transport = No
+
+THEN
+
+Outside Location Allowance = 350 EGP
+Transport Allowance = 150 EGP
+
+MAX
+500 EGP/day
+```
+
+وتدعم Conditions بدون برمجة.
+
+---
+
+## الشكل النهائي للربط
+
+```text
+Employee
+↓
+Base Location
+↓
+Assignment
+↓
+Project / Site
+↓
+Roster
+↓
+Attendance
+↓
+Actual Location
+↓
+Distance / Zone
+↓
+Allowance Rules
+↓
+Eligibility
+↓
+Approval
+↓
+Payroll
+↓
+Project Cost
+```
+
+وأنا أفضل نسمي الجزء داخل النظام:
+
+## **Location, Travel & Field Allowance Engine**
+
+لأنه أوسع وأصح من مجرد:
+
+> بدل القاهرة / خارج القاهرة
+
+لأن النظام وقتها يقدر يتعامل مع القاهرة، المحافظات، المواقع النائية، الـper diem، السفر، المبيت، الوجبات، النقل، المسافة، الـnight shift، المشاريع الخاصة، وأي دولة جديدة بنفس الـRule Engine بدون تعديل في الكود.

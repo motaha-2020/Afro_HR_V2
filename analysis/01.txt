@@ -1,0 +1,2134 @@
+أيوه، نقدر نبني النظام ده كـ **HR Platform متخصصة لشركات مقاولات شبكات الاتصالات** وليس مجرد HR System تقليدي. راجعت المصادر الموجودة عندك، وأهمها **People & Culture Operations Manual** والـ **People & Culture Org Chart** وإجراء الـ **Employee Exit / Disclaimer & Asset Clearance**. المصادر دي كافية جدًا كبداية لاستخراج الـBusiness Processes الفعلية بدل ما نصمم System نظري. المانيوال الحالي بالفعل يغطي دورة الموظف من Hiring إلى Onboarding وPayroll وAllowances وKPI وHR Operations ثم Offboarding.  كما أن الهيكل التنظيمي الحالي يفصل الوظائف إلى OD وTalent Acquisition وEmployee Relations & Compliance وPayroll وPersonnel وHR Operations، وده مهم جدًا في تصميم الصلاحيات والـworkflows. 
+
+وأنا أرى أن المشروع يجب أن نتعامل معه كـ **Workforce + HR + Project Resource Management Platform** لأن طبيعة شركات مقاولات الاتصالات مختلفة عن الشركات المكتبية.
+
+---
+
+# 1. الفكرة الأساسية للنظام
+
+بدل ما نعمل:
+
+**Employee → Attendance → Payroll**
+
+فقط، النظام الصحيح يجب أن يفهم العلاقة:
+
+**Employee → Company → Business Unit → Department → Project → Client → Site → Team → Position → Supervisor → Shift → Attendance → Productivity → KPI → Payroll → Cost**
+
+وده فرق جوهري.
+
+مثلاً الفني قد يكون:
+
+**Fiber Technician**
+
+لكن هذا الشهر:
+
+Project = WE FTTH Cairo
+Site = New Cairo
+Team = Team 12
+Supervisor = Ahmed
+Cost Center = WE-FTTH-CAI
+Salary = Fixed + OT + Productivity
+
+وبعد شهرين ينتقل:
+
+Project = Vodafone FTTS
+Site = Giza
+
+بدون ما نغيّر الـEmployee Master Data.
+
+---
+
+# 2. Architecture الموديولات المقترحة
+
+أقترح تقسيم النظام إلى حوالي **20 Business Modules**، لكن كلها تعمل فوق Core Data Model واحد.
+
+## Module 01 — Organization & Company Structure
+
+ده أساس النظام.
+
+يحتوي على:
+
+Company
+Subsidiary
+Business Unit
+Department
+Section
+Client Account
+Project
+Region
+Office
+Warehouse
+Site
+Cost Center
+Position
+Grade
+Job Family
+Reporting Line
+
+ويجب دعم:
+
+Administrative Reporting Line
+
+و
+
+Functional Reporting Line
+
+لأن الـOrg Chart الموجود عندكم بالفعل يستخدم النوعين. 
+
+---
+
+# 3. Employee Master Data
+
+ده الـSingle Source of Truth لكل موظف.
+
+Employee Profile يحتوي مثلاً:
+
+HR Code
+Arabic Name
+English Name
+National ID
+Passport
+Nationality
+Date of Birth
+Gender
+Contact Data
+Emergency Contact
+Address
+Bank Account
+Mobile Wallet
+Insurance Number
+Medical Insurance
+Employee Type
+Employment Status
+Contract Type
+Joining Date
+End Date
+Probation
+Position
+Grade
+Department
+Manager
+Project
+Site
+Cost Center
+Salary Data
+Certificates
+Skills
+HSE Training
+Assets
+Documents
+History
+
+لكن نقطة مهمة جدًا:
+
+لا نخزن فقط:
+
+> Current Project
+
+بل نحتاج:
+
+**Employee Assignment History**
+
+مثلاً:
+
+| Employee | Project       | From |      To | Role             |
+| -------- | ------------- | ---: | ------: | ---------------- |
+| E0154    | WE FTTH       |  Jan |     Apr | Fiber Technician |
+| E0154    | Vodafone FTTS |  May | Current | Splicer          |
+
+وده سيكون مهم جدًا لاحقًا في:
+
+Project Costing
+Payroll
+Utilization
+KPI
+AI Analytics
+
+---
+
+# 4. Employee Types
+
+النظام لازم يدعم طبيعة المقاولات.
+
+مثلاً:
+
+Permanent
+
+Temporary
+
+Daily Worker
+
+Project-Based
+
+Outsourced
+
+Subcontractor Employee
+
+White Collar
+
+Blue Collar
+
+Freelancer
+
+Seasonal
+
+الـHR Operations Manual نفسه ينص أن نطاق العمليات يشمل permanent وtemporary وproject-based وكذلك white-collar وblue-collar employees. 
+
+وده مش مجرد Classification.
+
+كل Employee Type ممكن يكون له:
+
+Attendance Policy
+Leave Policy
+Payroll Rule
+Overtime Rule
+Insurance Rule
+Benefits
+KPI Scheme
+Approval Workflow
+
+---
+
+# 5. Manpower Planning Module
+
+وده من أهم الموديولات لشركة مقاولات.
+
+مثلاً Project Manager يدخل:
+
+WE FTTH Project
+
+Required:
+
+10 Fiber Teams
+3 Splicing Teams
+2 Civil Supervisors
+1 Project Coordinator
+1 HSE Officer
+
+والSystem يعمل:
+
+Required Manpower
+
+vs
+
+Available Manpower
+
+vs
+
+Assigned Manpower
+
+vs
+
+Missing Manpower
+
+مثلاً:
+
+Required = 120
+
+Assigned = 96
+
+Shortage = 24
+
+ويظهر:
+
+**Manpower Coverage = 80%**
+
+وده يتكامل مباشرة مع Recruitment.
+
+---
+
+# 6. Recruitment / ATS
+
+الـWorkflow الموجود في الـManual عندكم ممتاز كبداية:
+
+Hiring Request
+
+→ Sourcing
+
+→ Screening
+
+→ Requester Review
+
+→ Assessment
+
+→ Approval
+
+→ Offer
+
+→ Acceptance
+
+→ Personnel Handover. 
+
+لكن نحوله Digital Workflow.
+
+مثلاً Project Manager يقول:
+
+> محتاج 15 Fiber Technicians لمشروع Huawei – P0.
+
+النظام يسجل:
+
+Project
+
+Position
+
+Number of Vacancies
+
+Location
+
+Salary Range
+
+Required Skills
+
+Priority
+
+Replacement / New Position
+
+Direct Manager
+
+وده بالفعل متوافق تقريبًا مع الـHiring Request Form المذكور في المانيوال. 
+
+---
+
+# 7. Candidate Database
+
+Candidate Pool مستقل عن Employee Database.
+
+Candidate:
+
+CV
+
+Skills
+
+Experience
+
+Expected Salary
+
+Location
+
+Previous Projects
+
+Technical Score
+
+HR Score
+
+HSE Score
+
+Interview History
+
+Offer History
+
+AI يمكن هنا يعمل:
+
+CV Parsing
+
+CV Ranking
+
+Candidate Matching
+
+Duplicate Detection
+
+Salary Comparison
+
+---
+
+# 8. Onboarding Module
+
+بعد Offer Acceptance يبدأ Onboarding.
+
+المانيوال الحالي عندكم بالفعل يحدد:
+
+Document Collection
+
+Contracting
+
+System Registration
+
+Equipment Preparation
+
+HSE Requirements
+
+Orientation
+
+Employment Activation. 
+
+إذن نعمل:
+
+**Onboarding Checklist Engine**
+
+مثلاً Fiber Technician:
+
+National ID ✓
+
+Contract ✓
+
+Form 1 ✓
+
+Medical ✓
+
+HSE ✓
+
+PPE ✓
+
+Uniform ✓
+
+Mobile Line ✓
+
+ERP Account ✓
+
+Project Assignment ✓
+
+Supervisor ✓
+
+وبعد اكتمال الشروط:
+
+**Employee Status → Active**
+
+مش مجرد HR يضغط Active يدوي.
+
+---
+
+# 9. Document Management
+
+كل موظف له Digital Personnel File.
+
+مثلاً:
+
+Contract
+
+National ID
+
+Birth Certificate
+
+Education
+
+Military Certificate
+
+Driving License
+
+Medical Examination
+
+HSE Certificates
+
+Experience Certificates
+
+Insurance Forms
+
+Company Policies
+
+Signed Documents
+
+مع:
+
+Expiry Date
+
+Reminder
+
+Version
+
+Approval
+
+OCR
+
+AI Data Extraction
+
+مثلاً المستخدم يصور البطاقة.
+
+AI يستخرج:
+
+Name
+
+National ID
+
+DOB
+
+Address
+
+ثم الموظف يراجع ويضغط Confirm.
+
+وده مثال ممتاز على **AI-assisted data entry** اللي طلبته.
+
+---
+
+# 10. Attendance & Time Management
+
+دي لازم تكون قوية جدًا لأن العمالة Field-Based.
+
+مصادر Attendance ممكن تكون:
+
+Fingerprint
+
+Mobile GPS
+
+QR Code
+
+Supervisor Confirmation
+
+Site Check-in
+
+Manual Entry
+
+Import Excel
+
+API
+
+النظام يحتاج:
+
+Shift Management
+
+Roster
+
+Attendance
+
+Late
+
+Early Leave
+
+Absent
+
+Mission
+
+Field Assignment
+
+Overtime
+
+Weekend
+
+Night Shift
+
+Standby
+
+Travel
+
+---
+
+# 11. Geo Attendance
+
+الموظف من Mobile App يعمل:
+
+Check In
+
+ويتحقق النظام من:
+
+Employee
+
+Project
+
+Site
+
+GPS Location
+
+Allowed Radius
+
+Shift
+
+Device
+
+Timestamp
+
+مثلاً:
+
+Site Location Radius = 300 meters.
+
+إذا الفني حاول Check-in خارج الموقع:
+
+System Flag:
+
+**Out-of-Geofence Attendance**
+
+لكن لازم يبقى فيه Supervisor Override مع سبب.
+
+---
+
+# 12. Workforce Scheduling
+
+مهم جدًا للمقاولات.
+
+Supervisor يوزع العمال:
+
+Team A → Site 101
+
+Team B → Site 105
+
+Team C → Site 117
+
+ونحتفظ بتاريخ:
+
+من كان في أي Team؟
+
+في أي Site؟
+
+في أي يوم؟
+
+ده بعدين يسمح بتحليل:
+
+Productivity per Team
+
+Cost per Site
+
+Absenteeism per Project
+
+Revenue per Employee
+
+---
+
+# 13. Leave Management
+
+Employee App:
+
+Request Leave
+
+Annual
+
+Sick
+
+Emergency
+
+Unpaid
+
+Mission
+
+Permission
+
+النظام يظهر:
+
+Balance
+
+Requested
+
+Approved
+
+Remaining
+
+ثم Approval Workflow:
+
+Employee
+
+→ Manager
+
+→ HR
+
+وممكن الـWorkflow يختلف حسب Grade أو Project.
+
+---
+
+# 14. Payroll Module
+
+دي واحدة من أصعب أجزاء النظام.
+
+Payroll Engine لازم يكون **Rule-Based** وليس Hard-Coded.
+
+Salary Components:
+
+Basic Salary
+
+Fixed Allowance
+
+Project Allowance
+
+Transportation
+
+Mobile
+
+Housing
+
+Meal
+
+Travel
+
+Site Allowance
+
+Hazard Allowance
+
+Overtime
+
+KPI Bonus
+
+Productivity Bonus
+
+Daily Rate
+
+Per Task
+
+Per Meter
+
+Deduction
+
+Penalty
+
+Advance
+
+Loan
+
+Insurance
+
+Tax
+
+المعادلة ممكن تختلف حسب:
+
+Employee Type
+
+Grade
+
+Project
+
+Client
+
+Position
+
+Country
+
+---
+
+# 15. Project Payroll Allocation
+
+ودي نقطة مهمة جدًا.
+
+لو Engineer راتبه:
+
+30,000
+
+وعمل:
+
+60% Project A
+
+40% Project B
+
+النظام يعمل:
+
+Project A Cost = 18,000
+
+Project B Cost = 12,000
+
+ودي مهمة جدًا للـFinance وProject Managers.
+
+---
+
+# 16. KPI & Performance Management
+
+مش عاوز Performance Appraisal سنوي فقط.
+
+الأفضل يكون عندنا:
+
+Corporate KPI
+
+Department KPI
+
+Project KPI
+
+Role KPI
+
+Individual KPI
+
+مثلاً Fiber Splicer:
+
+Splicing Productivity
+
+Quality
+
+Rework
+
+Attendance
+
+Safety
+
+Acceptance Rate
+
+مثلاً:
+
+Productivity = 30%
+
+Quality = 25%
+
+Attendance = 15%
+
+Safety = 15%
+
+Supervisor Evaluation = 15%
+
+System يحسب Final Score.
+
+والـManual الحالي بالفعل يربط تقييم الـKPI بالـBonus والـFinance Submission ثم KPI Bonus Payment وKPI Cost Allocation Reporting. 
+
+---
+
+# 17. Training, Skills & Competency
+
+مهم جدًا لشركات Telecom.
+
+Employee Skills Matrix:
+
+Fiber Splicing
+
+OTDR
+
+OSP
+
+FTTH
+
+Civil
+
+Power
+
+Rigging
+
+Huawei
+
+Ericsson
+
+Nokia
+
+ZTE
+
+Driving
+
+HSE
+
+Working at Heights
+
+First Aid
+
+Electrical Safety
+
+كل Skill:
+
+Level
+
+Certificate
+
+Issue Date
+
+Expiry
+
+Training Needed
+
+وده مهم لأن الـManual يفرض Medical Examination وHSE Courses لبعض الوظائف الحساسة قبل Deployment. 
+
+---
+
+# 18. Employee Asset & Custody
+
+مهم جدًا.
+
+Employee Assets:
+
+Laptop
+
+Mobile
+
+SIM
+
+Fusion Splicer
+
+OTDR
+
+Power Meter
+
+Tool Kit
+
+PPE
+
+Vehicle
+
+Fuel Card
+
+Keys
+
+Access Card
+
+Warehouse Custody
+
+Financial Custody
+
+النظام يعرف:
+
+Issued Date
+
+Asset Value
+
+Project
+
+Returned
+
+Lost
+
+Damaged
+
+---
+
+# 19. Employee Relations & Disciplinary Module
+
+يحتوي:
+
+Incident
+
+Complaint
+
+Violation
+
+Investigation
+
+Witnesses
+
+Evidence
+
+Legal Recommendation
+
+Decision
+
+Penalty
+
+Appeal
+
+Closure
+
+الـManual الحالي يحدد بالفعل Investigation Process مع Direct Manager وHR Operations وLegal Affairs. 
+
+---
+
+# 20. Offboarding & Clearance
+
+عندكم هنا Process قوي جدًا ويمكن تحويله Digital بالكامل.
+
+العملية الموجودة تشمل:
+
+Direct Manager
+
+IT
+
+Warehouse
+
+Lines SPOC
+
+Finance
+
+Assets Cost Control
+
+GRC/EHS
+
+HR
+
+مع SLA 48 ساعة للرد، و10 دقائق لكل محطة Clearance، وتصعيد 48h و72h. 
+
+بدل Email + Excel Tracker:
+
+نخليه Workflow داخل النظام.
+
+Employee resigns
+
+↓
+
+Offboarding Case Created
+
+↓
+
+Automatic Tasks Generated
+
+↓
+
+IT
+
+Warehouse
+
+Finance
+
+HR
+
+Project Manager
+
+GRC
+
+↓
+
+Clear / Pending / N/A
+
+↓
+
+Automatic Escalation
+
+↓
+
+Final Settlement
+
+↓
+
+Archive
+
+وده مثال ممتاز على Process Automation.
+
+---
+
+# 21. Employee Self-Service Mobile App
+
+وده لازم يكون منتج مستقل في الـUX لكن متصل بنفس Backend.
+
+الموظف يدخل ويشوف فقط:
+
+My Profile
+
+My Attendance
+
+My Shift
+
+My Project
+
+My Team
+
+My Salary
+
+Payslips
+
+Salary Transfers
+
+Overtime
+
+Allowances
+
+Deductions
+
+Loans
+
+Advances
+
+Leave Balance
+
+Leave Requests
+
+Permissions
+
+My KPI
+
+Performance
+
+Training
+
+Certificates
+
+Documents
+
+Assets
+
+Custody
+
+HR Requests
+
+Complaints
+
+Notifications
+
+Company Policies
+
+Letters
+
+Experience Certificate Requests
+
+---
+
+# 22. Manager Self Service
+
+Manager يرى:
+
+My Team
+
+Attendance
+
+Absence
+
+Leave Approvals
+
+Overtime
+
+Team KPI
+
+Performance
+
+Manpower Requirement
+
+Recruitment Requests
+
+Training Needs
+
+Employee Issues
+
+Project Staffing
+
+لكن **لا يرى كل الشركة**.
+
+---
+
+# 23. CEO Dashboard
+
+CEO لا يحتاج Details يومية.
+
+يحتاج Executive KPIs مثل:
+
+Total Headcount
+
+Active Employees
+
+Turnover
+
+Monthly Payroll
+
+Payroll / Revenue
+
+Headcount by Project
+
+Headcount by Client
+
+Employee Cost by Project
+
+Manpower Utilization
+
+Recruitment Gap
+
+Attrition
+
+Absenteeism
+
+Overtime Cost
+
+KPI Performance
+
+Project Manpower Shortage
+
+Critical Positions
+
+Revenue / Employee
+
+Cost / Employee
+
+---
+
+# 24. HR Director Dashboard
+
+HR Director يحتاج:
+
+Headcount
+
+Hiring Funnel
+
+Time to Hire
+
+Turnover
+
+Attendance
+
+Leave
+
+Payroll
+
+Overtime
+
+Employee Cost
+
+KPI
+
+Training
+
+Compliance
+
+Missing Documents
+
+Contract Expiry
+
+Insurance
+
+Employee Relations Cases
+
+Offboarding
+
+HR SLA
+
+---
+
+# 25. Security & Permissions Module
+
+ده مش Feature ثانوي.
+
+أعتبره:
+
+**Core Platform Module.**
+
+نحتاج:
+
+RBAC
+
+Role-Based Access Control
+
+*
+
+ABAC
+
+Attribute-Based Access Control
+
+مثلاً Role:
+
+Project Manager
+
+لكن يرى فقط:
+
+Project = Vodafone
+
+وليس WE.
+
+مثلاً HR Specialist يرى:
+
+Employee Master Data
+
+لكن لا يرى Salary.
+
+Payroll Specialist يرى Salary.
+
+Talent Acquisition يرى Candidate Salary Expectations لكن ليس Employee Payroll History.
+
+---
+
+# 26. Permission Structure
+
+الصلاحية لا تكون فقط:
+
+View
+
+Edit
+
+Delete
+
+بل:
+
+View
+
+Create
+
+Edit
+
+Delete
+
+Approve
+
+Reject
+
+Export
+
+Print
+
+Upload
+
+Download
+
+See Salary
+
+See National ID
+
+See Bank Data
+
+See Disciplinary Records
+
+Bulk Update
+
+AI Access
+
+Dashboard Access
+
+---
+
+# 27. Data Scope Permission
+
+كل Role يكون له:
+
+Module Permission
+
+*
+
+Data Scope
+
+مثلاً:
+
+CEO:
+
+All Company
+
+HR Manager:
+
+All Employees
+
+HR Operations:
+
+Assigned Projects
+
+Project Manager:
+
+His Projects
+
+Supervisor:
+
+His Teams
+
+Employee:
+
+Self Only
+
+وده بالضبط يمنع مشكلة:
+
+> "المستخدم لديه Access للـEmployee Module إذن يرى كل الموظفين."
+
+لا.
+
+---
+
+# 28. Approval Workflow Engine
+
+أنا لا أنصح نهائيًا بكتابة Approval Logic ثابت داخل كل Module.
+
+نبني:
+
+**Workflow Designer**
+
+مثلاً Leave:
+
+Employee
+
+→ Direct Manager
+
+→ HR
+
+لكن لو أكثر من 10 أيام:
+
+Employee
+
+→ Manager
+
+→ Department Head
+
+→ HR Manager
+
+ونفس Engine يستخدم في:
+
+Hiring
+
+Salary Change
+
+Promotion
+
+Transfer
+
+Leave
+
+Overtime
+
+Loan
+
+Advance
+
+Offboarding
+
+---
+
+# 29. AI Module
+
+وهنا أرى أن الذكاء الاصطناعي يكون **Platform Service** وليس صفحة Chatbot فقط.
+
+أسميه مثلاً:
+
+# HR Intelligence Center
+
+وله عدة Agents / Functions.
+
+---
+
+## AI Function 1 — Smart Data Entry
+
+المستخدم يكتب:
+
+> عيّن أحمد محمد فني فايبر في مشروع WE القاهرة من يوم 15 أغسطس براتب 12 ألف.
+
+AI يحوله إلى Structured Form:
+
+Name = Ahmed Mohamed
+
+Position = Fiber Technician
+
+Project = WE Cairo
+
+Joining Date = 15/08
+
+Salary = 12,000
+
+ثم:
+
+**Human Confirm**
+
+قبل Save.
+
+---
+
+# 30. AI Function 2 — Document Extraction
+
+Upload:
+
+CV
+
+National ID
+
+Contract
+
+Medical Certificate
+
+HSE Certificate
+
+AI extracts data.
+
+---
+
+# 31. AI Function 3 — HR Chatbot
+
+مثلاً CEO يسأل:
+
+> كام عدد العمالة الموجودة في مشروع Huawei؟
+
+ويأخذ إجابة من Database.
+
+HR Manager:
+
+> مين العقود اللي هتنتهي خلال 60 يوم؟
+
+Project Manager:
+
+> مين الفنيين المتاحين وعندهم Fiber Splicing Certificate؟
+
+Employee:
+
+> فاضلي كام يوم إجازة؟
+
+لكن كل إجابة تحترم Permissions.
+
+يعني Employee لا يستطيع سؤال AI:
+
+> مرتب أحمد زميلي كام؟
+
+الـAI Authorization يجب أن يكون نفس Authorization الخاص بالنظام.
+
+---
+
+# 32. AI Function 4 — Data Analysis
+
+مثلاً:
+
+> حلل أسباب ارتفاع الـOvertime الشهر ده.
+
+AI يحلل:
+
+Project
+
+Department
+
+Employee Type
+
+Attendance
+
+Schedule
+
+Manpower Shortage
+
+ويقول مثلاً:
+
+Project X مسؤول عن 43% من الزيادة.
+
+Team B لديه Overtime أعلى بـ31% من المتوسط.
+
+Potential Cause: Manpower shortage.
+
+---
+
+# 33. AI Function 5 — Automated Dashboards
+
+المستخدم يقول:
+
+> اعمل Dashboard للـCEO عن Workforce Cost.
+
+AI ينشئ Dashboard مقترح:
+
+Payroll Cost
+
+Headcount
+
+Cost / Employee
+
+Project Cost
+
+Overtime
+
+Turnover
+
+Revenue / Employee
+
+ثم المستخدم يحفظه.
+
+---
+
+# 34. AI Function 6 — Automated Reports
+
+مثلاً:
+
+> اعمل Monthly HR Report لشهر يوليو.
+
+يخرج:
+
+Executive Summary
+
+Headcount
+
+Recruitment
+
+Attendance
+
+Payroll
+
+KPI
+
+Turnover
+
+Training
+
+Issues
+
+Risks
+
+Recommendations
+
+PDF
+
+Excel
+
+Dashboard
+
+---
+
+# 35. AI Function 7 — Anomaly Detection
+
+System automatically detects:
+
+Ghost Employees
+
+Duplicate Bank Accounts
+
+Duplicate National IDs
+
+Unusual Overtime
+
+Payroll Spike
+
+Abnormal Absence
+
+Fake GPS
+
+Suspicious Attendance
+
+High Turnover
+
+Salary Outliers
+
+Employee without Project
+
+Project Overstaffing
+
+Project Understaffing
+
+---
+
+# 36. AI Function 8 — Predictive HR
+
+بعد وجود Data كافية:
+
+Turnover Risk
+
+Absenteeism Risk
+
+Manpower Demand
+
+Recruitment Forecast
+
+Overtime Forecast
+
+Payroll Forecast
+
+Project Staffing Risk
+
+مثلاً:
+
+> Project X likely needs 18 additional technicians next month.
+
+لكن ده Prediction وليس Decision.
+
+---
+
+# 37. AI Function 9 — Employee Copilot
+
+Employee App Chat:
+
+> مرتب الشهر ده اتخصم منه ليه؟
+
+System:
+
+Basic Salary
+
+OT
+
+Absence
+
+Advance
+
+Deduction
+
+ثم يشرح.
+
+لكن بدون أن يخترع أي شيء.
+
+كل رقم لازم يأتي من Database.
+
+---
+
+# 38. Notification Engine
+
+Notifications من:
+
+Mobile Push
+
+Email
+
+SMS
+
+In-App
+
+WhatsApp لو تم الربط لاحقًا.
+
+Triggers مثل:
+
+Contract expiry
+
+Certificate expiry
+
+Late approval
+
+Missing document
+
+Payroll published
+
+Leave approved
+
+KPI assigned
+
+Offboarding SLA violation
+
+---
+
+# 39. Audit & Governance
+
+دي Mandatory.
+
+كل Action:
+
+Who
+
+What
+
+Before
+
+After
+
+When
+
+From Which Device
+
+IP
+
+Approval
+
+Reason
+
+مثلاً:
+
+Salary:
+
+15,000 → 19,000
+
+Changed by: Payroll Manager
+
+Approved by: HR Director
+
+Date: XX
+
+Reason: Promotion
+
+ممنوع حذف التاريخ.
+
+---
+
+# 40. HR Ticketing / Employee Requests
+
+Employee App:
+
+Salary Issue
+
+Attendance Issue
+
+Leave Issue
+
+Insurance
+
+Document Request
+
+Complaint
+
+Payroll
+
+Contract
+
+Training
+
+Asset
+
+Other
+
+Ticket:
+
+Open
+
+Assigned
+
+In Progress
+
+Resolved
+
+Closed
+
+مع SLA.
+
+---
+
+# 41. Analytics Data Model
+
+وده قرار معماري مهم جدًا.
+
+لا أنصح أن الـDashboards تعتمد مباشرة على Operational Database فقط.
+
+الأفضل يكون عندنا:
+
+**Transactional Layer**
+
+للعمليات اليومية.
+
+ثم:
+
+**Analytics Layer**
+
+تحتوي Fact Tables مثل:
+
+FactAttendance
+
+FactPayroll
+
+FactEmployeeMovement
+
+FactRecruitment
+
+FactKPI
+
+FactLeave
+
+FactTraining
+
+FactProjectAllocation
+
+وبعدين:
+
+Power BI / Embedded BI / Internal Dashboard Engine
+
+وAI يستخدم نفس Semantic Layer.
+
+---
+
+# 42. أهم العلاقات داخل النظام
+
+أقدر ألخص System Architecture في:
+
+```text
+                     COMPANY
+                        │
+        ┌───────────────┼───────────────┐
+        │               │               │
+     CLIENT         DEPARTMENT       PROJECT
+                        │               │
+                        └──────┬────────┘
+                               │
+                           EMPLOYEE
+                               │
+           ┌───────────────────┼───────────────────┐
+           │                   │                   │
+       Attendance          Payroll              KPI
+           │                   │                   │
+       Project             Cost Center        Performance
+           │
+          Site
+           │
+          Team
+```
+
+وفوقهم:
+
+```text
+AI Layer
+Analytics
+Workflow Engine
+Permission Engine
+Notification Engine
+Audit Engine
+Document Engine
+```
+
+---
+
+# 43. System Navigation المقترح
+
+القائمة الرئيسية تكون Modular:
+
+**Home / Dashboard**
+
+People
+
+Recruitment
+
+Onboarding
+
+Organization
+
+Projects & Workforce
+
+Attendance
+
+Leave
+
+Payroll
+
+Performance & KPI
+
+Training
+
+Employee Relations
+
+Assets & Custody
+
+Offboarding
+
+Employee Services
+
+Reports & Analytics
+
+AI Assistant
+
+Settings
+
+---
+
+# 44. Settings Module
+
+Settings لازم يكون قوي جدًا.
+
+يحتوي:
+
+Companies
+
+Business Units
+
+Departments
+
+Projects
+
+Sites
+
+Positions
+
+Grades
+
+Job Families
+
+Employee Types
+
+Contract Types
+
+Shifts
+
+Attendance Policies
+
+Leave Policies
+
+Payroll Rules
+
+Salary Components
+
+KPI Templates
+
+Approval Workflows
+
+Notifications
+
+Document Types
+
+Assets
+
+Cost Centers
+
+Users
+
+Roles
+
+Permissions
+
+Data Scope
+
+AI Permissions
+
+Integrations
+
+Languages
+
+Audit Logs
+
+---
+
+# 45. Roles المبدئية
+
+أقترح لا نقل عن:
+
+Super Admin
+
+CEO
+
+Executive Director
+
+HR Director
+
+HR Manager
+
+HR Operations
+
+Personnel
+
+Payroll
+
+Talent Acquisition
+
+Organization Development
+
+Employee Relations
+
+Finance
+
+Project Director
+
+Project Manager
+
+Site Manager
+
+Supervisor
+
+HSE
+
+Warehouse
+
+IT
+
+Asset Control
+
+Employee
+
+Auditor
+
+لكن نستخدم **Dynamic Roles** وليس Hard-coded Roles.
+
+---
+
+# 46. نقطة أرى أنها شديدة الأهمية
+
+**لا نربط User = Role واحد.**
+
+مثلاً شخص ممكن يكون:
+
+Project Manager
+
+وفي نفس الوقت:
+
+Hiring Request Approver
+
+أو
+
+Regional Manager.
+
+إذن:
+
+User → Multiple Roles
+
+وكل Role → Permissions
+
+وكل Permission → Data Scope.
+
+---
+
+# 47. التكاملات التي يجب تجهيز Architecture لها
+
+حتى لو مش هنفذها كلها في Version 1:
+
+ERP
+
+Finance
+
+Payroll Bank File
+
+Fingerprint
+
+GPS
+
+Active Directory
+
+Microsoft 365 / Google Workspace
+
+Email
+
+SMS
+
+WhatsApp
+
+Power BI
+
+Project Management System
+
+Fleet
+
+Warehouse
+
+HSE
+
+Accounting
+
+Client Systems
+
+---
+
+# 48. نقطة Telecom Contractor التي أريد إضافتها
+
+عندي توصية قوية:
+
+**Project Workforce Module**
+
+لازم يكون First-Class Module وليس مجرد Field داخل Employee.
+
+لأن نجاح HR في شركة مقاولات يعتمد على الإجابة يوميًا على:
+
+> عندي كام شخص؟
+
+> فين؟
+
+> بيشتغلوا على إيه؟
+
+> بتكلفة كام؟
+
+> إنتاجيتهم كام؟
+
+> المشروع ناقص كام فرد؟
+
+> عندي مين Available؟
+
+> مين عنده Skill معينة؟
+
+دي أسئلة أهم أحيانًا من الـtraditional HR.
+
+---
+
+# 49. الهيكل المعماري المبدئي
+
+مبدئيًا أراه:
+
+```text
+Web Application
+        │
+Mobile Employee Application
+        │
+Manager Mobile Application
+        │
+        ▼
+API Gateway
+        │
+        ▼
+Application Backend
+        │
+ ┌──────┼───────────────┐
+ │      │               │
+HR   Workflow          AI
+ │      │               │
+Payroll Permission   Analytics
+ │
+PostgreSQL
+ │
+Analytics DB / Warehouse
+ │
+BI & AI
+```
+
+مع:
+
+Object Storage
+
+Redis
+
+Notification Service
+
+Background Jobs
+
+Audit Service
+
+Search Engine
+
+---
+
+# 50. ما الذي لا أريد أن نفعله؟
+
+فيه 5 أخطاء لو حصلت ستضعف المشروع جدًا:
+
+**1.** نبني HR عادي ثم نضيف Project Field.
+
+**2.** نعمل AI Chatbot منفصل عن Permission Engine.
+
+**3.** نحط Payroll Logic داخل الـCode بدون Rules Engine.
+
+**4.** نحط كل الـApprovals Hard-coded.
+
+**5.** نخلي Employee Current Project بدون Assignment History.
+
+دي قرارات Architecture لازم نحسمها من البداية.
+
+---
+
+# الأسئلة التي أحتاجها منك الآن
+
+عندي **10 أسئلة فقط** في المرحلة الحالية، وإجاباتهم ستحدد الـSystem Blueprint الحقيقي:
+
+1. **النظام ده هيكون لشركة واحدة فقط أم Multi-Company SaaS؟** يعني Afro فقط، أم تريد لاحقًا بيعه لشركات مقاولات أخرى؟
+
+2. **تقريبًا كام Employee لازم النظام يستوعب؟** 1,000؟ 3,000؟ 10,000؟ 50,000؟
+
+3. هل نعتبر **Nama ERP هو النظام المالي الرئيسي** ونتكامل معه، أم النظام الجديد مطلوب منه Payroll/Finance بشكل مستقل؟
+
+4. هل تريد إدارة **العمالة اليومية Daily Workers والعمالة Outsourcing والـSubcontractor Workforce** داخل نفس قاعدة الموظفين؟
+
+5. بالنسبة للحضور، ما المصادر المستخدمة حاليًا؟ **Fingerprint / GPS / Excel / Supervisor / أكثر من طريقة؟**
+
+6. هل الـPayroll عندكم **Monthly Salary فقط** أم يوجد فعلاً Daily Rate / Overtime / Per Task / Per Meter / Productivity Payment؟
+
+7. هل تريد Project Managers وSupervisors من خارج HR يستخدموا النظام لإدارة فرقهم، أم الوصول الأساسي CEO + HR + Employee فقط؟
+
+8. هل تريد ربط الموظف فعليًا بـ **Client → Project → Site → Team** بحيث نقدر نحسب Manpower Cost وProductivity لكل مشروع؟
+
+9. Mobile App: هل تريد **Android + iOS** أم Android أولاً؟ وهل العامل/الفني غالبًا يمتلك Smartphone؟
+
+10. أهم سؤال: هل هدفنا الآن **تصميم النظام الكامل End-to-End أولًا** ثم نحدد MVP، أم تريد البدء مباشرة بتصميم **Version 1** قابل للتنفيذ؟
+
+بعد إجاباتك، أقترح أن الخطوة التالية لا تكون كتابة كود. سأبني لك **Afro HR V2 System Blueprint** شامل: الـModules بالكامل، الـSubmodules، Personas، Permission Matrix، Workflows، Data Model/ERD، AI Architecture، Dashboards & KPIs لكل Role، Mobile App، Integrations، ثم نقسمه إلى Phase 1 / 2 / 3 قبل اختيار الـFrontend والـBackend والـDatabase. ده سيمنعنا من بناء شاشات كثيرة ثم اكتشاف أن الـData Model نفسه ناقص.

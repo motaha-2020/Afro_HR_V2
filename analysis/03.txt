@@ -1,0 +1,934 @@
+ممتاز. كده نقدر نقفل مرحلة الـ**High-Level Requirements** ونثبت مجموعة قرارات Architecture قبل الدخول في تصميم الـModules بالتفصيل.
+
+التصميم من الآن سيكون **Multi-Company / Multi-Tenant**، وكل شركة يمكن أن يصل حجمها إلى **5,000 موظف**، ولكل شركة **Company Super Admin مستقل** لا يرى شركات أخرى. وفي الوقت نفسه سيكون هناك مستوى أعلى خاص بمالك المنصة فقط لإدارة الـTenants مستقبلًا عندما يتحول النظام من Internal Platform إلى SaaS تجاري.
+
+## 1. الهيكل النهائي للـMulti-Tenancy
+
+لن نعتبر Super Admin رتبة واحدة. سيكون لدينا مستويان مختلفان تمامًا:
+
+```text
+Platform Owner
+│
+├── Platform Super Admin
+│
+├── Tenant / Company A
+│   └── Company Super Admin
+│       ├── HR
+│       ├── Finance
+│       ├── Project Managers
+│       └── Employees
+│
+├── Tenant / Company B
+│   └── Company Super Admin
+│
+└── Tenant / Company C
+    └── Company Super Admin
+```
+
+**Platform Super Admin** يستطيع مستقبلًا إنشاء شركة، تعطيلها، تحديد الباقة والـlimits وإدارة الإعدادات العامة، لكنه لا يجب أن يحصل افتراضيًا على صلاحية قراءة بيانات الرواتب أو الملفات الشخصية للشركات.
+
+أما **Company Super Admin** فيدير شركته فقط: المستخدمين، الصلاحيات، السياسات، الـprojects، الـworkflows والإعدادات.
+
+وده فصل مهم أمنيًا وتجاريًا.
+
+---
+
+# 2. Employee Multi-Assignment
+
+تم اعتماد أن أي موظف يمكن أن يرتبط بأكثر من Project في نفس الوقت.
+
+وده لا ينطبق فقط على Project Manager.
+
+ممكن يكون:
+
+Engineer
+Supervisor
+HR Generalist
+HSE
+Finance
+Warehouse
+Fleet
+Project Director
+
+وغيرهم.
+
+لذلك لن نضع:
+
+```text
+Employee.ProjectId
+```
+
+كتصميم أساسي.
+
+بل سيكون عندنا كيان:
+
+**Employee Assignment**
+
+مثلاً:
+
+```text
+Employee: Ahmed Mohamed
+
+Assignment #1
+Client: Telecom Egypt
+Project: FTTH Cairo
+Role: Project Manager
+Allocation: 50%
+
+Assignment #2
+Client: Vodafone
+Project: FTTS Giza
+Role: Project Manager
+Allocation: 30%
+
+Assignment #3
+Internal
+PMO Support
+Allocation: 20%
+```
+
+ومن هنا نستطيع حساب:
+
+**50% + 30% + 20% = 100%**
+
+ونضيف Rules تكشف:
+
+```text
+Allocation > 100%
+```
+
+أو:
+
+```text
+Employee without active assignment
+```
+
+أو:
+
+```text
+Project Manager assigned to 7 projects
+```
+
+ودي ستكون مادة ممتازة للـAI Analytics لاحقًا.
+
+---
+
+# 3. Subcontractor Workforce
+
+هنضيف مستوى مستقل:
+
+```text
+Company
+│
+├── Internal Employees
+│
+└── Subcontractors
+       │
+       ├── Subcontractor Company A
+       │      ├── Team
+       │      └── Workers
+       │
+       └── Subcontractor Company B
+```
+
+لكن مهم جدًا ألا نعامل Subcontractor Employee كموظف داخلي بشكل كامل.
+
+سيكون له **Worker Profile** خاص يمكن أن يحتوي مثلًا:
+
+Name
+National ID
+Mobile
+Trade
+Skill
+HSE Certification
+Medical Clearance
+Project
+Site
+Team
+Supervisor
+Attendance
+Productivity
+Access Permit
+Expiry Documents.
+
+بينما قد لا يكون له:
+
+Internal Payroll
+
+Salary Details
+
+Internal Benefits
+
+Internal Performance Appraisal.
+
+ومن Settings نحدد مستوى المعلومات المطلوب لكل نوع Workforce.
+
+---
+
+# 4. Authentication النهائي
+
+هيكون لدينا عدة طرق.
+
+### الموظف الإداري
+
+```text
+HR Code
++
+Password
+```
+
+ويمكن كذلك:
+
+```text
+Corporate Email
++
+Password
+```
+
+### الفني / العامل
+
+```text
+HR Code
++
+Password
+```
+
+وممكن Recover Account من:
+
+**Mobile Number + OTP**
+
+### Password Recovery
+
+نعتمد مسارين:
+
+```text
+Corporate Email
+→ OTP / Secure Link
+```
+
+أو:
+
+```text
+Registered Mobile
+→ OTP
+```
+
+وسيكون لكل Company Settings تحدد:
+
+```text
+Allowed Login Methods
+
+☑ HR Code
+☑ Corporate Email
+☑ Mobile
+☐ Microsoft SSO
+☐ Google SSO
+```
+
+SSO يمكن إضافته لاحقًا.
+
+---
+
+# 5. Mandatory First Login Security
+
+الموظف الجديد:
+
+```text
+HR creates employee
+        ↓
+HR Code generated
+        ↓
+Temporary Password generated
+        ↓
+Employee logs in
+        ↓
+OTP verification
+        ↓
+Forced Password Change
+        ↓
+Terms & Privacy Acceptance
+        ↓
+Account Activated
+```
+
+والـTemporary Password:
+
+* Expiry.
+* One-time use.
+* لا يمكن استخدامه مرة أخرى.
+* يسجل في Audit Log أن كلمة المرور تغيرت وليس محتواها.
+
+---
+
+# 6. Languages أصبحت Requirement أساسية
+
+النظام سيكون:
+
+**Arabic + English + French**
+
+وليس مجرد ترجمة Labels.
+
+نحتاج من البداية Architecture حقيقية للـLocalization.
+
+```text
+Supported Languages
+
+AR — العربية
+EN — English
+FR — Français
+```
+
+كل User يختار لغته.
+
+ويمكن لـCompany Admin تحديد:
+
+Default Language.
+
+مثلاً:
+
+شركة مصرية:
+
+```text
+Default = Arabic
+```
+
+شركة في Madagascar:
+
+```text
+Default = French
+```
+
+---
+
+# 7. RTL / LTR
+
+وده مهم جدًا في Frontend Architecture.
+
+### Arabic
+
+```text
+direction = RTL
+```
+
+القائمة:
+
+يمين.
+
+النصوص:
+
+يمين.
+
+Forms:
+
+RTL-aware.
+
+Tables:
+
+RTL.
+
+Breadcrumbs:
+
+RTL.
+
+Icons directional behavior:
+
+يتغير عند الحاجة.
+
+---
+
+### English
+
+```text
+direction = LTR
+```
+
+القائمة:
+
+يسار.
+
+---
+
+### French
+
+```text
+direction = LTR
+```
+
+---
+
+إذن نفس الشاشة مثلًا:
+
+### العربية
+
+```text
+┌─────────────────────────────────────────────┐
+│                              الملف الشخصي  │
+│                                             │
+│   المحتوى                       القائمة     │
+│                                الرئيسية     │
+│                                الحضور       │
+│                                الإجازات     │
+│                                الرواتب      │
+└─────────────────────────────────────────────┘
+```
+
+### English / Français
+
+```text
+┌─────────────────────────────────────────────┐
+│ Profile                                     │
+│                                             │
+│ Menu                    Content             │
+│ Dashboard                                   │
+│ Attendance                                  │
+│ Leave                                       │
+│ Payroll                                     │
+└─────────────────────────────────────────────┘
+```
+
+---
+
+# 8. حتى الـDatabase يجب أن تراعي اللغات
+
+مش هنكتب:
+
+```text
+JobTitle = Fiber Technician
+```
+
+فقط.
+
+الأفضل لبعض الـMaster Data:
+
+```text
+Position
+
+Code = FIBER_TECH
+
+Translations:
+
+AR = فني ألياف ضوئية
+EN = Fiber Technician
+FR = Technicien Fibre Optique
+```
+
+بنفس الطريقة:
+
+Departments
+Positions
+Grades
+Leave Types
+Request Types
+Training Types
+Asset Types
+Payroll Components
+
+يمكن ترجمتها.
+
+---
+
+# 9. لكن بيانات المستخدم نفسها لا تترجم آليًا
+
+فرق مهم.
+
+لو Project اسمه الرسمي:
+
+**WE FTTH Cairo**
+
+فلن نحوله تلقائيًا إلى ترجمة فرنسية.
+
+لكن الـSystem labels تكون مترجمة.
+
+وبعض Master Data يسمح للمستخدم بإدخال:
+
+Arabic Name
+English Name
+French Name.
+
+---
+
+# 10. الـAI كذلك يجب أن يكون Multilingual
+
+تم اعتماد:
+
+**Arabic + English + French AI Copilot**
+
+ويجب أن يستطيع المستخدم كتابة:
+
+> كام عدد الفنيين الموجودين في مشروع WE؟
+
+أو:
+
+> How many technicians are assigned to the WE project?
+
+أو:
+
+> Combien de techniciens sont affectés au projet WE ?
+
+والثلاثة يجب أن يصلوا إلى نفس Business Query.
+
+---
+
+# 11. الـAI يجب أن يفهم Mixed Language
+
+لأن الاستخدام الحقيقي سيكون مثل:
+
+> اعمل report عن attendance بتاع Vodafone project آخر شهر.
+
+أو:
+
+> مين الـtechnicians اللي HSE certificate بتاعتهم expired؟
+
+وده طبيعي جدًا في بيئة شركات الاتصالات.
+
+لذلك لا نبني Logic يفترض أن السؤال كله بلغة واحدة.
+
+---
+
+# 12. Architecture النهائية التي أصبحت أميل لها
+
+بعد تثبيت متطلباتك، الـTechnology Stack يبقى:
+
+```text
+Web
+React + TypeScript + Vite
+
+Mobile
+Flutter
+Android First
+iOS Later
+
+Backend
+ASP.NET Core 10
+C#
+
+Architecture
+Modular Monolith
+
+Database
+PostgreSQL
+
+Cache
+Redis
+
+Object Storage
+MinIO / S3 Compatible
+
+Background Jobs
+Hangfire
+
+AI
+Dedicated AI Gateway
++
+Model Router
+
+Deployment
+Docker Containers
+
+Reverse Proxy
+Nginx
+
+Analytics
+Operational Analytics First
+Dedicated Analytics Layer Later
+```
+
+لكن عندنا تعديل مهم:
+
+## React UI Framework
+
+لازم نختار Component System يدعم:
+
+RTL
+
+LTR
+
+Theming
+
+Accessibility
+
+Responsive Design
+
+Data Grids
+
+Forms
+
+بشكل قوي.
+
+وهذا سنحسمه عند تصميم **Frontend Design System**، وليس الآن عشوائيًا.
+
+---
+
+# 13. شكل النظام من ناحية Architecture أصبح كالتالي
+
+```text
+                     AFRO HR PLATFORM
+                           │
+                   Platform Management
+                           │
+              ┌────────────┼────────────┐
+              │            │            │
+          Tenant A     Tenant B     Tenant C
+              │
+    ┌─────────┼─────────────────────────────────┐
+    │         │          │           │           │
+ Identity Organization People     Projects    Payroll
+    │         │          │           │           │
+ Security Recruitment Attendance Workforce Performance
+    │
+ Workflow
+    │
+ Notifications
+    │
+ Documents
+    │
+ Analytics
+    │
+ AI Intelligence
+```
+
+والـMobile App يستخدم نفس الـBackend وليس Backend منفصل.
+
+---
+
+# 14. Core Modules التي نعتمدها الآن
+
+أصبحت الصورة عندي تقريبًا:
+
+1. Platform Administration
+2. Tenant / Company Management
+3. Identity & Authentication
+4. Roles & Permissions
+5. Organization Structure
+6. Employee Master
+7. Employee Digital File
+8. Workforce & Project Assignment
+9. Subcontractor Workforce
+10. Manpower Planning
+11. Recruitment & ATS
+12. Onboarding
+13. Employee Movement
+14. Attendance
+15. Shift & Roster
+16. Timesheet
+17. Overtime
+18. Productivity
+19. Leave & Permissions
+20. Payroll
+21. Compensation & Benefits
+22. Allowances
+23. Loans & Advances
+24. KPI
+25. Performance Management
+26. Training
+27. Skills & Competency
+28. HSE Compliance
+29. Employee Relations
+30. Investigation & Discipline
+31. Assets & Custody
+32. Employee Requests
+33. Offboarding
+34. Workflow Engine
+35. Notifications
+36. Document Management
+37. Reports
+38. Dashboards
+39. AI Intelligence Center
+40. Integrations
+41. Audit & Compliance
+42. Settings & Configuration.
+
+ما زال ممكن ندمج بعضهم في الـNavigation، لكن منطقيًا هم Domains مستقلة.
+
+---
+
+# 15. نقطة مهمة ظهرت من المستندات
+
+الـmanual الحالي يؤكد أن HR Operations ليس مجرد إدارة ملفات؛ هو مسؤول عن Workforce Management من حيث schedules والحضور والإجازات والـshift plans والـmanpower planning، بالإضافة إلى employee relations والمتابعة التشغيلية. 
+
+وده يؤكد قرارنا بأن:
+
+**Workforce Management لازم يكون جزء أساسي من HR Platform**
+
+وليس Project Management add-on.
+
+كما أن الهيكل الحالي يربط HR Operations بحسابات/مشروعات مختلفة مثل Huawei & Nokia وEricsson، وده يدعم فكرة **Data Scope by Account / Project / Client** بدل صلاحيات HR عامة فقط. 
+
+---
+
+# 16. أريد إضافة مفهوم مهم جدًا: Policy Engine
+
+بسبب كلامك:
+
+> كل مشروع أو نوع وظيفة ليه Attendance مختلفة.
+
+وكذلك Payroll.
+
+إذن بدل Settings منفصلة كثيرة، سنبني مفهوم:
+
+# Policy Engine
+
+مثلاً:
+
+```text
+Attendance Policy
+Payroll Policy
+Leave Policy
+Overtime Policy
+KPI Policy
+Approval Policy
+HSE Policy
+```
+
+ويمكن Assign السياسة حسب:
+
+```text
+Company
+Business Unit
+Client
+Project
+Location
+Employee Type
+Position
+Grade
+Individual Employee
+```
+
+مع ترتيب أولوية.
+
+مثال:
+
+Company Policy
+
+↓
+
+Project Policy overrides Company
+
+↓
+
+Position Policy overrides Project
+
+↓
+
+Employee Exception overrides all.
+
+دي ستجعل النظام مرن جدًا.
+
+---
+
+# 17. مثال عملي
+
+لدينا:
+
+**Fiber Technician – WE Project**
+
+Attendance:
+
+GPS + Supervisor
+
+Payroll:
+
+Basic + OT + Productivity
+
+Leave:
+
+6 Days On / 1 Day Off
+
+KPI:
+
+Productivity + Quality + HSE.
+
+بينما:
+
+**Finance Accountant**
+
+Attendance:
+
+Fingerprint
+
+Payroll:
+
+Monthly Fixed
+
+Leave:
+
+Standard Office Policy
+
+KPI:
+
+Department KPI.
+
+الاتنين داخل نفس الشركة ونفس النظام بدون كتابة Code جديد.
+
+---
+
+# 18. Settings Hierarchy
+
+من الآن سنبني Configuration بهذا المنطق:
+
+```text
+Global Platform Settings
+          ↓
+Company Settings
+          ↓
+Business Unit
+          ↓
+Project / Client
+          ↓
+Employee Category
+          ↓
+Position
+          ↓
+Employee Override
+```
+
+وده قرار معماري شديد الأهمية.
+
+---
+
+# 19. MVP سأعدله قليلًا بناءً على متطلباتك
+
+الـMVP الحقيقي عندي الآن يجب أن يحتوي:
+
+**Platform Core**
+
+* Multi-company
+* Company Super Admin
+* Localization AR/EN/FR
+* RTL/LTR
+* Authentication
+* HR Code
+* Email
+* Mobile OTP
+* Permissions
+* Audit
+
+**People**
+
+* Organization
+* Employee Master
+* Employee File
+* Project Assignments
+* Multiple Projects
+* Subcontractor Workforce
+
+**Workforce**
+
+* Attendance Policies
+* GPS Attendance
+* Manual Attendance
+* Basic Shift
+* Leave
+
+**Financial**
+
+* Configurable Basic Payroll
+* Salary Components
+* Project Cost Allocation
+
+**Performance**
+
+* Basic KPI
+
+**Employee Android App**
+
+* Profile
+* Attendance
+* Salary
+* Leave
+* KPI
+* Requests
+* Notifications
+
+**Intelligence**
+
+* Basic Dashboard
+* AI HR Chat
+* AI Smart Entry
+* AI Query over authorized employee data.
+
+وده MVP كبير نسبيًا، لكنه MVP فعلي للمنتج وليس مجرد Demo.
+
+---
+
+# 20. Version 1 بعدها
+
+ندخل:
+
+Full Recruitment
+
+Onboarding
+
+Personnel
+
+Document OCR
+
+Full Attendance
+
+Fingerprint Integration
+
+Roster
+
+Timesheet
+
+Full Payroll Rules
+
+Loans
+
+Advances
+
+Allowance
+
+Productivity
+
+Training
+
+HSE
+
+Performance
+
+Employee Relations
+
+Assets
+
+Full Offboarding
+
+Workflow Designer
+
+ERP integration
+
+Advanced Analytics
+
+AI Reports
+
+AI Dashboard Generation.
+
+---
+
+# هل عندي أسئلة أخرى الآن؟
+
+**لا أحتاج أسئلة Business عامة إضافية في المرحلة الحالية.**
+
+لو استمرينا في السؤال أكثر من كده هنبدأ ندخل في تفاصيل كل Module، وده بالضبط الخطوة التالية التي أنت طلبتها.
+
+من وجهة نظري، **Master Requirement Phase أصبحت مقفولة بنسبة كافية لنبدأ التصميم التفصيلي.**
+
+وأقترح أننا نشتغل من هنا بطريقة منظمة جدًا:
+
+> **Module 01 — Platform, Multi-Company & Tenant Management**
+
+نمسكه وحده ونحدد بالتفصيل:
+
+**الفكرة → الهدف → المستخدمين → الصلاحيات → البيانات → الشاشات → Workflow → Settings → Business Rules → حالات الخطأ → Audit → APIs → Database Entities → AI Use Cases → KPIs → شكل الـUI العربي RTL والإنجليزي/الفرنسي LTR → ما يدخل MVP وما يؤجل لـV1.**
+
+وبعد ما نقفله ننتقل إلى:
+
+**Module 02 — Organization Structure**
+
+ثم:
+
+**Module 03 — Identity, Users, Roles & Permissions**
+
+ثم Employee Master… وهكذا.
+
+بالطريقة دي في النهاية لن يكون عندنا مجرد فكرة HR System، بل **Functional + Technical Specification كاملة تقريبًا وجاهزة ليتحول منها الفريق مباشرة إلى Database وBackend وFrontend وMobile Development.**

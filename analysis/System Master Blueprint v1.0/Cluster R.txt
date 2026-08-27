@@ -1,0 +1,2800 @@
+نعم، **Cluster R** هو الخطوة الطبيعية الآن، لكن يجب ضبط حدوده بدقة حتى لا نكرر ما هو موجود في Cluster 03 أو L أو N.
+هذا الـCluster لا يعرّف فقط من هو المستخدم وما هي الـRole؛ بل يدير **حَوْكَمة الوصول، الثقة في الجلسة والجهاز، الصلاحيات الحساسة، مراجعات الوصول، الفصل بين المهام، كشف السلوك غير الطبيعي، الحوادث الأمنية، وربط المنصة مع SIEM/SOC**.
+
+والـManual الحالي نفسه يفرض مبادئ تدعم هذا الاتجاه: البيانات الوظيفية والرواتب والتحقيقات يجب أن تكون confidential ولا يصل إليها إلا المصرح لهم، وكل العمليات المهمة تحتاج approvals وقابلية تتبع، كما أن offboarding يتطلب تعطيل كل access بحد أقصى آخر يوم عمل. 
+
+# Cluster R — Enterprise Security Operations & IAM Governance ERD
+
+أقسمه إلى **18 Sub-Domains**:
+
+```text
+R1   Identity Federation & SSO
+R2   Authentication Policy
+R3   MFA / Passwordless
+R4   Conditional Access
+R5   Device Trust
+R6   Session & Risk Context
+R7   Privileged Access Management
+R8   Access Governance
+R9   Access Reviews / Certification
+R10  Segregation of Duties
+R11  Security Events
+R12  Threat Detection
+R13  DLP / Sensitive Data Controls
+R14  SIEM / SOC Integration
+R15  Security Incident Response
+R16  Credential / Secret Security Governance
+R17  Security Posture & Compliance
+R18  Security Operations Metrics & Audit
+```
+
+---
+
+# 1. الحدود المعمارية
+
+المهم أولًا أن نفرق بين:
+
+```text
+Cluster 03
+Identity / Users / Roles / Permissions
+
+Cluster R
+Security Governance / Risk / Monitoring / Privileged Access
+```
+
+مثلًا:
+
+```text
+Cluster 03:
+User Mohamed has role Payroll Specialist
+
+Cluster R:
+Should Mohamed still have this role?
+Was it reviewed?
+Is it conflicting with another role?
+Is he connecting from a trusted device?
+Is this a privileged session?
+Was the access used abnormally?
+```
+
+---
+
+# R1. Identity Provider Registry
+
+### `identity_provider`
+
+```text
+identity_provider
+-----------------
+identity_provider_id PK
+
+tenant_id NULL
+
+provider_code
+provider_name
+
+provider_type
+  LOCAL
+  AZURE_AD
+  ENTRA_ID
+  GOOGLE
+  OKTA
+  LDAP
+  SAML
+  OIDC
+
+issuer_url
+
+client_id
+
+secret_reference_id FK NULL
+
+metadata_url NULL
+
+sso_enabled
+
+jit_provisioning_enabled
+
+scim_enabled
+
+status
+```
+
+---
+
+# R2. Federation Configuration
+
+```text
+federation_configuration
+------------------------
+federation_configuration_id PK
+
+tenant_id
+
+identity_provider_id FK
+
+domain_pattern
+
+federation_protocol
+  SAML
+  OIDC
+
+default_role_mapping_policy_id FK NULL
+
+allow_local_login
+
+force_sso
+
+status
+```
+
+---
+
+# 2. External Identity Mapping
+
+### `external_identity`
+
+```text
+external_identity
+-----------------
+external_identity_id PK
+
+tenant_id
+
+user_id FK
+
+identity_provider_id FK
+
+external_subject_id
+
+external_username
+external_email
+
+linked_at
+
+last_sync_at
+
+status
+```
+
+---
+
+# R3. Authentication Policy
+
+### `authentication_policy`
+
+```text
+authentication_policy
+---------------------
+authentication_policy_id PK
+
+tenant_id NULL
+
+policy_code
+policy_name
+
+authentication_methods_json
+
+password_required
+
+mfa_required
+
+passwordless_allowed
+
+session_timeout_minutes
+
+absolute_session_lifetime_minutes
+
+idle_timeout_minutes
+
+risk_based_authentication
+
+status
+```
+
+---
+
+# 3. Password Policy
+
+### `password_policy`
+
+```text
+password_policy
+---------------
+password_policy_id PK
+
+tenant_id NULL
+
+min_length
+
+complexity_required
+
+password_history_count
+
+max_age_days
+
+min_age_days
+
+lockout_threshold
+
+lockout_duration_minutes
+
+breached_password_check
+
+status
+```
+
+لكن لو SSO إجباري:
+
+```text
+Local Password Policy
+```
+
+قد لا تُستخدم أصلًا.
+
+---
+
+# R4. Authentication Method
+
+### `user_authentication_method`
+
+```text
+user_authentication_method
+--------------------------
+user_authentication_method_id PK
+
+user_id FK
+
+method_type
+  PASSWORD
+  TOTP
+  SMS_OTP
+  EMAIL_OTP
+  PUSH
+  FIDO2
+  PASSKEY
+  CERTIFICATE
+
+credential_reference
+
+registered_at
+
+last_used_at
+
+is_primary
+
+status
+```
+
+---
+
+# 4. Passwordless
+
+أقترح دعم:
+
+```text
+Passkeys
+FIDO2 Security Keys
+Device Biometrics via platform authenticator
+```
+
+ولا نعتمد على SMS OTP كأفضل خيار أمني، وإن كان مفيدًا كfallback في بعض السيناريوهات.
+
+---
+
+# R5. MFA Policy
+
+```text
+mfa_policy
+----------
+mfa_policy_id PK
+
+tenant_id
+
+policy_code
+
+required_methods_json
+
+minimum_assurance_level
+
+apply_to_roles_json
+
+apply_to_risk_levels_json
+
+step_up_required
+
+status
+```
+
+---
+
+# 5. Step-Up Authentication
+
+ليس كل action يحتاج نفس assurance.
+
+مثال:
+
+```text
+View Employee Directory
+→ Normal session
+
+Export payroll
+→ MFA step-up
+
+Change payroll rule
+→ MFA + privileged approval
+
+Reset tenant admin MFA
+→ Strong authentication
+```
+
+---
+
+# R6. Step-Up Challenge
+
+```text
+step_up_challenge
+-----------------
+step_up_challenge_id PK
+
+tenant_id
+
+user_id
+
+session_id
+
+action_code
+
+required_assurance_level
+
+challenge_method
+
+issued_at
+completed_at
+
+status
+```
+
+---
+
+# 6. Conditional Access
+
+### `conditional_access_policy`
+
+```text
+conditional_access_policy
+-------------------------
+conditional_access_policy_id PK
+
+tenant_id
+
+policy_name
+
+priority
+
+condition_json
+
+access_decision
+  ALLOW
+  DENY
+  REQUIRE_MFA
+  REQUIRE_TRUSTED_DEVICE
+  REQUIRE_STEP_UP
+
+effective_from
+effective_to
+
+status
+```
+
+---
+
+# مثال
+
+```text
+IF
+role = Payroll Admin
+
+AND
+country != Egypt
+
+THEN
+Require MFA + trusted device
+```
+
+أو:
+
+```text
+IF
+session_risk = HIGH
+
+THEN
+Block
+```
+
+---
+
+# R7. Device Registry
+
+### `device`
+
+```text
+device
+------
+device_id PK
+
+tenant_id
+
+device_identifier
+
+device_type
+  DESKTOP
+  LAPTOP
+  MOBILE
+  TABLET
+
+operating_system
+
+os_version
+
+device_owner_type
+  CORPORATE
+  BYOD
+
+registered_user_id FK NULL
+
+managed_flag
+
+encrypted_flag
+
+security_agent_installed
+
+last_seen_at
+
+status
+```
+
+---
+
+# R8. Device Trust
+
+```text
+device_trust_status
+-------------------
+device_trust_status_id PK
+
+device_id FK
+
+trust_level
+  TRUSTED
+  LIMITED
+  UNTRUSTED
+  BLOCKED
+
+compliance_score
+
+malware_status
+
+disk_encryption_status
+
+patch_status
+
+rooted_or_jailbroken
+
+evaluated_at
+
+status
+```
+
+---
+
+# 7. Device Compliance Rule
+
+### `device_compliance_policy`
+
+```text
+device_compliance_policy
+------------------------
+device_compliance_policy_id PK
+
+tenant_id
+
+policy_name
+
+minimum_os_version
+
+disk_encryption_required
+
+screen_lock_required
+
+security_agent_required
+
+rooted_device_blocked
+
+minimum_compliance_score
+
+status
+```
+
+---
+
+# R9. Session
+
+### `security_session`
+
+```text
+security_session
+----------------
+security_session_id PK
+
+tenant_id
+
+user_id
+
+device_id FK NULL
+
+identity_provider_id FK NULL
+
+ip_address
+
+country_code
+
+user_agent
+
+authentication_strength
+
+created_at
+
+last_activity_at
+
+expires_at
+
+session_status
+  ACTIVE
+  REVOKED
+  EXPIRED
+```
+
+---
+
+# R10. Session Risk
+
+```text
+session_risk_assessment
+-----------------------
+session_risk_assessment_id PK
+
+security_session_id FK
+
+risk_score
+
+risk_level
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+
+risk_factors_json
+
+assessed_at
+
+recommended_action
+```
+
+---
+
+# 8. Risk Factors
+
+مثل:
+
+```text
+Impossible travel
+New device
+Anonymous proxy
+Repeated MFA failures
+Unusual download volume
+Sensitive module access
+Off-hours privileged access
+```
+
+---
+
+# R11. User Risk
+
+### `user_risk_profile`
+
+```text
+user_risk_profile
+-----------------
+user_risk_profile_id PK
+
+tenant_id
+user_id
+
+current_risk_score
+current_risk_level
+
+last_assessed_at
+
+risk_reason_json
+
+status
+```
+
+---
+
+# 9. Privileged Access Management
+
+دي من أهم أجزاء Cluster R.
+
+لا أريد:
+
+```text
+Tenant Super Admin
+```
+
+يمتلك صلاحيات دائمة بلا رقابة.
+
+الأفضل:
+
+> Just-In-Time Privileged Access.
+
+---
+
+# R12. Privileged Role
+
+### `privileged_role`
+
+```text
+privileged_role
+---------------
+privileged_role_id PK
+
+role_id FK
+
+privilege_level
+  HIGH
+  CRITICAL
+
+jit_required
+
+approval_required
+
+mfa_required
+
+max_activation_minutes
+
+status
+```
+
+---
+
+# R13. Privileged Access Request
+
+```text
+privileged_access_request
+-------------------------
+privileged_access_request_id PK
+
+tenant_id
+
+user_id
+
+privileged_role_id FK
+
+business_reason
+
+requested_duration_minutes
+
+requested_at
+
+approved_by NULL
+approved_at NULL
+
+valid_from
+valid_until
+
+status
+```
+
+---
+
+# R14. Privileged Access Activation
+
+```text
+privileged_access_activation
+----------------------------
+activation_id PK
+
+privileged_access_request_id FK
+
+user_id
+
+role_id
+
+activated_at
+expires_at
+
+session_id FK
+
+revoked_at NULL
+
+status
+```
+
+---
+
+# 10. مثال
+
+Payroll Configuration Admin:
+
+```text
+Normal state:
+No privileged access
+
+Requests:
+30 minutes
+
+Approver:
+HR Director / Tenant Security Admin
+
+MFA:
+Required
+
+Audit:
+Mandatory
+```
+
+---
+
+# R15. Privileged Session Recording
+
+```text
+privileged_session
+------------------
+privileged_session_id PK
+
+activation_id FK
+
+security_session_id FK
+
+started_at
+ended_at
+
+commands_logged
+
+screen_recording_reference NULL
+
+actions_count
+
+status
+```
+
+للعمليات شديدة الحساسية.
+
+---
+
+# 11. Access Governance
+
+### `access_entitlement`
+
+```text
+access_entitlement
+------------------
+access_entitlement_id PK
+
+tenant_id
+
+entitlement_type
+  ROLE
+  PERMISSION
+  SYSTEM_ACCESS
+  DATA_SCOPE
+  PRIVILEGED_ROLE
+
+entitlement_reference_id
+
+risk_level
+
+business_owner_role
+
+status
+```
+
+---
+
+# R16. Entitlement Assignment
+
+```text
+access_entitlement_assignment
+-----------------------------
+assignment_id PK
+
+user_id
+
+access_entitlement_id
+
+assignment_source
+  DIRECT
+  ROLE
+  POSITION
+  GROUP
+  PROJECT
+  WORKFLOW
+
+granted_by
+
+granted_at
+
+effective_from
+effective_to
+
+status
+```
+
+---
+
+# 12. لماذا هذا مهم؟
+
+لأننا نريد الإجابة:
+
+> لماذا هذا المستخدم عنده access؟
+
+مثلًا:
+
+```text
+Payroll Read
+because:
+Role = Payroll Specialist
+
+Huawei Employees
+because:
+Assigned Account = Huawei
+```
+
+وليس مجرد:
+
+```text
+permission = true
+```
+
+---
+
+# R17. Access Request
+
+### `access_request`
+
+```text
+access_request
+--------------
+access_request_id PK
+
+tenant_id
+
+requester_user_id
+
+target_user_id
+
+access_entitlement_id
+
+business_reason
+
+requested_from
+requested_until
+
+risk_level
+
+status
+
+created_at
+```
+
+---
+
+# R18. Access Approval
+
+```text
+access_request_approval
+-----------------------
+access_request_approval_id PK
+
+access_request_id FK
+
+approval_step
+
+approver_user_id
+
+decision
+
+decision_reason
+
+decided_at
+```
+
+---
+
+# 13. Access Review
+
+كل access مهم يجب أن يُراجع دوريًا.
+
+### `access_review_campaign`
+
+```text
+access_review_campaign
+----------------------
+access_review_campaign_id PK
+
+tenant_id
+
+campaign_name
+
+scope_type
+  ALL_USERS
+  PRIVILEGED
+  MODULE
+  ROLE
+  DEPARTMENT
+  PROJECT
+
+scope_reference NULL
+
+reviewer_type
+  MANAGER
+  ROLE_OWNER
+  SECURITY
+  DATA_OWNER
+
+start_date
+due_date
+
+status
+```
+
+---
+
+# R19. Access Review Item
+
+```text
+access_review_item
+------------------
+access_review_item_id PK
+
+campaign_id FK
+
+user_id
+
+access_entitlement_id
+
+assignment_id
+
+reviewer_user_id
+
+recommendation
+
+decision
+  KEEP
+  REVOKE
+  MODIFY
+  PENDING
+
+decision_reason
+
+reviewed_at
+```
+
+---
+
+# 14. Example Review
+
+Quarterly:
+
+```text
+Review:
+All Payroll Access
+
+Reviewer:
+Payroll Section Head
+
+Question:
+Does this user still need access?
+```
+
+وده مناسب جدًا لطبيعة الهيكل عندكم لأن Payroll وPersonnel وER/Compliance منفصلون وظيفيًا. 
+
+---
+
+# 15. Segregation of Duties — SoD
+
+### `sod_rule`
+
+```text
+sod_rule
+--------
+sod_rule_id PK
+
+tenant_id NULL
+
+sod_rule_code
+
+rule_name
+
+conflicting_entitlement_a
+conflicting_entitlement_b
+
+severity
+  WARNING
+  HIGH
+  CRITICAL
+
+mitigation_allowed
+
+status
+```
+
+---
+
+# أمثلة SoD مهمة
+
+```text
+Create Payroll Rule
++
+Approve Payroll Rule
+```
+
+Conflict.
+
+```text
+Prepare Payroll
++
+Release Bank Payment
+```
+
+قد تحتاج separation.
+
+```text
+Create Vendor
++
+Approve Vendor Payment
+```
+
+لو Finance integration توسع مستقبلًا.
+
+---
+
+# R20. SoD Violation
+
+```text
+sod_violation
+-------------
+sod_violation_id PK
+
+tenant_id
+
+user_id
+
+sod_rule_id
+
+detected_at
+
+violation_source
+
+risk_level
+
+status
+  OPEN
+  MITIGATED
+  ACCEPTED
+  RESOLVED
+```
+
+---
+
+# R21. SoD Mitigation
+
+```text
+sod_mitigation
+--------------
+sod_mitigation_id PK
+
+sod_violation_id FK
+
+mitigation_type
+
+mitigation_description
+
+approved_by
+
+effective_from
+effective_to
+
+status
+```
+
+---
+
+# 16. Security Event
+
+كل ما يحدث أمنيًا يجب أن يتحول إلى normalized event.
+
+### `security_event`
+
+```text
+security_event
+--------------
+security_event_id PK
+
+tenant_id NULL
+
+event_type
+
+event_category
+  AUTH
+  ACCESS
+  PRIVILEGED
+  DATA
+  DEVICE
+  APPLICATION
+  INTEGRATION
+
+severity
+
+user_id NULL
+device_id NULL
+session_id NULL
+
+source_service_id NULL
+
+ip_address NULL
+
+occurred_at
+
+event_data_json
+
+correlation_id
+```
+
+---
+
+# 17. Event Types
+
+مثل:
+
+```text
+LoginFailed
+MFAFailed
+ImpossibleTravelDetected
+PrivilegedRoleActivated
+SensitiveDataExported
+BulkEmployeeSearch
+BreakGlassUsed
+DocumentDownloaded
+PayrollExported
+SessionRevoked
+```
+
+---
+
+# R22. Security Detection Rule
+
+### `security_detection_rule`
+
+```text
+security_detection_rule
+-----------------------
+security_detection_rule_id PK
+
+rule_code
+rule_name
+
+event_pattern_json
+
+severity
+
+threshold
+
+window_seconds
+
+action_policy_id FK NULL
+
+status
+```
+
+---
+
+# 18. Threat Detection
+
+مثال:
+
+```text
+5 failed logins
++
+successful login
++
+salary export
+within 10 minutes
+```
+
+قد يكون High Risk.
+
+---
+
+# R23. Security Alert
+
+```text
+security_alert
+--------------
+security_alert_id PK
+
+tenant_id NULL
+
+detection_rule_id FK
+
+alert_type
+
+severity
+
+risk_score
+
+first_detected_at
+last_detected_at
+
+user_id NULL
+device_id NULL
+
+status
+  OPEN
+  ACKNOWLEDGED
+  INVESTIGATING
+  CLOSED
+```
+
+---
+
+# 19. Security Alert Evidence
+
+```text
+security_alert_event
+--------------------
+security_alert_event_id PK
+
+security_alert_id FK
+
+security_event_id FK
+```
+
+---
+
+# R24. Response Action Policy
+
+```text
+security_response_action_policy
+-------------------------------
+response_action_policy_id PK
+
+action_code
+
+action_type
+  NOTIFY
+  REQUIRE_MFA
+  REVOKE_SESSION
+  DISABLE_USER
+  BLOCK_DEVICE
+  REVOKE_PRIVILEGE
+  CREATE_INCIDENT
+
+auto_execute
+
+approval_required
+
+status
+```
+
+---
+
+# 20. Automated Response
+
+Low-risk:
+
+```text
+High session risk
+→ Force MFA
+```
+
+Critical:
+
+```text
+Confirmed credential compromise
+→ Revoke sessions
+```
+
+لكن تعطيل موظف إداريًا في HR لا يتم كأثر أمني تلقائي؛ هذا فرق مهم.
+
+---
+
+# 21. Data Loss Prevention — DLP
+
+نحتاج Data Classification من O/M/P/Q.
+
+### `dlp_policy`
+
+```text
+dlp_policy
+----------
+dlp_policy_id PK
+
+tenant_id
+
+policy_name
+
+data_classification
+
+data_pattern
+
+channel
+  WEB
+  EXPORT
+  EMAIL
+  API
+  DOCUMENT_SHARE
+  AI
+
+action
+  ALLOW
+  WARN
+  BLOCK
+  REQUIRE_APPROVAL
+
+status
+```
+
+---
+
+# R25. DLP Detection
+
+```text
+dlp_detection
+-------------
+dlp_detection_id PK
+
+tenant_id
+
+dlp_policy_id
+
+user_id
+
+source_object_type
+source_object_id
+
+channel
+
+detected_at
+
+matched_data_types_json
+
+record_count
+
+action_taken
+
+risk_level
+```
+
+---
+
+# 22. أمثلة DLP
+
+```text
+Export:
+5,000 employee salaries
+
+→ Block / approval
+```
+
+أو:
+
+```text
+Share:
+ER evidence to external email
+
+→ Block
+```
+
+أو:
+
+```text
+AI Prompt:
+contains National IDs + bank accounts
+
+→ redact / block based on policy
+```
+
+---
+
+# 23. Sensitive Data Registry
+
+### `sensitive_data_definition`
+
+```text
+sensitive_data_definition
+-------------------------
+sensitive_data_definition_id PK
+
+data_type_code
+
+data_type_name
+
+classification
+  CONFIDENTIAL
+  RESTRICTED
+  HIGHLY_RESTRICTED
+
+detection_method
+  FIELD
+  REGEX
+  CLASSIFICATION
+  ML
+
+status
+```
+
+---
+
+# 24. SIEM Integration
+
+### `siem_connector`
+
+```text
+siem_connector
+--------------
+siem_connector_id PK
+
+tenant_id NULL
+
+connector_name
+
+siem_type
+  MICROSOFT_SENTINEL
+  SPLUNK
+  ELASTIC
+  QRADAR
+  OTHER
+
+endpoint_reference
+
+credential_secret_reference
+
+event_format
+
+status
+```
+
+---
+
+# R26. SIEM Event Route
+
+```text
+siem_event_route
+----------------
+siem_event_route_id PK
+
+siem_connector_id
+
+security_event_category
+
+minimum_severity
+
+include_tenant_context
+
+include_user_context
+
+status
+```
+
+---
+
+# 25. SOC Case Integration
+
+### `soc_case_reference`
+
+```text
+soc_case_reference
+------------------
+soc_case_reference_id PK
+
+security_incident_id FK
+
+external_case_id
+
+external_system
+
+external_case_url_reference
+
+synced_at
+
+status
+```
+
+---
+
+# 26. Security Incident
+
+### `security_incident`
+
+```text
+security_incident
+-----------------
+security_incident_id PK
+
+tenant_id NULL
+
+incident_code
+
+incident_type
+
+severity
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+
+detected_at
+declared_at
+
+incident_owner_user_id
+
+status
+  OPEN
+  CONTAINMENT
+  INVESTIGATION
+  RECOVERY
+  CLOSED
+
+affected_users_count
+affected_tenants_count
+
+root_cause_category NULL
+
+resolved_at NULL
+```
+
+---
+
+# R27. Incident Timeline
+
+```text
+security_incident_event
+-----------------------
+security_incident_event_id PK
+
+security_incident_id FK
+
+event_time
+
+event_type
+
+description
+
+actor_user_id NULL
+
+security_event_id NULL
+```
+
+---
+
+# 27. Incident Response Task
+
+### `security_incident_task`
+
+```text
+security_incident_task
+----------------------
+security_incident_task_id PK
+
+security_incident_id
+
+task_type
+  INVESTIGATE
+  CONTAIN
+  RESET_CREDENTIALS
+  REVOKE_ACCESS
+  NOTIFY
+  RECOVER
+  REVIEW
+
+assigned_to
+
+due_at
+
+completed_at
+
+status
+```
+
+---
+
+# 28. Security Evidence
+
+يمكننا الاستفادة من Cluster O.
+
+Security incident لا يخزن الملفات بنفسه.
+
+```text
+R:
+Security Incident
+
+O:
+Logs / exported evidence / screenshots / forensic files
+```
+
+ويربطها:
+
+```text
+document_link
+entity_type = SECURITY_INCIDENT
+```
+
+---
+
+# 29. Breach Assessment
+
+### `security_breach_assessment`
+
+```text
+security_breach_assessment
+--------------------------
+security_breach_assessment_id PK
+
+security_incident_id
+
+personal_data_affected
+
+sensitive_data_affected
+
+affected_subject_count
+
+data_exfiltration_confirmed
+
+regulatory_notification_required
+
+customer_notification_required
+
+assessed_by
+
+assessed_at
+
+status
+```
+
+---
+
+# 30. Credential Risk
+
+### `credential_risk_event`
+
+```text
+credential_risk_event
+---------------------
+credential_risk_event_id PK
+
+user_id
+
+risk_type
+  COMPROMISED_PASSWORD
+  TOKEN_THEFT
+  MFA_FATIGUE
+  PHISHING
+  IMPOSSIBLE_TRAVEL
+
+risk_score
+
+detected_at
+
+response_action
+
+status
+```
+
+---
+
+# 31. Credential Rotation
+
+خصوصًا Service Identities.
+
+### `credential_rotation_record`
+
+```text
+credential_rotation_record
+--------------------------
+credential_rotation_record_id PK
+
+credential_type
+
+credential_reference
+
+owner_type
+owner_id
+
+rotation_due_date
+
+rotated_at NULL
+
+rotation_status
+
+status
+```
+
+---
+
+# 32. Break-Glass Accounts
+
+لازم موجودة لكن محكومة.
+
+### `break_glass_account`
+
+```text
+break_glass_account
+-------------------
+break_glass_account_id PK
+
+tenant_id NULL
+
+user_id
+
+purpose
+
+credential_storage_reference
+
+mfa_exception_allowed
+
+monitoring_required
+
+last_tested_at
+
+status
+```
+
+---
+
+# R28. Break-Glass Use
+
+```text
+break_glass_usage
+-----------------
+break_glass_usage_id PK
+
+break_glass_account_id
+
+used_by
+
+reason
+
+started_at
+ended_at
+
+incident_reference NULL
+
+reviewed_by NULL
+
+review_status
+```
+
+كل استخدام يجب أن يولد Critical Alert.
+
+---
+
+# 33. Security Exception
+
+أحيانًا business يحتاج استثناء.
+
+### `security_exception`
+
+```text
+security_exception
+------------------
+security_exception_id PK
+
+tenant_id
+
+policy_type
+policy_id
+
+exception_scope
+
+business_reason
+
+risk_assessment
+
+requested_by
+
+approved_by
+
+effective_from
+effective_to
+
+compensating_controls_json
+
+status
+```
+
+---
+
+# 34. Security Policy Registry
+
+### `security_policy_definition`
+
+```text
+security_policy_definition
+--------------------------
+security_policy_definition_id PK
+
+policy_code
+
+policy_name
+
+policy_category
+  ACCESS
+  AUTH
+  DEVICE
+  DLP
+  PRIVILEGED
+  INCIDENT
+  DATA
+  SESSION
+
+policy_owner
+
+version
+
+effective_from
+effective_to
+
+status
+```
+
+---
+
+# 35. Security Compliance Control
+
+### `security_control`
+
+```text
+security_control
+----------------
+security_control_id PK
+
+control_code
+control_name
+
+control_domain
+
+description
+
+control_owner
+
+control_type
+  PREVENTIVE
+  DETECTIVE
+  CORRECTIVE
+
+status
+```
+
+---
+
+# R29. Control Evidence
+
+```text
+security_control_evidence
+-------------------------
+security_control_evidence_id PK
+
+security_control_id
+
+evidence_type
+
+evidence_reference
+
+evidence_date
+
+verified_by
+
+status
+```
+
+---
+
+# 36. Security Posture
+
+### `security_posture_snapshot`
+
+```text
+security_posture_snapshot
+-------------------------
+security_posture_snapshot_id PK
+
+tenant_id NULL
+
+snapshot_date
+
+mfa_coverage_pct
+privileged_access_review_pct
+device_compliance_pct
+open_critical_alerts
+open_sod_violations
+overdue_access_reviews
+
+overall_security_score
+
+status
+```
+
+---
+
+# 37. Security Metrics
+
+أهم KPIs:
+
+```text
+MFA Coverage %
+Privileged Accounts %
+JIT Privileged Access %
+Access Review Completion %
+Open SoD Violations
+Untrusted Device Sessions
+High-Risk Logins
+Critical Security Alerts
+Mean Time to Detect
+Mean Time to Respond
+Sensitive Exports
+DLP Blocks
+```
+
+---
+
+# 38. Security Dashboard Levels
+
+## Platform Security
+
+```text
+All tenants
+Provider health
+Global threats
+Critical incidents
+```
+
+## Tenant Security
+
+```text
+Tenant users
+Roles
+Privileged access
+Devices
+Risk
+Alerts
+Reviews
+```
+
+## Audit / Compliance
+
+```text
+Access certifications
+SoD
+Security exceptions
+Control evidence
+```
+
+---
+
+# 39. Offboarding Integration
+
+دي نقطة مهمة جدًا مع الـManual.
+
+الـManual ينص أن access يجب تعطيله في موعد أقصاه آخر يوم عمل للموظف. 
+
+المسار يكون:
+
+```text
+Employee.SeparationInitiated
+        ↓
+Cluster H
+        ↓
+Access Deactivation Command
+        ↓
+Cluster R / Identity
+        |
+        +-- revoke sessions
+        +-- disable login
+        +-- revoke privileged roles
+        +-- disable API/service access if applicable
+        +-- notify external IdP if integrated
+```
+
+ثم:
+
+```text
+Access.Deactivated
+```
+
+يرجع Event للـOffboarding workflow.
+
+---
+
+# 40. Onboarding Integration
+
+عند Employee Activation:
+
+```text
+Employee.Activated
+      ↓
+Provision standard access
+      ↓
+Position / Role mapping
+      ↓
+Security policy evaluation
+      ↓
+MFA enrollment requirement
+```
+
+لكن:
+
+> لا نعطي privileged role تلقائيًا بسبب Job Title فقط.
+
+---
+
+# 41. Role Mining
+
+مستقبلًا يمكن تحليل:
+
+```text
+users with same position
++
+actual permissions
++
+usage
+```
+
+لاكتشاف excess access.
+
+### `access_usage_summary`
+
+```text
+access_usage_summary
+--------------------
+access_usage_summary_id PK
+
+user_id
+
+access_entitlement_id
+
+period_start
+period_end
+
+usage_count
+
+last_used_at
+
+unused_days
+```
+
+---
+
+# 42. Dormant Access
+
+مثال:
+
+```text
+Payroll export permission
+not used for 180 days
+```
+
+يظهر في Access Review كـ:
+
+```text
+Revoke Candidate
+```
+
+لكن لا يتم سحبه تلقائيًا إذا كان business-critical بدون policy.
+
+---
+
+# 43. Orphaned Account Detection
+
+### `orphaned_identity_detection`
+
+```text
+orphaned_identity_detection
+---------------------------
+orphaned_identity_detection_id PK
+
+identity_reference
+
+identity_provider_id
+
+employee_id NULL
+
+detected_at
+
+reason
+  NO_EMPLOYEE
+  TERMINATED_EMPLOYEE
+  UNKNOWN_OWNER
+  INACTIVE_ROLE
+
+risk_level
+
+resolution_status
+```
+
+---
+
+# 44. Service Account Governance
+
+### `service_account`
+
+```text
+service_account
+---------------
+service_account_id PK
+
+tenant_id NULL
+
+account_name
+
+owner_team
+
+business_purpose
+
+service_identity_id FK
+
+interactive_login_allowed
+
+privileged
+
+review_frequency
+
+last_reviewed_at
+
+status
+```
+
+---
+
+# 45. Non-Human Identity Review
+
+ضرورية لأن integration/service accounts غالبًا أخطر من user accounts.
+
+```text
+API integrations
+Bots
+Background jobs
+Automation accounts
+```
+
+كلهم يدخلون Access Governance.
+
+---
+
+# 46. Login History
+
+### `authentication_event`
+
+```text
+authentication_event
+--------------------
+authentication_event_id PK
+
+tenant_id
+
+user_id NULL
+
+identity_provider_id
+
+event_type
+  LOGIN_SUCCESS
+  LOGIN_FAILURE
+  MFA_SUCCESS
+  MFA_FAILURE
+  LOGOUT
+  SESSION_REVOKED
+
+ip_address
+device_id NULL
+
+risk_score
+
+occurred_at
+
+failure_reason NULL
+```
+
+---
+
+# 47. Geo Risk
+
+### `geo_access_policy`
+
+```text
+geo_access_policy
+-----------------
+geo_access_policy_id PK
+
+tenant_id
+
+country_code
+
+access_mode
+  ALLOW
+  DENY
+  REQUIRE_MFA
+
+applies_to_role_id NULL
+
+status
+```
+
+---
+
+# 48. Impossible Travel
+
+### `impossible_travel_detection`
+
+```text
+impossible_travel_detection
+---------------------------
+detection_id PK
+
+user_id
+
+session_a_id
+session_b_id
+
+distance_km
+time_difference_minutes
+
+calculated_speed_kph
+
+risk_score
+
+detected_at
+
+status
+```
+
+---
+
+# 49. Data Export Security
+
+Cluster M/P/O يسجل export، وR يراقب السلوك.
+
+مثال:
+
+```text
+User exported:
+4,500 salary records
+
+R sees:
+Sensitive export
++
+unusual volume
++
+new device
+```
+
+ويرفع alert.
+
+---
+
+# 50. AI Security Integration
+
+Cluster Q يولد:
+
+```text
+PromptInjectionDetected
+ToolAbuseDetected
+SensitiveAIDataRequest
+```
+
+Cluster R يجمعها كـSecurity Events.
+
+مثال:
+
+```text
+AI security detection
+      ↓
+R threat detection
+      ↓
+Security alert
+      ↓
+Incident if threshold exceeded
+```
+
+---
+
+# 51. Search Security Integration
+
+Cluster P قد يولد:
+
+```text
+BulkSensitiveSearch
+UnauthorizedSearchAttempt
+```
+
+Cluster R يستخدمها في behavior analysis.
+
+---
+
+# 52. Document Security Integration
+
+Cluster O:
+
+```text
+BreakGlassDocumentAccess
+RestrictedDocumentExport
+ExternalShareCreated
+```
+
+كلها تتحول إلى R Security Events.
+
+---
+
+# 53. Security Event Correlation
+
+### `security_event_correlation`
+
+```text
+security_event_correlation
+--------------------------
+security_event_correlation_id PK
+
+correlation_key
+
+correlation_type
+  USER
+  DEVICE
+  IP
+  SESSION
+  INCIDENT
+  TENANT
+
+first_event_at
+last_event_at
+
+event_count
+
+risk_score
+
+status
+```
+
+---
+
+# 54. Entity Risk
+
+### `security_entity_risk`
+
+```text
+security_entity_risk
+--------------------
+security_entity_risk_id PK
+
+entity_type
+  USER
+  DEVICE
+  IP
+  SERVICE_ACCOUNT
+
+entity_id
+
+risk_score
+
+risk_level
+
+risk_factors_json
+
+evaluated_at
+```
+
+---
+
+# 55. Security Response Playbook
+
+### `security_playbook`
+
+```text
+security_playbook
+-----------------
+security_playbook_id PK
+
+playbook_code
+
+playbook_name
+
+incident_type
+
+severity
+
+status
+```
+
+---
+
+# R30. Playbook Step
+
+```text
+security_playbook_step
+----------------------
+security_playbook_step_id PK
+
+security_playbook_id
+
+step_no
+
+step_type
+  AUTOMATED
+  MANUAL
+  APPROVAL
+
+action_reference
+
+timeout_minutes
+
+status
+```
+
+---
+
+# مثال
+
+Credential Compromise:
+
+```text
+1 Revoke Sessions
+2 Force Password Reset
+3 Require MFA Re-registration
+4 Review recent privileged actions
+5 Review exports
+6 Notify Security
+7 Close after validation
+```
+
+---
+
+# 56. Security Incident Postmortem
+
+### `security_postmortem`
+
+```text
+security_postmortem
+-------------------
+security_postmortem_id PK
+
+security_incident_id
+
+root_cause
+
+contributing_factors
+
+control_failures
+
+corrective_actions
+
+lessons_learned
+
+approved_by
+
+completed_at
+```
+
+---
+
+# 57. Corrective Action
+
+### `security_corrective_action`
+
+```text
+security_corrective_action
+--------------------------
+security_corrective_action_id PK
+
+security_postmortem_id
+
+action_description
+
+owner_user_id
+
+due_date
+
+completed_at NULL
+
+status
+```
+
+---
+
+# 58. High-Level ERD
+
+```text
+USER / ROLE
+    |
+    v
+ACCESS_ENTITLEMENT
+    |
+    +---- ACCESS_REQUEST
+    |
+    +---- ACCESS_REVIEW
+    |
+    +---- SOD_RULE
+    |
+    v
+SESSION
+    |
+    +---- DEVICE
+    |
+    +---- SESSION_RISK
+    |
+    v
+SECURITY_EVENT
+    |
+    v
+DETECTION_RULE
+    |
+    v
+SECURITY_ALERT
+    |
+    v
+SECURITY_INCIDENT
+```
+
+Privileged access:
+
+```text
+PRIVILEGED_ROLE
+      |
+      v
+PRIVILEGED_ACCESS_REQUEST
+      |
+      v
+APPROVAL
+      |
+      v
+PRIVILEGED_ACTIVATION
+      |
+      v
+PRIVILEGED_SESSION
+```
+
+Security operations:
+
+```text
+SECURITY_EVENT
+      |
+      +---- SIEM
+      |
+      +---- DLP
+      |
+      +---- THREAT DETECTION
+      |
+      v
+SECURITY_INCIDENT
+      |
+      v
+PLAYBOOK
+      |
+      v
+POSTMORTEM
+```
+
+---
+
+# 59. Core Production Entities
+
+لو اختصرنا Cluster R إلى production-grade core:
+
+```text
+01 identity_provider
+02 federation_configuration
+03 external_identity
+
+04 authentication_policy
+05 password_policy
+06 user_authentication_method
+07 mfa_policy
+08 step_up_challenge
+
+09 conditional_access_policy
+
+10 device
+11 device_trust_status
+12 device_compliance_policy
+
+13 security_session
+14 session_risk_assessment
+15 user_risk_profile
+
+16 privileged_role
+17 privileged_access_request
+18 privileged_access_activation
+19 privileged_session
+
+20 access_entitlement
+21 access_entitlement_assignment
+22 access_request
+23 access_request_approval
+
+24 access_review_campaign
+25 access_review_item
+
+26 sod_rule
+27 sod_violation
+28 sod_mitigation
+
+29 security_event
+30 security_detection_rule
+31 security_alert
+32 security_alert_event
+33 security_response_action_policy
+
+34 dlp_policy
+35 dlp_detection
+36 sensitive_data_definition
+
+37 siem_connector
+38 siem_event_route
+39 soc_case_reference
+
+40 security_incident
+41 security_incident_event
+42 security_incident_task
+43 security_breach_assessment
+
+44 credential_risk_event
+45 credential_rotation_record
+
+46 break_glass_account
+47 break_glass_usage
+
+48 security_exception
+
+49 security_policy_definition
+50 security_control
+51 security_control_evidence
+52 security_posture_snapshot
+
+53 access_usage_summary
+54 orphaned_identity_detection
+55 service_account
+
+56 authentication_event
+57 geo_access_policy
+58 impossible_travel_detection
+
+59 security_event_correlation
+60 security_entity_risk
+
+61 security_playbook
+62 security_playbook_step
+63 security_postmortem
+64 security_corrective_action
+```
+
+إذن حوالي **64 core entities**.
+
+---
+
+# 60. Security Golden Rules
+
+أعتبر هذه القواعد أساسية:
+
+1. **Authentication ≠ Authorization.**
+2. Role assignment لا يعني access دائمًا بلا مراجعة.
+3. Privileged access يكون JIT حيثما أمكن.
+4. Critical roles تحتاج MFA.
+5. Sensitive actions تحتاج step-up authentication.
+6. Device trust جزء من access decision.
+7. Session risk يمكن أن يغير القرار بعد login.
+8. Tenant isolation تطبق أمنيًا في كل layer.
+9. Access reviews دورية للـhigh-risk roles.
+10. SoD conflicts تُكتشف قبل وبعد assignment.
+11. Break-glass access مراقب بالكامل.
+12. Offboarding يجب أن يؤدي إلى session/access revocation.
+13. Service accounts تخضع لنفس governance تقريبًا.
+14. Logs الأمنية لا تحتوي secrets.
+15. DLP تطبق على export/share/API/AI.
+16. SIEM integration لا تلغي local audit.
+17. Security Events يجب أن تكون normalized.
+18. High-risk actions قابلة للربط بالمستخدم والجلسة والجهاز.
+19. Security response لا يتخذ قرار HR وظيفيًا تلقائيًا.
+20. Security incident evidence يدار عبر Cluster O.
+21. Access decisions يجب أن تكون explainable.
+22. MFA reset نفسه action privileged.
+23. Security exceptions لها expiry وموافقة.
+24. Credential rotation mandatory للـservice identities.
+25. Security monitoring يشمل AI/Search/Documents/API events.
+26. المستخدم لا يستطيع اعتماد access request لنفسه إذا policy تمنع ذلك.
+27. No permanent hidden super-admin permissions.
+28. Security posture قابل للقياس وليس policy على الورق فقط.
+
+---
+
+# العلاقة مع الـClusters السابقة
+
+```text
+Cluster 03
+Identity / Roles
+       ↓
+Cluster R
+Governance / Risk / Monitoring
+```
+
+```text
+Cluster L
+Configuration
+       ↓
+R consumes security policies
+```
+
+```text
+Cluster N
+API / Runtime
+       ↓
+R consumes technical security events
+```
+
+```text
+Cluster O
+Documents
+       ↓
+R governs sensitive access and DLP
+```
+
+```text
+Cluster P
+Search
+       ↓
+R detects abnormal search activity
+```
+
+```text
+Cluster Q
+AI
+       ↓
+R monitors AI security and data leakage
+```
+
+---
+
+# وضع الـArchitecture بعد Cluster R
+
+أصبح لدينا الآن:
+
+```text
+A–J
+HR Business Domains
+
+K
+Integration / Data Governance
+
+L
+Configuration / SaaS Control Plane
+
+M
+Analytics / BI / ML
+
+N
+API / Events / Runtime
+
+O
+Documents / Records / Evidence
+
+P
+Search / Knowledge / RAG
+
+Q
+Enterprise AI Platform
+
+R
+Security Governance / Zero Trust / SOC
+```
+
+وهنا أصبح الـSecurity ليس مجرد Authentication Screen أو RBAC Tables، بل **Security Operating Model كامل للمنصة**.
+
+**الخطوة التالية المنطقية الآن هي Cluster S — Enterprise DevSecOps, Environment Management, CI/CD, Release Management, Infrastructure Configuration, Feature Deployment, Database Migration Governance, Secrets Deployment, Backup/Restore, Disaster Recovery, High Availability, Capacity Management, Tenant Provisioning, Observability Operations & Business Continuity ERD**؛ لأننا صممنا التطبيق والـruntime والـsecurity، لكن ما زلنا بحاجة إلى الطبقة التي تدير **كيف يتم نشر وتشغيل واستعادة المنصة نفسها بأمان عبر DEV/UAT/Production ومع عدة Tenants**.

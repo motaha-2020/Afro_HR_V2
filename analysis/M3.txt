@@ -1,0 +1,1636 @@
+# Module 03 — Identity, Users, Roles, Permissions & Security
+
+هذا الـModule هو **طبقة التحكم والأمان الأساسية** في Afro HR SaaS.
+Module 02 يحدد *من هو الموظف داخل الهيكل التنظيمي*، بينما Module 03 يحدد:
+
+> **من يستطيع الدخول؟ وبأي هوية؟ ولأي شركة؟ وعلى أي بيانات؟ وماذا يستطيع أن يفعل؟ ومن وافق على هذه الصلاحية؟**
+
+وهذا مهم جدًا لأن النظام سيحتوي على بيانات شديدة الحساسية: الرواتب، National ID، العقود، التحقيقات، المستندات، الحسابات البنكية، تقييمات KPI وغيرها. الـOperations Manual نفسه ينص على أن بيانات الموظفين والتعويضات والـPayroll والتحقيقات Confidential ولا يصل إليها إلا authorized personnel، وأن العمليات يجب أن تكون traceable وقابلة للتدقيق. 
+
+---
+
+## 3.1 Core Identity Architecture
+
+سنفصل بين 4 كيانات لا يجب دمجها في جدول واحد:
+
+**Person → Employee → User Account → Access Assignments**
+
+مثال:
+
+```text
+Ahmed Mohamed
+      │
+      ▼
+Person
+      │
+      ▼
+Employee
+AFRO Egypt
+HR Code: AF-10235
+Position: Project Manager
+      │
+      ▼
+User Account
+ahmed@afro.com
++20xxxxxxxxxx
+      │
+      ▼
+Access Assignments
+Project Manager
+Project A
+Project B
+Employee Self-Service
+```
+
+السبب أن **ليس كل Employee بالضرورة User**، كما أن الـUser قد تتغير وظيفته أو مشروعه دون إنشاء حساب جديد.
+
+---
+
+# 3.2 Multi-Company Identity Model
+
+بما أن النظام Multi-Company SaaS، فلا يكفي:
+
+```text
+User → Role
+```
+
+بل:
+
+```text
+User
+ ↓
+Tenant / Company
+ ↓
+Role Assignment
+ ↓
+Scope
+ ↓
+Permissions
+```
+
+مثال:
+
+```text
+User: Ahmed
+Company: Afro Egypt
+
+Role:
+Project Manager
+
+Scope:
+Project A
+Project B
+Project C
+
+Permissions:
+Employees.View
+Attendance.View
+Attendance.Approve
+Leave.Approve
+Manpower.Request
+KPI.Submit
+```
+
+وبالتالي مدير المشروع يستطيع إدارة أكثر من مشروع كما اتفقنا، بدون إعطائه صلاحية على بقية مشاريع الشركة.
+
+---
+
+# 3.3 Tenant Isolation
+
+كل شركة تعتبر **Tenant مستقل**.
+
+```text
+Platform
+│
+├── Afro Egypt
+│   ├── Users
+│   ├── Employees
+│   ├── Roles
+│   └── Data
+│
+├── Company B
+│
+└── Company C
+```
+
+كل Tenant يصل حتى **5,000 Employee**.
+
+قاعدة إلزامية:
+
+```text
+Tenant A
+      ✕
+Tenant B
+```
+
+لا يجوز لمستخدم Company A الوصول إلى بيانات Company B حتى لو عرف:
+
+```text
+Employee ID
+API Endpoint
+Record ID
+URL
+```
+
+ويجب تطبيق Tenant Isolation في:
+
+```text
+Database queries
+APIs
+Background jobs
+Reports
+Exports
+File storage
+Search
+AI Copilot
+Audit logs
+Cache
+Notifications
+```
+
+خصوصًا **AI**: لا يجوز أن يسترجع الـCopilot بيانات Tenant آخر.
+
+---
+
+# 3.4 Platform Super Admin vs Company Super Admin
+
+هذه نقطة مهمة جدًا.
+
+لدينا مستويان منفصلان.
+
+### Platform Super Admin
+
+خاص بإدارة منصة SaaS نفسها.
+
+يستطيع:
+
+```text
+Create Tenant
+Suspend Tenant
+Configure Subscription
+Set Limits
+View System Health
+Manage Platform Features
+```
+
+لكن الأفضل أمنيًا ألا يستطيع تلقائيًا قراءة:
+
+```text
+Employee salaries
+National IDs
+Bank details
+Investigations
+Contracts
+Payroll
+```
+
+إلا من خلال Controlled Support Access.
+
+### Company Super Admin
+
+لكل شركة Super Admin مستقل كما طلبت.
+
+مثال:
+
+```text
+AFRO Egypt
+    └── Super Admin A
+
+Company B
+    └── Super Admin B
+```
+
+ولا يرى أحدهما الآخر.
+
+---
+
+# 3.5 User Types
+
+النظام يدعم أنواع حسابات مختلفة:
+
+| User Type       | Example                             |
+| --------------- | ----------------------------------- |
+| Employee        | موظف عادي                           |
+| Manager         | Line Manager                        |
+| Project Manager | مدير مشروع                          |
+| HR User         | Personnel / Payroll / HR Operations |
+| Department Head | مدير إدارة                          |
+| Company Admin   | مسؤول الشركة                        |
+| External User   | Outsourcing / Consultant            |
+| Contractor User | مقاول                               |
+| Auditor         | Internal / External Audit           |
+| Service Account | ERP / API Integration               |
+| Platform Admin  | إدارة SaaS                          |
+
+---
+
+# 3.6 Authentication
+
+يدعم النظام عدة طرق دخول ويمكن لكل Tenant تحديد المسموح منها.
+
+### Email + Password
+
+```text
+Email
+Password
+```
+
+### Mobile + Password
+
+```text
+Mobile Number
+Password
+```
+
+### Mobile + OTP
+
+كما طلبنا سابقًا:
+
+```text
+Mobile
+   ↓
+OTP
+   ↓
+Verification
+   ↓
+Login
+```
+
+### Email OTP
+
+أيضًا يمكن تفعيله.
+
+### Enterprise SSO
+
+للمستقبل:
+
+```text
+Microsoft Entra ID
+Google Workspace
+OIDC
+SAML 2.0
+```
+
+ويمكن لكل Company اختيار Authentication Policy خاصة بها.
+
+---
+
+# 3.7 MFA — Multi-Factor Authentication
+
+يجب أن يكون Mandatory للوظائف الحساسة مثل:
+
+```text
+Company Super Admin
+HR Manager
+Payroll
+Finance
+IT Admin
+Security Admin
+Auditor
+```
+
+والخيارات:
+
+```text
+Authenticator App
+Email OTP
+SMS OTP
+Recovery Codes
+```
+
+ويفضل عدم الاعتماد على SMS وحده للحسابات عالية الصلاحية.
+
+---
+
+# 3.8 Role-Based Access Control — RBAC
+
+لن نعتمد على Job Title مباشرة.
+
+أي:
+
+```text
+Position ≠ Role
+```
+
+مثال:
+
+Position:
+
+```text
+Project Manager
+```
+
+قد يحصل على:
+
+```text
+Employee Role
++
+Project Manager Role
++
+Hiring Requester Role
++
+KPI Evaluator Role
+```
+
+وهذا يجعل النظام مرنًا جدًا.
+
+---
+
+# 3.9 Permission-Based Model
+
+كل Role عبارة عن مجموعة Permissions.
+
+صيغة موحدة:
+
+```text
+Resource.Action
+```
+
+مثل:
+
+```text
+Employee.View
+Employee.Create
+Employee.Edit
+Employee.Transfer
+
+Attendance.View
+Attendance.Edit
+Attendance.Approve
+
+Leave.View
+Leave.Approve
+
+Payroll.View
+Payroll.Process
+Payroll.Approve
+
+Recruitment.Request
+Recruitment.Approve
+
+KPI.View
+KPI.Submit
+KPI.Approve
+```
+
+بدل Hard Coding مثل:
+
+```text
+if user == HR Manager
+```
+
+نستخدم:
+
+```text
+Can(User, "Payroll.Process")
+```
+
+---
+
+# 3.10 Permission Levels
+
+لا يكفي View / Edit فقط.
+
+سنستخدم:
+
+```text
+View
+Create
+Edit
+Delete
+Submit
+Approve
+Reject
+Cancel
+Assign
+Transfer
+Import
+Export
+Print
+Download
+Upload
+Process
+Close
+Reopen
+Administer
+```
+
+مثال مهم:
+
+مدير المشروع قد يستطيع:
+
+```text
+Payroll Cost.View
+```
+
+ولكن لا يستطيع:
+
+```text
+Payroll.EmployeeSalary.View
+```
+
+أي يرى تكلفة manpower الخاصة بالمشروع دون رؤية راتب كل موظف.
+
+---
+
+# 3.11 Data Scope — أهم جزء
+
+وجود Permission وحده خطر.
+
+لو Project Manager لديه:
+
+```text
+Employee.View
+```
+
+هل يرى 5,000 موظف؟
+
+لا.
+
+لذلك كل Permission مرتبطة بـScope.
+
+```text
+Permission + Scope
+```
+
+الـScopes:
+
+```text
+Self
+Direct Reports
+Indirect Reports
+Team
+Department
+Business Unit
+Project
+Multiple Projects
+Location
+Region
+Legal Entity
+Company
+Custom Scope
+```
+
+مثال:
+
+```text
+Ahmed
+Role: Project Manager
+
+Employee.View
+Scope:
+Project Cairo
+Project Alexandria
+```
+
+يرى فقط الموظفين assigned لهذه المشاريع.
+
+---
+
+# 3.12 Multiple Concurrent Assignments
+
+هذه ضرورية لطبيعة شركات المقاولات.
+
+الموظف يمكن أن يكون:
+
+```text
+Project Manager → Project A
+Project Manager → Project B
+
+Hiring Requester → Department X
+
+Employee → Self
+```
+
+في نفس الوقت.
+
+لذلك:
+
+```text
+User
+ ├── Role Assignment #1
+ ├── Role Assignment #2
+ └── Role Assignment #3
+```
+
+وكل Assignment له:
+
+```text
+Company
+Role
+Scope Type
+Scope ID
+Start Date
+End Date
+Status
+Assigned By
+Approval Reference
+```
+
+---
+
+# 3.13 Dynamic Access from Organization Structure
+
+هنا Module 03 يرتبط مباشرة بـModule 02.
+
+مثلاً:
+
+```text
+Direct Manager
+```
+
+يحصل تلقائيًا على صلاحيات محددة تجاه Direct Reports.
+
+عند نقل الموظف:
+
+```text
+Manager A
+   ↓
+Employee
+```
+
+إلى:
+
+```text
+Manager B
+   ↓
+Employee
+```
+
+تتغير صلاحيات المديرين تلقائيًا.
+
+ولا نحتاج لتعديلها يدويًا.
+
+---
+
+# 3.14 HR Roles Based on Actual AFRO Structure
+
+الـOrg Chart الحالي يوضح أقسام People & Culture مثل:
+
+```text
+Organizational Development
+Talent Acquisition
+ER & Compliance
+Payroll
+Personnel
+HR Operations
+```
+
+كما يوضح وجود HR Operations مرتبط بعمليات Huawei & Nokia وEricsson. 
+
+لذلك لا أنصح بإنشاء Role واحد اسمه:
+
+```text
+HR
+```
+
+هذا خطأ أمني كبير.
+
+بل:
+
+```text
+HR Manager
+OD
+Talent Acquisition
+Personnel
+Payroll
+HR Operations
+Employee Relations & Compliance
+```
+
+وكل Role له صلاحيات مستقلة.
+
+---
+
+# 3.15 مثال: Talent Acquisition
+
+من الـOperations Manual، Talent Acquisition مسؤول عن sourcing، screening، interviews، offers ثم handover إلى Personnel. 
+
+لذلك يمكنه مثلاً:
+
+```text
+Candidate.View
+Candidate.Create
+Candidate.Edit
+
+Interview.Schedule
+Interview.View
+
+Offer.Create
+Offer.Send
+
+HiringFile.Handover
+```
+
+لكن ليس بالضرورة:
+
+```text
+Payroll.Process
+Employee.BankAccount.Edit
+DisciplinaryCase.View
+```
+
+---
+
+# 3.16 Personnel Role
+
+Personnel مسؤول فعليًا عن:
+
+```text
+Employee Records
+Documents
+Contracts
+Social Insurance
+Medical Insurance
+HR Code
+ERP Registration
+Onboarding
+Offboarding
+```
+
+والمستند يحدد إنشاء employee profile وHR Code وطلب Corporate Email وSystem Access أثناء onboarding. 
+
+لذلك Personnel يحصل على صلاحيات مرتبطة بهذه الوظائف، وليس Payroll كامل.
+
+---
+
+# 3.17 Payroll Security
+
+Payroll من أكثر أجزاء النظام حساسية.
+
+سنقسم صلاحياته:
+
+```text
+Payroll.Employee.View
+Payroll.Salary.View
+Payroll.Process
+Payroll.Adjustment.Create
+Payroll.Adjustment.Approve
+Payroll.Report.View
+Payroll.Export
+Payroll.ClosePeriod
+Payroll.ReopenPeriod
+```
+
+والـManual نفسه يفصل مسؤوليات Personnel وPayroll وFinance وProject Managers خلال دورة الرواتب، بدل وضع العملية كلها عند شخص واحد. 
+
+وهذا يقودنا إلى:
+
+# Segregation of Duties — SoD
+
+مثلاً لا نريد نفس المستخدم يستطيع:
+
+```text
+Create Salary Adjustment
++
+Approve Salary Adjustment
++
+Execute Payment
+```
+
+بل:
+
+```text
+Maker → Checker → Approver
+```
+
+---
+
+# 3.18 Sensitive Field-Level Security
+
+بعض البيانات تحتاج حماية على مستوى **الحقل نفسه**.
+
+مثلاً Employee Profile:
+
+```text
+Name                 ✓
+Position             ✓
+Project              ✓
+Mobile               Conditional
+
+National ID          Restricted
+Bank Account         Restricted
+Salary               Highly Restricted
+Medical Information  Highly Restricted
+Investigation        Highly Restricted
+```
+
+مثلاً Project Manager يرى:
+
+```text
+Mohamed Ahmed
+Technician
+Project X
+Active
+```
+
+لكن:
+
+```text
+Salary: ********
+Bank Account: ********
+National ID: ************
+```
+
+---
+
+# 3.19 Document-Level Security
+
+المستندات نفسها لها Access Classification.
+
+مثلاً:
+
+```text
+Public Internal
+Internal
+Confidential
+Highly Confidential
+```
+
+Documents:
+
+```text
+CV
+Contract
+National ID
+Medical Form
+Police Clearance
+Payroll Document
+Investigation Evidence
+Disciplinary Decision
+```
+
+كل Document Type له Access Policy.
+
+وهذا ضروري لأن الـManual يتطلب مستندات حساسة أثناء onboarding، ومنها National ID وPolice Clearance وmedical examination وغيرها. 
+
+---
+
+# 3.20 Approval Authority
+
+Permission لا تعني Approval Authority تلقائيًا.
+
+مثلاً:
+
+```text
+Salary Increase
+```
+
+قد يكون لدى HR صلاحية:
+
+```text
+SalaryChange.Create
+```
+
+لكن Approval Matrix تحدد:
+
+```text
+< 10%        → HR Manager
+10–20%       → HR + BU Head
+> 20%        → CEO
+```
+
+وتكون Configurable لكل Company.
+
+---
+
+# 3.21 Temporary Delegation
+
+ضرورية جدًا.
+
+مثال:
+
+Project Manager في إجازة.
+
+يستطيع:
+
+```text
+Delegate Approvals
+```
+
+إلى Manager آخر:
+
+```text
+From: 10 Aug
+To: 20 Aug
+```
+
+مع تحديد:
+
+```text
+Leave Approvals ✓
+Attendance ✓
+Hiring Requests ✓
+Salary Changes ✕
+Payroll ✕
+```
+
+وتنتهي الصلاحية تلقائيًا.
+
+---
+
+# 3.22 Privileged Access Management
+
+للصلاحيات الخطرة:
+
+```text
+Super Admin
+Payroll Admin
+Security Admin
+Database Support
+```
+
+يمكن استخدام:
+
+```text
+Temporary Elevated Access
+```
+
+مثال:
+
+```text
+Support Engineer requests access
+        ↓
+Company Admin approves
+        ↓
+Access valid 2 hours
+        ↓
+Session recorded in Audit Log
+        ↓
+Automatic expiration
+```
+
+---
+
+# 3.23 Joiner–Mover–Leaver Security
+
+هذه من أهم نقاط التصميم لأن الـManual يحتوي Hiring → Onboarding → Employment → Offboarding.
+
+### Joiner
+
+بعد إتمام الشروط:
+
+```text
+Employee Activated
+        ↓
+User Created
+        ↓
+Base Employee Role
+        ↓
+Position Roles
+        ↓
+Project Roles
+```
+
+لكن الـManual يمنع تفعيل الموظف في الأنظمة أو المشروع أو payroll قبل استكمال mandatory onboarding requirements. 
+
+لذلك النظام يجب أن يمنع **Premature Account Activation**.
+
+### Mover
+
+عند:
+
+```text
+Transfer
+Promotion
+Project Change
+Manager Change
+Department Change
+```
+
+يعمل النظام:
+
+```text
+Recalculate Access
+```
+
+ويلغي الصلاحيات القديمة غير المطلوبة.
+
+### Leaver
+
+هذه Critical.
+
+الـManual ينص صراحة على أن System Access يجب تعطيله بحد أقصى في آخر يوم عمل للموظف. 
+
+لذلك:
+
+```text
+Offboarding Trigger
+      ↓
+Deactivate HR Account
+      ↓
+Revoke Sessions
+      ↓
+Revoke Tokens
+      ↓
+Remove Roles
+      ↓
+Disable API Access
+      ↓
+Notify IT
+```
+
+ويتم تسجيل كل خطوة.
+
+---
+
+# 3.24 User Lifecycle Status
+
+```text
+Invited
+Pending Verification
+Pending Activation
+Active
+Locked
+Suspended
+On Leave
+Pending Offboarding
+Terminated
+Archived
+```
+
+مهم:
+
+```text
+Employee Status ≠ User Status
+```
+
+قد يكون Employee Active لكن User Locked بسبب Security Incident.
+
+---
+
+# 3.25 Password Security
+
+سياسة Configurable لكل Tenant:
+
+```text
+Minimum Length
+Complexity
+Password History
+Failed Attempts
+Lockout Duration
+Password Reset
+Compromised Password Detection
+```
+
+ولا يتم تخزين Password كنص.
+
+```text
+Password
+   ↓
+Strong Hash
+   ↓
+Database
+```
+
+---
+
+# 3.26 Session Security
+
+كل Login Session تسجل:
+
+```text
+User
+Device
+IP
+Browser
+Login Time
+Last Activity
+Location approximation
+Authentication Method
+MFA Status
+```
+
+ويستطيع المستخدم رؤية:
+
+```text
+Active Sessions
+```
+
+وعمل:
+
+```text
+Logout All Devices
+```
+
+---
+
+# 3.27 Risk-Based Authentication
+
+للمستقبل:
+
+مثلاً المستخدم دائمًا يدخل من مصر ثم:
+
+```text
+Login → unusual country
+```
+
+النظام يطلب:
+
+```text
+MFA Challenge
+```
+
+وكذلك:
+
+```text
+New Device
+Repeated Failed Login
+Suspicious IP
+Impossible Travel
+Sensitive Operation
+```
+
+---
+
+# 3.28 Step-Up Authentication
+
+حتى لو المستخدم Logged In، بعض العمليات تطلب إعادة تحقق.
+
+مثلاً:
+
+```text
+Export Payroll
+Change Bank Account
+Change Salary
+Create Super Admin
+View Investigation
+Bulk Employee Export
+```
+
+النظام يطلب:
+
+```text
+Password / MFA
+```
+
+مرة أخرى.
+
+---
+
+# 3.29 Audit Trail
+
+لا يجوز أن يكون مجرد Login Log.
+
+كل عملية حساسة تسجل:
+
+```text
+Who
+What
+When
+Where
+Before
+After
+Reason
+Approval
+Device/IP
+```
+
+مثال:
+
+```text
+User:
+Payroll Specialist
+
+Action:
+Salary.Change
+
+Employee:
+AF-1034
+
+Before:
+25,000
+
+After:
+28,000
+
+Date:
+10-Aug-2026 11:43
+
+Approval:
+REQ-000348
+```
+
+والـOperations Manual يشترط أن تكون أنشطة People & Culture traceable وأن يحتفظ Process Owners بسجلات تدعم التدقيق. 
+
+---
+
+# 3.30 Audit Logs Must Be Immutable
+
+حتى Company Super Admin لا ينبغي أن يستطيع:
+
+```text
+Delete Audit Log
+Edit Audit Log
+```
+
+يمكنه View حسب الصلاحية فقط.
+
+---
+
+# 3.31 Data Export Security
+
+من أكبر مخاطر HR ليست شاشة النظام، بل:
+
+> **Export to Excel.**
+
+لذلك نفصل:
+
+```text
+Employee.View
+```
+
+عن:
+
+```text
+Employee.Export
+```
+
+مثلاً HR Operations يستطيع مشاهدة 2,000 Employee، لكن ليس بالضرورة تنزيلهم Excel.
+
+ويمكن إضافة:
+
+```text
+Export Reason
+Manager Approval
+Watermark
+Download Expiration
+Audit Log
+```
+
+للبيانات الحساسة.
+
+---
+
+# 3.32 Impersonation / Support Mode
+
+Platform Support لا يدخل بحساب المستخدم مباشرة.
+
+إذا احتجنا Support:
+
+```text
+Request Impersonation
+      ↓
+Tenant Approval
+      ↓
+Limited Duration
+      ↓
+Visible Banner
+      ↓
+Full Audit
+```
+
+مثلاً:
+
+> Viewing as Company Admin — Support Session.
+
+---
+
+# 3.33 API & Integration Security
+
+لأننا سنربط مستقبلًا مع:
+
+```text
+Nama ERP
+Attendance Devices
+Email
+SMS
+Payroll/Bank
+Customer Systems
+BI
+```
+
+نحتاج:
+
+```text
+Service Accounts
+API Keys
+OAuth Clients
+Scopes
+Token Expiry
+IP Restrictions
+Rate Limits
+Webhook Signing
+Audit Logs
+```
+
+ولا تستخدم Integration حساب Employee عادي.
+
+---
+
+# 3.34 Security Roles
+
+أقترح وجود System Roles أساسية:
+
+```text
+Platform Super Admin
+Tenant Super Admin
+Security Admin
+User Administrator
+Role Administrator
+Auditor
+Integration Administrator
+```
+
+لكن يمكن للشركة إنشاء Custom Roles.
+
+---
+
+# 3.35 Role Templates
+
+عند إنشاء Tenant جديد:
+
+```text
+Employee
+Line Manager
+Project Manager
+Department Manager
+HR Operations
+Personnel
+Talent Acquisition
+Payroll
+Finance
+HSE
+IT
+Executive
+Auditor
+```
+
+ثم الشركة تعدلها.
+
+---
+
+# 3.36 Permission Inheritance
+
+مثلاً:
+
+```text
+Employee
+   ↓
+Manager
+   ↓
+Department Manager
+```
+
+لكن لا أنصح بوراثة غير محدودة.
+
+الأفضل:
+
+```text
+Role Composition
+```
+
+حتى لا تنتقل صلاحية حساسة بدون قصد.
+
+---
+
+# 3.37 Access Request Workflow
+
+المستخدم يمكن أن يطلب Access:
+
+```text
+Request Access
+     ↓
+Role
+     ↓
+Scope
+     ↓
+Business Justification
+     ↓
+Manager Approval
+     ↓
+Data Owner Approval
+     ↓
+Security Approval — if required
+     ↓
+Access Granted
+```
+
+مثال:
+
+```text
+Role:
+Payroll Viewer
+
+Duration:
+30 Days
+
+Reason:
+Payroll Audit
+```
+
+---
+
+# 3.38 Access Expiration
+
+كل صلاحية استثنائية يجب أن تدعم:
+
+```text
+Start Date
+End Date
+```
+
+مثلاً:
+
+```text
+Project Manager
+Project X
+01-Aug-2026
+31-Dec-2026
+```
+
+عند نهاية المشروع:
+
+```text
+Access automatically revoked
+```
+
+---
+
+# 3.39 Periodic Access Review
+
+كل 3 أو 6 أشهر مثلاً:
+
+```text
+Manager receives:
+
+Ahmed
+Project A
+Project B
+Payroll Viewer
+Hiring Approver
+
+Keep / Remove
+```
+
+وهذا يمنع **Permission Accumulation** بعد التنقلات الوظيفية.
+
+---
+
+# 3.40 Permission Conflict Engine
+
+النظام يجب أن يحذر:
+
+```text
+⚠ Conflict Detected
+```
+
+مثلاً المستخدم أصبح:
+
+```text
+Payroll Creator
++
+Payroll Final Approver
+```
+
+في نفس الوقت.
+
+Policy Engine يمنعها أو يطلب Exception Approval.
+
+---
+
+# 3.41 Security Notifications
+
+Notifications عند:
+
+```text
+New Login
+Password Reset
+MFA Changed
+New Device
+Role Changed
+Sensitive Permission Granted
+Payroll Export
+Account Locked
+Super Admin Created
+Suspicious Activity
+```
+
+---
+
+# 3.42 Security Dashboard
+
+Company Super Admin / Security Admin يرى:
+
+```text
+5,000 Employees
+
+4,260 Active Users
+740 No-System Accounts
+
+12 Admin Accounts
+6 Locked Accounts
+
+18 Expiring Access Assignments
+7 Permission Conflicts
+
+3 Suspicious Logins
+
+28 Users Without MFA
+
+42 Dormant Accounts
+```
+
+---
+
+# 3.43 Permissions Matrix Example
+
+| Function           |         Employee |      Manager |         HR Ops | Personnel |       Payroll | Super Admin |
+| ------------------ | ---------------: | -----------: | -------------: | --------: | ------------: | ----------: |
+| Own Profile        |                ✓ |            ✓ |              ✓ |         ✓ |             ✓ |           ✓ |
+| Team Profiles      |                — |            ✓ |              ✓ |         ✓ |       Limited |           ✓ |
+| Contracts          |              Own | Team Limited |        Limited |         ✓ |             — |  Controlled |
+| Attendance         |              Own |         Team | Assigned Scope |         ✓ | Payroll Input |           ✓ |
+| Leave Approval     |                — |            ✓ |        Limited |         — |             — |           ✓ |
+| Salary             |              Own |     Optional |              — |   Limited |             ✓ |  Controlled |
+| Payroll Processing |                — |            — |              — |         — |             ✓ |  Controlled |
+| Investigation      | Own Case Limited |      Limited |       Assigned |   Limited |             — |  Controlled |
+| User Management    |                — |            — |              — |         — |             — |           ✓ |
+
+هذه مجرد **Default Template** وليست Hard Coded.
+
+---
+
+# 3.44 Security Architecture
+
+تقنيًا تصبح:
+
+```text
+                Identity Service
+                      │
+        ┌─────────────┼─────────────┐
+        │             │             │
+ Authentication   Authorization   Sessions
+        │             │             │
+        ▼             ▼             ▼
+      MFA          RBAC/ABAC       Tokens
+                      │
+             Permission Engine
+                      │
+              Scope Evaluation
+                      │
+               Policy Engine
+                      │
+               Application
+```
+
+سنستخدم عمليًا Hybrid:
+
+**RBAC + ABAC + Scope-Based Access Control**
+
+لأن RBAC وحده لن يكفي لحالة:
+
+> مدير المشروع يستطيع رؤية موظفي مشروعاته فقط.
+
+---
+
+# 3.45 Proposed Database Model
+
+الجزء الأساسي:
+
+```text
+Users
+UserIdentities
+UserCredentials
+UserSessions
+
+Roles
+Permissions
+RolePermissions
+
+UserRoleAssignments
+AccessScopes
+
+SecurityPolicies
+MfaMethods
+
+AccessRequests
+AccessApprovals
+Delegations
+
+ServiceAccounts
+ApiClients
+ApiScopes
+
+AuditLogs
+SecurityEvents
+LoginAttempts
+```
+
+ويرتبط بـModule 02:
+
+```text
+Employees
+Positions
+Departments
+BusinessUnits
+Projects
+Locations
+ReportingLines
+```
+
+---
+
+# 3.46 قاعدة Authorization النهائية
+
+أي Request داخل النظام يمر بالمعادلة:
+
+```text
+ALLOW =
+Authenticated
+AND
+Tenant Match
+AND
+Active User
+AND
+Permission Granted
+AND
+Scope Match
+AND
+Policy Passed
+AND
+No SoD Conflict
+AND
+Record Security Passed
+```
+
+مثلاً:
+
+```text
+Ahmed
+wants
+Employee.View
+for Employee #245
+```
+
+النظام لا يسأل فقط:
+
+```text
+Does Ahmed have Employee.View?
+```
+
+بل:
+
+```text
+Is Ahmed authenticated?
+Is Ahmed active?
+Is employee #245 in same tenant?
+Does Ahmed have Employee.View?
+Does #245 fall inside Ahmed's scope?
+Is the requested field permitted?
+Is there a security restriction?
+```
+
+ثم:
+
+```text
+ALLOW / DENY
+```
+
+---
+
+# 3.47 نقطة تصميم مهمة لـAfro HR
+
+أقترح ألا نبني النظام على مفهوم:
+
+> **"الشخص ده HR إذن يشوف HR."**
+
+بل على:
+
+> **User + Role + Permission + Scope + Data Classification + Approval Authority**
+
+وهذا يتوافق أفضل بكثير مع الهيكل الفعلي، لأن People & Culture نفسه مقسم إلى Talent Acquisition وPersonnel وPayroll وER & Compliance وHR Operations وOD.  كما أن الـOperations Manual يوزع المسؤوليات بين HR وFinance وIT وHSE وOperations وProject Managers ولا يضع دورة الموظف كلها تحت Role واحد. 
+
+**الناتج النهائي لـModule 03:**
+
+```text
+Identity Management
++
+Multi-Tenant Isolation
++
+Authentication / OTP / MFA / SSO
++
+RBAC
++
+ABAC
++
+Scope-Based Access
++
+Field & Document Security
++
+Approval Authority
++
+Segregation of Duties
++
+Delegation
++
+Joiner-Mover-Leaver Automation
++
+API Security
++
+Audit & Traceability
++
+Security Monitoring
+```
+
+وبذلك أصبح لدينا أساس قوي جدًا قبل الانتقال إلى **Module 04**؛ والأفضل أن يكون التالي **Employee Master Data & Digital Employee File**، لأن Modules 01–03 أصبحت تحدد الشركة والهيكل والوظيفة والهوية والصلاحية، والآن نستطيع تصميم الـEmployee Record نفسه بطريقة صحيحة.

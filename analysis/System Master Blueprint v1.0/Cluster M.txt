@@ -1,0 +1,3138 @@
+ممتاز. **Cluster M** هو الطبقة التي تفصل بين **تشغيل الـHR يوميًا** وبين **التحليل واتخاذ القرار**.
+القاعدة الأساسية هنا:
+
+> **OLTP يدير العمليات. Analytical Platform يدير الأسئلة، المؤشرات، الاتجاهات، التنبؤ، والقرارات.**
+
+ولا أنصح إطلاقًا أن يقرأ Power BI أو Executive Dashboard مباشرة من جداول Payroll / Attendance / Employee operational tables إلا في حالات محدودة جدًا.
+
+الـOperations Manual نفسه يثبت أن عندنا دورات زمنية وتقارير دورية واضحة في Payroll، Allowances وKPI، إضافةً إلى project cost allocation وongoing workforce management؛ وهذا يجعل وجود طبقة تحليل مستقلة أمرًا منطقيًا وليس إضافة تجميلية.  كما أن الهيكل الحالي يفصل Payroll وPersonnel وHR Operations وTalent Acquisition وER/Compliance وOD، وبالتالي سنحتاج Analytical Security تمنع أن يرى كل فريق كل المؤشرات أو البيانات الحساسة لمجرد أنها موجودة في نفس الـBI platform. 
+
+# Cluster M — Enterprise Analytics & Intelligence Architecture
+
+أقسمه إلى 15 Sub-Domains رئيسية:
+
+```text
+M1   Analytical Source Registry
+M2   Ingestion & CDC
+M3   Raw / Bronze Layer
+M4   Standardized / Silver Layer
+M5   Data Warehouse / Gold Layer
+M6   Conformed Dimensions
+M7   Fact Model
+M8   KPI & Semantic Layer
+M9   Dashboard & BI Catalog
+M10  Analytical Security
+M11  Data Lineage
+M12  Data Quality for Analytics
+M13  AI/ML Feature Store
+M14  Forecasting / Models / Scoring
+M15  Analytics Operations & Governance
+```
+
+---
+
+# 1. أهم Architectural Principle
+
+المسار يكون:
+
+```text
+HR Operational Database
+Clusters A → L
+        |
+        v
+CDC / Events / ETL / ELT
+        |
+        v
+Raw / Bronze
+        |
+        v
+Standardized / Silver
+        |
+        v
+Warehouse / Gold
+        |
+        +-------------------+
+        |                   |
+        v                   v
+ Semantic / KPI          Feature Store
+        |                   |
+        v                   v
+ BI / Dashboards        AI / ML Models
+```
+
+وليس:
+
+```text
+Power BI
+   |
+   v
+Payroll Production DB   ❌
+```
+
+---
+
+# 2. ماذا سيحل Cluster M؟
+
+بدونه سنواجه مشاكل مثل:
+
+```text
+Headcount في Dashboard A = 4,920
+Headcount في Dashboard B = 5,013
+
+Turnover في HR Report = 8.3%
+Turnover في CEO Dashboard = 10.1%
+```
+
+ليس لأن البيانات خاطئة بالضرورة، بل لأن تعريف المؤشر مختلف.
+
+Cluster M يجعل تعريف:
+
+```text
+HEADCOUNT
+ACTIVE_HEADCOUNT
+VOLUNTARY_TURNOVER
+ABSENTEEISM_RATE
+PAYROLL_COST
+COST_PER_EMPLOYEE
+TIME_TO_HIRE
+TRAINING_COMPLIANCE
+```
+
+مركزيًا وله Version وOwner.
+
+---
+
+# M1. Analytical Source Registry
+
+### `analytics_source_system`
+
+```text
+analytics_source_system
+-----------------------
+source_system_id PK
+
+tenant_id
+
+source_code
+source_name
+
+source_type
+  HR_CORE
+  PAYROLL
+  ATTENDANCE
+  ERP
+  FINANCE
+  HSE
+  ATS
+  LMS
+  EXPENSE
+  EXTERNAL
+
+source_owner
+
+connection_reference
+
+load_method
+  CDC
+  EVENT
+  API
+  FILE
+  BATCH
+
+is_authoritative
+
+data_freshness_sla_minutes
+
+status
+```
+
+هنا نحدد:
+
+> من هو System of Record؟
+
+مثال:
+
+```text
+Employee Master → HR Core
+Payroll Cost → Payroll Engine
+Project Financial Code → ERP
+Attendance Raw → Attendance Engine
+```
+
+---
+
+# M2. Analytical Dataset Registry
+
+### `analytics_dataset`
+
+```text
+analytics_dataset
+-----------------
+dataset_id PK
+
+source_system_id FK
+
+dataset_code
+dataset_name
+
+business_domain
+
+source_object_name
+
+dataset_type
+  TABLE
+  VIEW
+  EVENT
+  API
+  FILE
+
+load_frequency
+
+contains_pii
+contains_financial_data
+contains_medical_data
+
+retention_class
+
+status
+```
+
+---
+
+# M3. Ingestion Pipeline
+
+### `ingestion_pipeline`
+
+```text
+ingestion_pipeline
+------------------
+pipeline_id PK
+
+tenant_id
+
+pipeline_code
+pipeline_name
+
+source_dataset_id FK
+
+target_layer
+  BRONZE
+  SILVER
+  GOLD
+
+load_strategy
+  FULL
+  INCREMENTAL
+  CDC
+  SNAPSHOT
+
+watermark_field
+
+schedule_id FK
+
+retry_policy_id FK
+
+status
+```
+
+---
+
+# M4. Pipeline Execution
+
+### `pipeline_run`
+
+```text
+pipeline_run
+------------
+pipeline_run_id PK
+
+pipeline_id FK
+
+started_at
+ended_at
+
+load_window_from
+load_window_to
+
+rows_read
+rows_written
+rows_rejected
+
+status
+
+error_count
+error_details
+
+data_freshness_minutes
+```
+
+---
+
+# M5. Bronze / Raw Metadata
+
+لن نعيد تصميم كل raw table في الـERD؛ لكن نحتاج metadata.
+
+### `raw_object_registry`
+
+```text
+raw_object_registry
+-------------------
+raw_object_id PK
+
+dataset_id FK
+
+storage_location
+
+schema_name
+object_name
+
+ingestion_timestamp_field
+
+partition_strategy
+
+retention_days
+
+status
+```
+
+---
+
+# M6. Transformation Model
+
+### `transformation_model`
+
+```text
+transformation_model
+--------------------
+transformation_model_id PK
+
+model_code
+model_name
+
+source_layer
+target_layer
+
+business_domain
+
+transformation_type
+
+sql_or_logic_reference
+
+version_no
+
+effective_from
+effective_to
+
+status
+```
+
+---
+
+# M7. Transformation Dependency
+
+### `transformation_dependency`
+
+```text
+transformation_dependency
+-------------------------
+dependency_id PK
+
+upstream_model_id FK
+downstream_model_id FK
+
+dependency_type
+
+status
+```
+
+هنا يبدأ الـLineage الحقيقي.
+
+---
+
+# 3. Star Schema وليس نسخة من OLTP
+
+أحد أكبر الأخطاء هو عمل:
+
+```text
+Employee OLTP
+→ Employee Warehouse same structure
+```
+
+هذا ليس Warehouse فعليًا.
+
+المطلوب:
+
+```text
+Dimensions
++
+Facts
+```
+
+---
+
+# M8. Conformed Dimension Registry
+
+### `dimension_definition`
+
+```text
+dimension_definition
+--------------------
+dimension_id PK
+
+dimension_code
+dimension_name
+
+grain_description
+
+slow_change_type
+  TYPE_0
+  TYPE_1
+  TYPE_2
+
+business_key_definition
+
+status
+```
+
+---
+
+# أهم Dimensions
+
+## `dim_employee`
+
+```text
+dim_employee
+------------
+employee_sk PK
+
+tenant_id
+employee_id_business_key
+
+employee_code
+
+employee_name_display
+
+gender_code
+nationality_code
+
+employment_type
+worker_type
+
+hire_date
+termination_date
+
+employment_status
+
+company_sk
+department_sk
+position_sk
+job_sk
+grade_sk
+location_sk
+manager_sk
+
+effective_from
+effective_to
+
+is_current
+```
+
+لكن انتبه:
+
+**ليس بالضرورة أن نضع كل الـPII هنا.**
+
+مثلًا:
+
+```text
+National ID
+Bank Account
+Medical Diagnosis
+Investigation Detail
+```
+
+لا تدخل Dimension عامة للـBI.
+
+---
+
+# `dim_company`
+
+```text
+dim_company
+-----------
+company_sk PK
+
+tenant_id
+company_id_business_key
+
+company_code
+company_name
+
+country_code
+
+effective_from
+effective_to
+is_current
+```
+
+---
+
+# `dim_org_unit`
+
+```text
+dim_org_unit
+------------
+org_unit_sk PK
+
+org_unit_id_business_key
+
+org_unit_code
+org_unit_name
+
+org_unit_type
+
+parent_org_unit_sk
+
+hierarchy_level
+
+effective_from
+effective_to
+is_current
+```
+
+---
+
+# `dim_position`
+
+```text
+dim_position
+------------
+position_sk PK
+
+position_id_business_key
+
+position_code
+position_title
+
+job_family
+job_level
+
+grade_sk
+
+critical_position_flag
+
+effective_from
+effective_to
+is_current
+```
+
+---
+
+# `dim_project`
+
+مهم جدًا لطبيعة Afro.
+
+```text
+dim_project
+-----------
+project_sk PK
+
+project_id_business_key
+
+project_code
+project_name
+
+customer_code
+customer_name
+
+project_manager_sk
+
+project_type
+
+location_sk
+
+start_date
+end_date
+
+project_status
+
+effective_from
+effective_to
+is_current
+```
+
+---
+
+# `dim_location`
+
+```text
+dim_location
+------------
+location_sk PK
+
+country
+governorate
+city
+area
+site
+
+inside_cairo_flag
+field_location_flag
+
+latitude NULL
+longitude NULL
+```
+
+وهذا مهم لتحليل:
+
+```text
+Inside Cairo
+Outside Cairo
+Field Allowance
+Attendance Geography
+Workforce Distribution
+```
+
+---
+
+# `dim_date`
+
+إلزامية.
+
+```text
+dim_date
+--------
+date_sk PK
+
+full_date
+
+day
+day_name
+
+week_no
+month_no
+month_name
+
+quarter
+year
+
+is_weekend
+is_public_holiday
+
+payroll_period
+fiscal_period
+```
+
+---
+
+# `dim_time`
+
+```text
+dim_time
+--------
+time_sk PK
+
+hour
+minute
+
+shift_bucket
+
+day_part
+```
+
+---
+
+# `dim_contract`
+
+```text
+dim_contract
+------------
+contract_sk PK
+
+contract_type
+
+employment_category
+
+pay_frequency
+
+work_pattern
+
+effective_from
+effective_to
+```
+
+---
+
+# `dim_reason`
+
+Dimension مشتركة لأسباب مثل:
+
+```text
+Termination Reason
+Absence Reason
+Leave Reason
+Hiring Reason
+Transfer Reason
+Disciplinary Reason Category
+```
+
+لكن مع:
+
+```text
+reason_domain
+```
+
+حتى لا تختلط.
+
+---
+
+# 4. أهم Facts
+
+## M9. `fact_employee_snapshot`
+
+أعتبره من أهم الجداول في النظام.
+
+```text
+fact_employee_snapshot
+----------------------
+snapshot_date_sk FK
+employee_sk FK
+
+company_sk
+org_unit_sk
+position_sk
+project_sk
+location_sk
+
+active_flag
+
+fte_value
+
+basic_salary
+total_fixed_cost
+
+employment_status
+
+tenure_days
+
+headcount_value
+
+PRIMARY KEY
+(snapshot_date_sk, employee_sk)
+```
+
+هذا يسمح بإجابة صحيحة على:
+
+> كم كان عندي موظف في 31 ديسمبر الماضي؟
+
+بدون محاولة إعادة بناء الماضي من current employee table.
+
+---
+
+# `fact_employee_movement`
+
+```text
+fact_employee_movement
+----------------------
+movement_fact_id PK
+
+employee_sk
+
+movement_date_sk
+
+movement_type
+  HIRE
+  TRANSFER
+  PROMOTION
+  DEMOTION
+  PROJECT_CHANGE
+  MANAGER_CHANGE
+  TERMINATION
+  REHIRE
+
+from_company_sk
+to_company_sk
+
+from_org_unit_sk
+to_org_unit_sk
+
+from_position_sk
+to_position_sk
+
+from_project_sk
+to_project_sk
+
+reason_sk
+```
+
+---
+
+# `fact_recruitment`
+
+```text
+fact_recruitment
+----------------
+recruitment_fact_id PK
+
+requisition_id
+
+requisition_date_sk
+fill_date_sk
+
+position_sk
+department_sk
+project_sk
+
+vacancies_requested
+vacancies_filled
+
+applicant_count
+shortlisted_count
+interviewed_count
+offers_count
+accepted_count
+
+time_to_shortlist_days
+time_to_fill_days
+time_to_hire_days
+
+recruitment_cost
+```
+
+---
+
+# `fact_attendance_daily`
+
+```text
+fact_attendance_daily
+---------------------
+attendance_fact_id PK
+
+employee_sk
+date_sk
+
+project_sk
+location_sk
+shift_sk
+
+scheduled_hours
+worked_hours
+
+late_minutes
+early_leave_minutes
+overtime_hours
+
+absence_hours
+
+attendance_status
+
+attendance_method
+
+exception_count
+```
+
+---
+
+# `fact_leave`
+
+```text
+fact_leave
+----------
+leave_fact_id PK
+
+employee_sk
+
+leave_type_sk
+
+request_date_sk
+start_date_sk
+end_date_sk
+
+days_requested
+days_approved
+days_paid
+days_unpaid
+
+approval_duration_hours
+
+leave_status
+```
+
+---
+
+# `fact_payroll`
+
+أهم شرط:
+
+> Grain واضح.
+
+أقترح:
+
+```text
+Employee
+× Payroll Period
+× Pay Component
+```
+
+```text
+fact_payroll
+------------
+payroll_fact_id PK
+
+employee_sk
+payroll_period_sk
+
+company_sk
+project_sk
+cost_center_sk
+
+pay_component_sk
+
+quantity
+rate
+
+gross_amount
+deduction_amount
+employer_cost
+
+net_effect
+
+currency_sk
+
+payroll_run_id
+
+posted_flag
+```
+
+بدل row واحدة فيها 80 salary columns.
+
+---
+
+# `dim_pay_component`
+
+```text
+dim_pay_component
+-----------------
+pay_component_sk PK
+
+component_code
+component_name
+
+component_type
+  BASIC
+  ALLOWANCE
+  BONUS
+  OT
+  DEDUCTION
+  TAX
+  INSURANCE
+  EMPLOYER_COST
+
+taxable_flag
+pensionable_flag
+
+cost_category
+```
+
+---
+
+# `fact_allowance`
+
+```text
+fact_allowance
+--------------
+allowance_fact_id PK
+
+employee_sk
+
+date_sk
+project_sk
+location_sk
+
+allowance_type_sk
+
+eligible_days
+
+quantity
+rate
+amount
+
+rule_version
+
+approval_status
+```
+
+---
+
+# `fact_performance`
+
+```text
+fact_performance
+----------------
+performance_fact_id PK
+
+employee_sk
+
+review_cycle_sk
+kpi_sk
+
+target_value
+actual_value
+
+achievement_pct
+
+weight
+
+weighted_score
+
+rating_sk
+
+bonus_value
+```
+
+---
+
+# `fact_training`
+
+```text
+fact_training
+-------------
+training_fact_id PK
+
+employee_sk
+course_sk
+
+assigned_date_sk
+completion_date_sk
+
+required_flag
+
+completion_status
+
+score
+
+training_hours
+
+cost
+
+certificate_expiry_date_sk
+```
+
+---
+
+# `fact_employee_relations`
+
+يجب أن يكون بحذر شديد.
+
+```text
+fact_employee_relations
+-----------------------
+case_fact_id PK
+
+case_category_sk
+
+opened_date_sk
+closed_date_sk
+
+company_sk
+org_unit_sk
+
+severity_band
+
+case_status
+
+resolution_duration_days
+
+appeal_flag
+```
+
+لاحظ أنني **لا أضع complaint text أو investigation evidence** في الـWarehouse العام.
+
+---
+
+# `fact_expense`
+
+```text
+fact_expense
+------------
+expense_fact_id PK
+
+employee_sk
+project_sk
+
+expense_type_sk
+
+expense_date_sk
+
+claimed_amount
+approved_amount
+rejected_amount
+
+currency_sk
+
+approval_duration_days
+```
+
+---
+
+# `fact_hse_employee`
+
+```text
+fact_hse_employee
+-----------------
+hse_fact_id PK
+
+employee_sk
+date_sk
+project_sk
+location_sk
+
+event_type
+
+incident_flag
+medical_restriction_flag
+lost_time_days
+
+fitness_status
+certification_status
+```
+
+---
+
+# 5. KPI Semantic Layer
+
+وهنا الفرق بين:
+
+```text
+Warehouse
+```
+
+و
+
+```text
+Management Information System
+```
+
+### `kpi_definition`
+
+```text
+kpi_definition
+--------------
+kpi_id PK
+
+kpi_code UNIQUE
+kpi_name
+
+business_domain
+
+description
+
+business_question
+
+formula_expression
+
+numerator_definition
+denominator_definition
+
+aggregation_method
+  SUM
+  AVG
+  DISTINCT_COUNT
+  RATIO
+  WEIGHTED_AVG
+
+time_grain
+  DAY
+  WEEK
+  MONTH
+  QUARTER
+  YEAR
+
+default_dimension
+
+unit_of_measure
+
+owner_role_id
+
+data_steward_role_id
+
+status
+```
+
+---
+
+# M10. KPI Version
+
+### `kpi_version`
+
+```text
+kpi_version
+-----------
+kpi_version_id PK
+
+kpi_id FK
+
+version_no
+
+formula_expression
+
+effective_from
+effective_to
+
+change_reason
+
+approved_by
+
+status
+```
+
+---
+
+# Example: Headcount
+
+بدل:
+
+```text
+COUNT(employee)
+```
+
+نعرّفه:
+
+```text
+KPI:
+ACTIVE_HEADCOUNT
+
+Definition:
+Distinct employees whose
+employment_status = ACTIVE
+and snapshot_date = selected_date
+and FTE > 0
+```
+
+---
+
+# Example: Turnover Rate
+
+```text
+VOLUNTARY_TURNOVER_RATE
+
+Numerator:
+Voluntary terminations in period
+
+Denominator:
+Average Active Headcount
+
+Formula:
+Voluntary Terminations
+/
+((Opening Headcount + Closing Headcount) / 2)
+× 100
+```
+
+لو تغير التعريف مستقبلًا:
+
+```text
+Version 2
+```
+
+لا نمسح Version 1.
+
+---
+
+# M11. KPI Target
+
+### `kpi_target`
+
+```text
+kpi_target
+----------
+kpi_target_id PK
+
+kpi_id FK
+
+tenant_id
+company_id NULL
+org_unit_id NULL
+project_id NULL
+
+period_start
+period_end
+
+target_value
+
+warning_threshold
+critical_threshold
+
+approved_by
+```
+
+---
+
+# M12. KPI Actual Cache
+
+### `kpi_result`
+
+```text
+kpi_result
+----------
+kpi_result_id PK
+
+kpi_id FK
+kpi_version_id FK
+
+period_key
+
+dimension_context_json
+
+actual_value
+target_value
+variance_value
+variance_pct
+
+calculated_at
+
+data_as_of
+```
+
+---
+
+# 6. KPI Tree
+
+الـCEO يريد 10–20 KPI، وليس 200 KPI.
+
+فننشئ hierarchy.
+
+### `kpi_relationship`
+
+```text
+kpi_relationship
+----------------
+relationship_id PK
+
+parent_kpi_id
+child_kpi_id
+
+relationship_type
+  DRIVES
+  CONTRIBUTES
+  EXPLAINS
+
+weight NULL
+```
+
+مثال:
+
+```text
+People Cost Efficiency
+│
+├── Payroll Cost
+├── OT Cost
+├── Allowance Cost
+├── Cost per Employee
+└── Project Labor Cost
+```
+
+---
+
+# 7. Semantic Model
+
+### `semantic_model`
+
+```text
+semantic_model
+--------------
+semantic_model_id PK
+
+model_code
+model_name
+
+business_domain
+
+default_time_dimension
+
+status
+
+version_no
+```
+
+---
+
+### `semantic_entity`
+
+```text
+semantic_entity
+---------------
+semantic_entity_id PK
+
+semantic_model_id FK
+
+entity_type
+  FACT
+  DIMENSION
+  KPI
+  MEASURE
+
+source_object
+
+business_name
+```
+
+---
+
+### `semantic_relationship`
+
+```text
+semantic_relationship
+---------------------
+semantic_relationship_id PK
+
+semantic_model_id
+
+from_entity_id
+to_entity_id
+
+relationship_type
+cardinality
+```
+
+---
+
+# 8. Business Measure
+
+### `semantic_measure`
+
+```text
+semantic_measure
+----------------
+measure_id PK
+
+semantic_model_id
+
+measure_code
+measure_name
+
+formula
+
+format_string
+
+default_aggregation
+
+owner
+```
+
+مثال:
+
+```text
+Total Payroll Cost
+Average Salary
+Total OT Cost
+Absence Hours
+Training Cost
+Hiring Cost
+```
+
+---
+
+# 9. Dashboard Registry
+
+لا أريد Dashboards بلا governance.
+
+### `dashboard_definition`
+
+```text
+dashboard_definition
+--------------------
+dashboard_id PK
+
+tenant_id
+
+dashboard_code
+dashboard_name
+
+dashboard_type
+  EXECUTIVE
+  MANAGEMENT
+  OPERATIONAL
+  COMPLIANCE
+  SELF_SERVICE
+
+owner_role_id
+
+semantic_model_id
+
+refresh_frequency
+
+status
+
+version_no
+```
+
+---
+
+# M13. Dashboard Widget
+
+```text
+dashboard_widget
+----------------
+widget_id PK
+
+dashboard_id FK
+
+widget_type
+  KPI_CARD
+  TABLE
+  CHART
+  TREND
+  MATRIX
+  MAP
+  FUNNEL
+  HEATMAP
+
+title
+
+kpi_id FK NULL
+measure_id FK NULL
+
+dimension_config_json
+filter_config_json
+
+position_json
+```
+
+---
+
+# Executive Dashboard مثال
+
+```text
+CEO PEOPLE DASHBOARD
+
+Workforce
+--------
+Headcount
+FTE
+New Hires
+Exits
+Turnover
+
+Cost
+----
+Payroll Cost
+OT Cost
+Allowance Cost
+People Cost / Revenue
+Project Labor Cost
+
+Capability
+----------
+Training Compliance
+Critical Skill Coverage
+
+Risk
+----
+Critical Vacancies
+Expired Certifications
+High Absenteeism
+ER Case Trend
+```
+
+---
+
+# 10. Embedded Analytics
+
+ليس كل dashboard داخل Power BI.
+
+بعض التحليلات يجب أن تظهر داخل الـHR App نفسه.
+
+مثال:
+
+في Employee Profile:
+
+```text
+Attendance Trend
+Leave Balance Trend
+Training Completion
+Performance History
+```
+
+وفي Project Profile:
+
+```text
+Headcount
+Payroll Cost
+OT
+Allowance Cost
+Attendance
+Turnover
+```
+
+---
+
+# `embedded_analytics_view`
+
+```text
+embedded_analytics_view
+-----------------------
+embedded_view_id PK
+
+module_code
+
+page_context
+
+semantic_model_id
+
+visualization_config_json
+
+required_permission
+
+status
+```
+
+---
+
+# 11. Analytical Security
+
+وهذه من أخطر نقاط Cluster M.
+
+لا يكفي:
+
+```text
+Can access Power BI = Yes
+```
+
+نحتاج 4 Layers:
+
+```text
+Tenant Security
+Row-Level Security
+Column-Level Security
+Measure-Level Security
+```
+
+---
+
+# M14. Analytical Role
+
+### `analytics_role`
+
+```text
+analytics_role
+--------------
+analytics_role_id PK
+
+tenant_id
+
+role_code
+role_name
+
+role_type
+  EXECUTIVE
+  HR
+  PAYROLL
+  MANAGER
+  PROJECT
+  AUDIT
+  FINANCE
+
+status
+```
+
+---
+
+# M15. Dataset Permission
+
+### `analytics_dataset_permission`
+
+```text
+analytics_dataset_permission
+----------------------------
+permission_id PK
+
+analytics_role_id FK
+dataset_id FK
+
+can_read
+
+row_filter_rule_id FK NULL
+
+column_policy_id FK NULL
+
+export_allowed
+
+drillthrough_allowed
+```
+
+---
+
+# Row-Level Security
+
+مثل:
+
+```text
+Project Manager
+→ only his projects
+
+Department Manager
+→ only his organization subtree
+
+Payroll
+→ allowed salary details
+
+HR Operations Huawei
+→ Huawei workforce
+
+HR Operations Ericsson
+→ Ericsson workforce
+```
+
+وهذه النقطة متوافقة جدًا مع واقع الهيكل الحالي الذي يظهر توزيع HR Operations حسب customer/account. 
+
+---
+
+# Column-Level Security
+
+مثال:
+
+HR Operations يرى:
+
+```text
+Employee
+Department
+Attendance
+Leave
+Training
+```
+
+لكن لا يرى:
+
+```text
+Net Salary
+Bank Account
+Investigation Evidence
+Medical Diagnosis
+```
+
+---
+
+# Measure-Level Security
+
+يمكن أن يرى المدير:
+
+```text
+Average Salary
+Total People Cost
+```
+
+لكن لا يرى:
+
+```text
+Individual Salary
+```
+
+---
+
+# M16. Data Masking Policy
+
+```text
+analytics_masking_policy
+------------------------
+masking_policy_id PK
+
+dataset_id
+column_name
+
+masking_type
+  FULL
+  PARTIAL
+  AGGREGATE_ONLY
+  NULLIFY
+  HASH
+
+analytics_role_id
+
+status
+```
+
+---
+
+# 12. Data Lineage
+
+نحتاج الإجابة عن:
+
+> الرقم الذي أراه في Dashboard جاء من أين؟
+
+### `data_lineage_node`
+
+```text
+data_lineage_node
+-----------------
+lineage_node_id PK
+
+node_type
+  SOURCE
+  DATASET
+  PIPELINE
+  TRANSFORMATION
+  TABLE
+  COLUMN
+  KPI
+  DASHBOARD
+
+object_reference
+```
+
+---
+
+### `data_lineage_edge`
+
+```text
+data_lineage_edge
+-----------------
+edge_id PK
+
+from_node_id
+to_node_id
+
+transformation_reference NULL
+
+lineage_type
+```
+
+---
+
+# Example Lineage
+
+```text
+Attendance Device
+      ↓
+Attendance Raw Table
+      ↓
+Attendance Validated
+      ↓
+fact_attendance_daily
+      ↓
+Absenteeism KPI
+      ↓
+HR Executive Dashboard
+```
+
+---
+
+# Payroll مثال
+
+```text
+Payroll Run
+    ↓
+Payroll Components
+    ↓
+fact_payroll
+    ↓
+Total People Cost
+    ↓
+Project Cost Dashboard
+```
+
+---
+
+# 13. Data Quality
+
+Cluster K لديه operational reconciliation.
+
+Cluster M يحتاج Analytical DQ.
+
+### `analytics_data_quality_rule`
+
+```text
+analytics_data_quality_rule
+---------------------------
+dq_rule_id PK
+
+dataset_id
+
+rule_code
+rule_name
+
+dimension
+  COMPLETENESS
+  VALIDITY
+  UNIQUENESS
+  CONSISTENCY
+  TIMELINESS
+  ACCURACY
+
+rule_expression
+
+severity
+
+threshold
+
+owner
+status
+```
+
+---
+
+# `analytics_data_quality_result`
+
+```text
+analytics_data_quality_result
+-----------------------------
+dq_result_id PK
+
+dq_rule_id
+
+evaluation_date
+
+rows_checked
+rows_failed
+
+failure_rate
+
+status
+
+sample_failure_reference
+```
+
+---
+
+# Example Rules
+
+```text
+Employee must have company
+100%
+
+Active employee must have position
+>= 99.5%
+
+Payroll employee must exist in employee dimension
+100%
+
+Attendance date cannot be future date
+100%
+
+Project payroll allocation must sum to 100%
+>= 99.9%
+```
+
+---
+
+# 14. Data Freshness
+
+### `dataset_freshness_status`
+
+```text
+dataset_freshness_status
+------------------------
+dataset_id PK
+
+last_source_timestamp
+last_loaded_timestamp
+
+latency_minutes
+
+freshness_sla_minutes
+
+status
+  FRESH
+  DELAYED
+  STALE
+```
+
+الـDashboard يجب أن يظهر:
+
+```text
+Data as of:
+10-Aug-2026 15:30
+```
+
+بدل جعل المستخدم يعتقد أن البيانات realtime.
+
+---
+
+# 15. AI / ML Feature Store
+
+الـFeature Store لا يخزن:
+
+```text
+"Employee is likely to resign"
+```
+
+فقط.
+
+بل يخزن الـfeatures المستخدمة في التدريب/inference.
+
+### `feature_definition`
+
+```text
+feature_definition
+------------------
+feature_id PK
+
+feature_code
+feature_name
+
+entity_type
+  EMPLOYEE
+  POSITION
+  PROJECT
+  CANDIDATE
+
+data_type
+
+feature_logic
+
+source_dataset_id
+
+refresh_frequency
+
+contains_sensitive_data
+
+online_enabled
+offline_enabled
+
+status
+```
+
+---
+
+# Example Features
+
+Employee:
+
+```text
+tenure_months
+attendance_rate_90d
+absence_days_90d
+overtime_hours_90d
+salary_change_pct_12m
+manager_changes_12m
+performance_score
+training_hours_12m
+promotion_wait_months
+project_changes_12m
+```
+
+لكن يجب الحذر جدًا من استخدام:
+
+```text
+medical information
+disciplinary allegations
+protected characteristics
+```
+
+في ML scoring.
+
+---
+
+# M17. Feature Value Offline
+
+```text
+feature_value_offline
+---------------------
+feature_id
+entity_id
+
+as_of_timestamp
+
+feature_value
+
+source_version
+```
+
+للتدريب والتحليل التاريخي.
+
+---
+
+# M18. Online Feature Value
+
+```text
+feature_value_online
+--------------------
+feature_id
+entity_id
+
+feature_value
+
+calculated_at
+
+expires_at
+```
+
+لـreal-time inference.
+
+---
+
+# 16. ML Model Registry
+
+### `ml_model_definition`
+
+```text
+ml_model_definition
+-------------------
+model_id PK
+
+model_code
+model_name
+
+use_case
+
+model_type
+
+business_owner
+technical_owner
+
+risk_class
+
+status
+```
+
+---
+
+# ML Model Version
+
+### `ml_model_version`
+
+```text
+ml_model_version
+----------------
+model_version_id PK
+
+model_id FK
+
+version_no
+
+training_dataset_reference
+
+feature_set_version
+
+algorithm
+
+hyperparameters_json
+
+training_date
+
+performance_metrics_json
+
+fairness_metrics_json
+
+approved_by
+
+deployment_status
+```
+
+---
+
+# 17. Prediction Registry
+
+### `ml_prediction`
+
+```text
+ml_prediction
+-------------
+prediction_id PK
+
+model_version_id
+
+entity_type
+entity_id
+
+prediction_timestamp
+
+prediction_value
+prediction_score
+
+confidence
+
+explanation_reference
+
+valid_until
+```
+
+---
+
+# Use Cases
+
+أنصح في البداية بـ:
+
+```text
+Workforce Demand Forecast
+Overtime Cost Forecast
+Absence Risk Trend
+Hiring Demand Forecast
+Turnover Trend Analysis
+Training Demand Forecast
+Project Manpower Cost Forecast
+Payroll Anomaly Detection
+```
+
+ولا أبدأ مباشرة بـ:
+
+```text
+Who should be fired?
+Who should be promoted?
+Who is a bad employee?
+```
+
+هذه استخدامات عالية المخاطر إداريًا وأخلاقيًا وتشغيليًا.
+
+---
+
+# 18. Model Monitoring
+
+### `ml_model_monitoring`
+
+```text
+ml_model_monitoring
+-------------------
+monitoring_id PK
+
+model_version_id
+
+monitoring_date
+
+prediction_count
+
+accuracy_metric
+
+data_drift_score
+concept_drift_score
+
+fairness_alert
+
+performance_status
+
+action_required
+```
+
+---
+
+# 19. Feature Set
+
+### `feature_set`
+
+```text
+feature_set
+-----------
+feature_set_id PK
+
+feature_set_code
+feature_set_name
+
+entity_type
+
+version_no
+
+status
+```
+
+---
+
+### `feature_set_item`
+
+```text
+feature_set_item
+----------------
+feature_set_id
+feature_id
+
+sequence_no
+```
+
+---
+
+# 20. Analytical Snapshot
+
+أحيانًا نحتاج Freeze رسمي.
+
+مثل:
+
+```text
+Monthly HR Report
+Board Report
+Audit Report
+Year-End Workforce
+```
+
+### `analytics_snapshot`
+
+```text
+analytics_snapshot
+------------------
+snapshot_id PK
+
+snapshot_name
+
+snapshot_type
+
+as_of_date
+
+dataset_versions_json
+
+kpi_versions_json
+
+created_by
+approved_by
+
+locked_at
+status
+```
+
+بمجرد اعتماد Board Report:
+
+> لا يعاد حسابه تلقائيًا من بيانات تغيرت لاحقًا.
+
+---
+
+# 21. Report Catalog
+
+### `report_definition`
+
+```text
+report_definition
+-----------------
+report_id PK
+
+report_code
+report_name
+
+report_category
+
+semantic_model_id
+
+owner
+
+delivery_format
+  PDF
+  EXCEL
+  CSV
+  DASHBOARD
+
+status
+```
+
+---
+
+# M19. Report Schedule
+
+```text
+report_schedule
+---------------
+report_schedule_id PK
+
+report_id
+
+schedule_expression
+
+timezone
+
+recipient_rule
+
+delivery_channel
+
+status
+```
+
+---
+
+# 22. Report Execution
+
+```text
+report_execution
+----------------
+report_execution_id PK
+
+report_id
+
+started_at
+completed_at
+
+data_as_of
+
+status
+
+output_reference
+
+recipient_count
+```
+
+---
+
+# 23. Self-Service Analytics
+
+لا يجب إعطاء المستخدم direct SQL access.
+
+نستخدم:
+
+```text
+Certified Dimensions
+Certified Measures
+Certified KPIs
+```
+
+### `analytics_object_certification`
+
+```text
+analytics_object_certification
+------------------------------
+certification_id PK
+
+object_type
+
+object_id
+
+certification_level
+  DRAFT
+  VERIFIED
+  CERTIFIED
+  DEPRECATED
+
+certified_by
+
+certified_at
+```
+
+---
+
+# 24. Metric Ownership
+
+كل KPI يحتاج:
+
+```text
+Business Owner
+Data Owner
+Technical Owner
+```
+
+### `metric_ownership`
+
+```text
+metric_ownership
+----------------
+metric_ownership_id PK
+
+kpi_id
+
+business_owner_role
+data_owner_role
+technical_owner_role
+
+review_frequency
+```
+
+---
+
+# 25. Dashboard Usage Analytics
+
+نعرف:
+
+```text
+من يستخدم dashboard؟
+ما dashboard التي لا يفتحها أحد؟
+ما KPI التي يعتمد عليها الإدارة؟
+```
+
+### `analytics_usage_event`
+
+```text
+analytics_usage_event
+---------------------
+usage_event_id PK
+
+user_id
+dashboard_id NULL
+report_id NULL
+kpi_id NULL
+
+action_type
+  VIEW
+  EXPORT
+  FILTER
+  DRILLDOWN
+
+occurred_at
+```
+
+---
+
+# 26. Export Governance
+
+مهم جدًا.
+
+### `analytics_export_log`
+
+```text
+analytics_export_log
+--------------------
+export_log_id PK
+
+user_id
+
+source_object_type
+source_object_id
+
+export_format
+
+row_count
+
+contains_sensitive_data
+
+business_reason NULL
+
+approved_by NULL
+
+exported_at
+```
+
+مثال:
+
+إذا حاول أحد:
+
+```text
+Export 5,000 salaries
+```
+
+يجب أن يسجل.
+
+---
+
+# 27. AI Analytical Copilot
+
+الـAI Copilot لا ينبغي أن يقرأ الـOLTP مباشرة.
+
+المسار الأفضل:
+
+```text
+User Question
+   ↓
+Permission Check
+   ↓
+Semantic Layer
+   ↓
+Certified Measures/KPIs
+   ↓
+Query Generator
+   ↓
+Warehouse
+   ↓
+Result
+   ↓
+Narrative Explanation
+```
+
+مثال:
+
+> لماذا زادت Payroll Cost في يوليو؟
+
+يجب أن يرد بناءً على:
+
+```text
+Headcount increase
+OT increase
+Allowances
+KPI bonus
+Salary adjustments
+Project reallocations
+```
+
+وليس بمجرد SQL عشوائي على payroll tables.
+
+---
+
+# M20. AI Query Audit
+
+### `ai_analytics_query`
+
+```text
+ai_analytics_query
+------------------
+ai_query_id PK
+
+tenant_id
+user_id
+
+question_text
+
+semantic_model_id
+
+generated_query_reference
+
+datasets_accessed_json
+
+security_context_json
+
+result_summary
+
+execution_time_ms
+
+created_at
+```
+
+---
+
+# 28. Executive KPI Packs
+
+أقترح Semantic Layer جاهزة في أول Release.
+
+## Workforce
+
+```text
+Headcount
+FTE
+New Hires
+Exits
+Turnover
+Vacancy Rate
+Internal Mobility
+Average Tenure
+```
+
+## Recruitment
+
+```text
+Open Requisitions
+Time to Fill
+Time to Hire
+Offer Acceptance Rate
+Recruitment Funnel Conversion
+Hiring SLA Compliance
+```
+
+## Attendance
+
+```text
+Attendance Rate
+Absenteeism Rate
+Late Arrival Rate
+OT Hours
+OT Cost
+Attendance Exception Rate
+```
+
+## Payroll
+
+```text
+Gross Payroll
+Net Payroll
+Employer Cost
+Payroll Cost / Employee
+Payroll Cost / Project
+OT Cost
+Allowance Cost
+Payroll Variance
+```
+
+## Performance
+
+```text
+Average Performance Score
+High Performer %
+Low Performer %
+KPI Achievement %
+Bonus Cost
+```
+
+## Learning
+
+```text
+Training Hours / Employee
+Mandatory Training Compliance
+Certification Compliance
+Training Cost
+Skill Gap Index
+```
+
+## Talent
+
+```text
+Critical Positions
+Succession Coverage
+Ready Now %
+Promotion Rate
+Internal Fill Rate
+```
+
+## Employee Relations
+
+```text
+Cases Opened
+Cases Closed
+Average Closure Time
+Case Aging
+Appeal Rate
+```
+
+لكن ER dashboard يجب أن يكون highly restricted.
+
+---
+
+# 29. People Cost Cube
+
+أعتبر هذا من أهم الـAnalytical Models.
+
+```text
+Employee
+× Month
+× Company
+× Department
+× Project
+× Cost Component
+```
+
+ويعرض:
+
+```text
+Salary
+OT
+Allowance
+Bonus
+Insurance
+Benefits
+Expense
+Training
+Employer Cost
+```
+
+فتستطيع الإدارة معرفة:
+
+> تكلفة Project Huawei الفعلية للموظفين كام؟
+
+وليس Salary فقط.
+
+---
+
+# 30. Workforce Capacity Model
+
+لأن طبيعة الشركة project-based.
+
+```text
+Available FTE
+Allocated FTE
+Bench FTE
+Overallocated FTE
+Underallocated FTE
+```
+
+### `fact_workforce_capacity`
+
+```text
+fact_workforce_capacity
+-----------------------
+employee_sk
+date_sk
+project_sk
+
+available_hours
+allocated_hours
+actual_hours
+
+utilization_pct
+
+capacity_status
+```
+
+---
+
+# 31. Project Workforce Analytics
+
+Dashboard لكل Project Manager:
+
+```text
+Project Headcount
+New Joiners
+Employees Pending Activation
+Attendance
+Absence
+OT
+Leave
+Payroll Cost
+Allowance Cost
+Training Compliance
+HSE Readiness
+Expiring Certifications
+Turnover
+Open HR Cases
+```
+
+مع security بحيث لا يرى مشاريع أخرى.
+
+---
+
+# 32. Historical Organization Analytics
+
+بسبب SCD Type 2 يمكننا الإجابة:
+
+> هذا الموظف كان يتبع أي مدير وقت حصوله على performance rating؟
+
+وليس manager الحالي.
+
+وهذا سبب مهم لوجود:
+
+```text
+effective_from
+effective_to
+is_current
+```
+
+في dimensions.
+
+---
+
+# 33. Data Retention في Analytics
+
+لا يجب أن نفترض أن Warehouse يحتفظ بكل شيء للأبد.
+
+### `analytics_retention_policy`
+
+```text
+analytics_retention_policy
+--------------------------
+policy_id PK
+
+dataset_id
+
+hot_retention_days
+archive_retention_days
+
+anonymize_after_days
+
+delete_after_days
+
+legal_hold_supported
+```
+
+---
+
+# 34. Data Privacy Zones
+
+أوصي بثلاث Zones:
+
+```text
+GENERAL ANALYTICS
+
+RESTRICTED ANALYTICS
+
+HIGHLY RESTRICTED ANALYTICS
+```
+
+### General
+
+```text
+Headcount
+Attendance aggregates
+Training
+Recruitment
+```
+
+### Restricted
+
+```text
+Individual Compensation
+Performance
+Benefits
+```
+
+### Highly Restricted
+
+```text
+Medical
+Employee Relations
+Investigation
+Legal
+```
+
+---
+
+# 35. Privacy-Safe Dimensions
+
+للـAI/ML والتحليل المتقدم، يمكن إنشاء:
+
+```text
+employee_analytics_id
+```
+
+بدل Employee ID الحقيقي.
+
+### `analytics_identity_map`
+
+```text
+analytics_identity_map
+----------------------
+analytics_subject_id PK
+
+employee_id
+
+tokenized_employee_key
+
+security_zone
+
+status
+```
+
+والـAI environment يرى:
+
+```text
+EMP_X83491
+```
+
+بدل الاسم الحقيقي إلا عند الضرورة.
+
+---
+
+# 36. Cluster M — High-Level ERD
+
+```text
+                 ANALYTICS_SOURCE_SYSTEM
+                          |
+                          v
+                  ANALYTICS_DATASET
+                          |
+                          v
+                  INGESTION_PIPELINE
+                          |
+                          v
+                      PIPELINE_RUN
+                          |
+                          v
+                     RAW / BRONZE
+                          |
+                          v
+                TRANSFORMATION_MODEL
+                          |
+                          v
+                    SILVER MODELS
+                          |
+                          v
+                  +-------+-------+
+                  |               |
+                  v               v
+              DIMENSIONS         FACTS
+                  \               /
+                   \             /
+                    +-----------+
+                          |
+                          v
+                   SEMANTIC_MODEL
+                          |
+             +------------+------------+
+             |            |            |
+             v            v            v
+       KPI_DEFINITION  MEASURES   CERTIFIED DATA
+             |
+             v
+       KPI_RESULT / TARGET
+             |
+             v
+        DASHBOARD / REPORT
+             |
+             v
+          END USER
+```
+
+وبالتوازي:
+
+```text
+WAREHOUSE
+    |
+    +---- DATA QUALITY
+    |
+    +---- LINEAGE
+    |
+    +---- ANALYTICAL SECURITY
+    |
+    +---- FEATURE STORE
+              |
+              v
+          ML MODELS
+              |
+              v
+         PREDICTIONS
+```
+
+---
+
+# 37. أهم Core Tables
+
+لو سنختصر Cluster M إلى production-grade core schema:
+
+```text
+01 analytics_source_system
+02 analytics_dataset
+
+03 ingestion_pipeline
+04 pipeline_run
+
+05 raw_object_registry
+06 transformation_model
+07 transformation_dependency
+
+08 dimension_definition
+
+09 dim_employee
+10 dim_company
+11 dim_org_unit
+12 dim_position
+13 dim_project
+14 dim_location
+15 dim_date
+16 dim_time
+17 dim_contract
+18 dim_reason
+19 dim_pay_component
+
+20 fact_employee_snapshot
+21 fact_employee_movement
+22 fact_recruitment
+23 fact_attendance_daily
+24 fact_leave
+25 fact_payroll
+26 fact_allowance
+27 fact_performance
+28 fact_training
+29 fact_employee_relations
+30 fact_expense
+31 fact_hse_employee
+32 fact_workforce_capacity
+
+33 kpi_definition
+34 kpi_version
+35 kpi_target
+36 kpi_result
+37 kpi_relationship
+
+38 semantic_model
+39 semantic_entity
+40 semantic_relationship
+41 semantic_measure
+
+42 dashboard_definition
+43 dashboard_widget
+44 embedded_analytics_view
+
+45 analytics_role
+46 analytics_dataset_permission
+47 analytics_masking_policy
+
+48 data_lineage_node
+49 data_lineage_edge
+
+50 analytics_data_quality_rule
+51 analytics_data_quality_result
+52 dataset_freshness_status
+
+53 feature_definition
+54 feature_set
+55 feature_set_item
+56 feature_value_offline
+57 feature_value_online
+
+58 ml_model_definition
+59 ml_model_version
+60 ml_prediction
+61 ml_model_monitoring
+
+62 analytics_snapshot
+
+63 report_definition
+64 report_schedule
+65 report_execution
+
+66 analytics_object_certification
+67 metric_ownership
+
+68 analytics_usage_event
+69 analytics_export_log
+
+70 ai_analytics_query
+
+71 analytics_identity_map
+72 analytics_retention_policy
+```
+
+إذًا تقريبًا **72 entity / analytical objects أساسية**.
+
+---
+
+# 38. قواعد معمارية لا أنصح بالتنازل عنها
+
+### Rule 1
+
+لا يوجد Executive Dashboard يقرأ مباشرة من OLTP.
+
+### Rule 2
+
+كل KPI له تعريف وOwner وVersion.
+
+### Rule 3
+
+أي Financial KPI يجب أن يعرض:
+
+```text
+Data As Of
+Source
+KPI Version
+```
+
+### Rule 4
+
+PII لا تنتقل تلقائيًا إلى Warehouse.
+
+### Rule 5
+
+Medical / ER / Investigation data لا تدخل General BI.
+
+### Rule 6
+
+Project Managers يرون projects المصرح بها فقط.
+
+### Rule 7
+
+Historical analysis يعتمد SCD وليس current master.
+
+### Rule 8
+
+ML features يجب أن تكون governed وقابلة للتتبع.
+
+### Rule 9
+
+AI Copilot يستعلم من Semantic Layer وليس raw tables.
+
+### Rule 10
+
+أي Export حساس يجب أن يسجل في Audit.
+
+---
+
+# 39. النتيجة بعد Cluster M
+
+أصبح لدينا الآن ثلاث طبقات واضحة:
+
+```text
+Operational System
+Clusters A → J
+
+Integration / Platform Control
+Clusters K → L
+
+Intelligence & Decision Layer
+Cluster M
+```
+
+وبالتالي المنصة أصبحت قادرة على دعم:
+
+```text
+Transactions
+Workflow
+Rules
+Integrations
+Audit
+Reporting
+Dashboards
+Executive KPIs
+Historical Analytics
+Forecasting
+AI / ML
+Data Lineage
+Analytical Security
+```
+
+من دون تحميل الـProduction HR Database بأحمال الـBI والتحليل.
+
+**الخطوة التالية التي أراها منطقية الآن ليست Cluster Business جديد مباشرة، بل Cluster N — Enterprise API Gateway, Event Bus, Domain Events, Webhooks, Service-to-Service Contracts, Background Processing, Idempotency, Distributed Transactions, Integration Security & Observability ERD**؛ لأننا صممنا حتى الآن الـbusiness domains والـconfiguration والـanalytics، لكن ما زلنا نحتاج الـtechnical runtime backbone الذي يربط كل هذه الـdomains بطريقة scalable ويمنع الـmodules من الارتباط المباشر ببعضها.

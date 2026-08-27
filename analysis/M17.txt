@@ -1,0 +1,2757 @@
+ممتاز. **Module 17** هنا لا ينبغي أن يكون مجرد “Dashboard Module”، بل يصبح **طبقة القرار Decision Intelligence Layer** فوق Modules 01–16 كلها.
+
+والسبب مدعوم مباشرة من الـOperations Manual الحالي: الـHR Operations مسؤول بالفعل عن **manpower planning** ومتابعة workforce، والـPayroll ينتج **Payroll Cost Reports by Project**، والـManual يشترط أن تكون employee movements والـproject allocations والـattendance والـallowances والـKPI والـpayroll adjustments موثقة ومحدثة وقابلة للتتبع. أي أن عناصر التحليل موجودة بالفعل، لكنها موزعة على عمليات مختلفة وليست موحدة داخل Planning & Intelligence Engine. 
+
+كما أن الـOrg Chart يوضح أن People & Culture موزع بين OD وTalent Acquisition وER & Compliance وPayroll وPersonnel وHR Operations؛ ولذلك Module 17 يجب أن يرى بيانات الجميع، لكن **من غير أن يصبح مالكًا للبيانات التشغيلية الأصلية**. 
+
+# Module 17 — HR Analytics, Workforce Planning, People Cost, Headcount Budgeting & Executive People Intelligence
+
+## 17.1 الهدف الأساسي
+
+تحويل كل البيانات الناتجة من Modules 01–16 إلى نظام يمكنه الإجابة على أسئلة الإدارة مثل:
+
+> كم عدد الموظفين لدينا فعليًا؟
+
+> كم نحتاج بعد 3 أو 6 أو 12 شهر؟
+
+> أين يوجد نقص أو زيادة في العمالة؟
+
+> ما تكلفة الموظفين الحقيقية لكل Project / Client / Department؟
+
+> هل Headcount الحالي داخل Budget أم لا؟
+
+> هل مشروع معين Overstaffed أو Understaffed؟
+
+> كم تكلفة كل Engineer / Technician / Team؟
+
+> ما الوظائف التي يصعب تعويضها؟
+
+> ما نسبة Turnover؟
+
+> ما احتمالية عدم قدرتنا على تلبية مشروع جديد بسبب نقص العمالة؟
+
+> هل زيادة العمالة ناتجة عن business growth أم ضعف productivity؟
+
+وبالتالي يصبح Module 17 هو:
+
+**People Data → Metrics → Analysis → Forecast → Scenario → Decision**
+
+وليس:
+
+**People Data → Charts**
+
+---
+
+# 17.2 موقع Module 17 داخل النظام
+
+Architecture منطقيًا:
+
+```text
+Modules 01–16
+      ↓
+HR Data Layer
+      ↓
+People Analytics Engine
+      ↓
+Workforce Planning Engine
+      ↓
+People Cost Engine
+      ↓
+Headcount Budget Engine
+      ↓
+Forecasting & Scenario Engine
+      ↓
+Executive People Intelligence
+```
+
+والقاعدة المهمة جدًا:
+
+> Module 17 لا يعدّل Salary أو Attendance أو Employee Record أو Performance Score.
+
+هو **يقرأ البيانات المعتمدة** من الـSource Modules، ويولد منها Analysis وPlans وForecasts.
+
+---
+
+# 17.3 مصادر بيانات Module 17
+
+## من Module 01 — Company / Tenant Configuration
+
+* Company
+* Legal Entity
+* Business Unit
+* Country
+* Currency
+* Fiscal Year
+* Cost Center
+* Project structure
+* Client structure
+
+---
+
+## من Module 02 — Organization Structure & Job Architecture
+
+مصدر أساسي جدًا للتحليل:
+
+* Company
+* Sector
+* Division
+* Department
+* Section
+* Team
+* Project
+* Position
+* Job
+* Job Family
+* Job Level
+* Grade
+* Reporting Line
+* Position Status
+* Approved Positions
+* Occupied Positions
+* Vacant Positions
+
+ومن هنا يمكن معرفة:
+
+```text
+Approved Positions
+- Filled Positions
+= Vacant Positions
+```
+
+لكن مهم جدًا ألا نخلط بين:
+
+**Position Vacancy**
+
+و
+
+**Recruitment Vacancy**
+
+لأن Position قد تكون Vacant لكن الإدارة لا تريد التوظيف عليها حاليًا.
+
+---
+
+# 17.4 Workforce Master Analytics
+
+يجب أن يوفر النظام Workforce Snapshot في أي تاريخ.
+
+مثلاً:
+
+**As of 31 July 2026**
+
+| Metric                 | Value |
+| ---------------------- | ----: |
+| Total Active Employees | 3,842 |
+| Permanent              | 1,720 |
+| Project Based          | 1,530 |
+| Daily Workers          |   392 |
+| Outsourced             |   200 |
+| White Collar           | 1,148 |
+| Blue Collar            | 2,694 |
+
+وهنا نحتاج مفهوم مهم جدًا:
+
+## Point-in-Time Reporting
+
+لا يكفي عرض الوضع الحالي.
+
+يجب أن أستطيع اختيار:
+
+```text
+31-Dec-2025
+31-Mar-2026
+30-Jun-2026
+Today
+```
+
+ومعرفة شكل الشركة وقتها.
+
+وهذا يتطلب **historical snapshots / effective-dated records** وليس overwrite للبيانات القديمة.
+
+---
+
+# 17.5 Headcount Analytics
+
+## Headcount Dimensions
+
+يمكن تحليل Headcount حسب:
+
+* Company
+* Legal Entity
+* Business Unit
+* Sector
+* Department
+* Section
+* Project
+* Client
+* Site
+* Governorate
+* Location
+* Job Family
+* Job
+* Position
+* Grade
+* Employment Type
+* Contract Type
+* Gender — إذا سمحت السياسات والصلاحيات
+* Age Band
+* Tenure
+* Manager
+* Nationality
+* Customer
+* Cost Center
+* Employee Category
+
+---
+
+# 17.6 Headcount Metrics
+
+المؤشرات الأساسية:
+
+### Current Headcount
+
+```text
+Active Employee Count
+```
+
+### Approved Headcount
+
+العدد المعتمد داخل Organization / Manpower Plan.
+
+### Budgeted Headcount
+
+العدد الموجود في Financial Workforce Budget.
+
+### Actual Headcount
+
+الموظفون الفعليون.
+
+### Committed Headcount
+
+تشمل مثلًا:
+
+```text
+Actual Employees
++
+Accepted Offers
++
+Approved Transfers In
++
+Employees Joining Soon
+```
+
+وهذه Metric مهمة جدًا لأنها تعطي صورة أفضل من Actual فقط.
+
+---
+
+# 17.7 Headcount Gap
+
+```text
+Headcount Gap =
+Required HC - Committed HC
+```
+
+مثال:
+
+Project Ericsson Cairo:
+
+```text
+Required HC       150
+Active HC         118
+Accepted Offers     7
+Internal Transfer   5
+---------------------
+Committed HC      130
+
+Remaining Gap      20
+```
+
+بدل أن يظهر النظام:
+
+> Vacancy = 32
+
+الصحيح Planning-wise:
+
+> **Remaining Workforce Gap = 20**
+
+---
+
+# 17.8 Workforce Planning Engine
+
+هذه واحدة من أهم أجزاء Module 17.
+
+يجب أن يكون لدينا:
+
+## Annual Workforce Plan
+
+مثلاً:
+
+**Workforce Plan FY2027**
+
+ويتم التخطيط حسب:
+
+```text
+Company
+→ Business Unit
+→ Department
+→ Project
+→ Job
+→ Grade
+→ Month
+```
+
+مثال:
+
+| Position        | Jan | Feb | Mar | Apr |
+| --------------- | --: | --: | --: | --: |
+| Project Manager |   6 |   6 |   7 |   8 |
+| Site Engineer   |  40 |  45 |  55 |  60 |
+| Technician      | 120 | 140 | 165 | 180 |
+| Rigger          |  45 |  50 |  60 |  70 |
+
+---
+
+# 17.9 Workforce Demand Planning
+
+لا أريد أن يعتمد Workforce Plan فقط على أن Manager يقول:
+
+> محتاج 50 Technician.
+
+النظام يجب أن يسمح بأكثر من Demand Model.
+
+## Model A — Manager Requested Demand
+
+المدير يدخل العدد المطلوب.
+
+---
+
+## Model B — Project-Based Demand
+
+مثلاً:
+
+```text
+Project
+Start Date
+End Date
+Scope
+Locations
+Sites
+Work Packages
+Expected Workload
+```
+
+ومنها تحدد manpower.
+
+---
+
+## Model C — Productivity-Based Demand
+
+مثلاً:
+
+Technician productivity:
+
+```text
+Average = 4 installations/day
+```
+
+المشروع يحتاج:
+
+```text
+12,000 installations/month
+```
+
+إذن:
+
+```text
+12,000
+÷
+4
+÷
+26 working days
+≈
+116 Technicians
+```
+
+مع إضافة Buffer.
+
+---
+
+## Model D — Ratio-Based Demand
+
+مثلاً:
+
+```text
+1 Supervisor per 8 Technicians
+1 Project Manager per 5 Supervisors
+1 HR Operations per 300 employees
+```
+
+---
+
+## Model E — Revenue-Based Workforce
+
+مثلًا:
+
+```text
+Revenue per Employee
+Revenue per Engineer
+Payroll Cost / Revenue
+```
+
+---
+
+# 17.10 Supply Planning
+
+مقابل Demand، النظام يحسب Workforce Supply.
+
+Supply لا تعني Active Employees فقط.
+
+يجب النظر إلى:
+
+```text
+Current Employees
++
+Expected New Joiners
++
+Internal Transfers In
++
+Employees Returning from Leave
+-
+Expected Leavers
+-
+Contract Expirations
+-
+Transfers Out
+-
+Retirement
+-
+Project Releases
+```
+
+فتصبح:
+
+```text
+Forecast Workforce Supply
+```
+
+---
+
+# 17.11 Workforce Gap Forecast
+
+النظام يقارن:
+
+```text
+Demand Forecast
+vs
+Supply Forecast
+```
+
+شهريًا.
+
+مثلاً:
+
+| Month | Demand | Supply | Gap |
+| ----- | -----: | -----: | --: |
+| Sep   |    620 |    605 | -15 |
+| Oct   |    690 |    625 | -65 |
+| Nov   |    750 |    655 | -95 |
+| Dec   |    770 |    715 | -55 |
+
+وبالتالي يظهر Early Warning:
+
+> ⚠️ Ericsson deployment workforce shortage expected in November.
+
+---
+
+# 17.12 Workforce Planning Scenarios
+
+يجب وجود Scenario Planning.
+
+مثلاً:
+
+### Base Case
+
+المشروعات الحالية فقط.
+
+### Growth Case
+
+فوزنا بمشروعين جديدين.
+
+### Aggressive Growth
+
++30% revenue target.
+
+### Cost Reduction
+
+خفض People Cost 10%.
+
+### Project Loss
+
+انتهاء عقد Customer معين.
+
+### Hiring Freeze
+
+لا يوجد external recruitment.
+
+### Productivity Improvement
+
+Productivity +15%.
+
+---
+
+يمكن المقارنة:
+
+```text
+Scenario A
+vs
+Scenario B
+vs
+Scenario C
+```
+
+على:
+
+* HC
+* Hiring Needs
+* Payroll Cost
+* Overtime
+* Revenue/Employee
+* Utilization
+* Project Margin
+
+---
+
+# 17.13 Position Control
+
+هذا جزء يجب ألا نغفله.
+
+لكل Position:
+
+```text
+Position ID
+Job
+Department
+Project
+Grade
+Budget Status
+Funding Status
+Position Status
+Incumbent
+Replacement Allowed?
+Recruitment Status
+```
+
+Status مثل:
+
+* Budgeted
+* Approved
+* Frozen
+* Filled
+* Vacant
+* Recruitment Open
+* Offer Accepted
+* On Hold
+* Cancelled
+
+وبذلك لا يحدث:
+
+> Hiring بدون Position أو Budget.
+
+---
+
+# 17.14 Headcount Budgeting
+
+يجب فصل:
+
+### Manpower Plan
+
+كم موظف نحتاج؟
+
+عن:
+
+### Headcount Budget
+
+كم موظف نقدر ندفع تكلفته؟
+
+مثال:
+
+```text
+Department requires:
+120 employees
+
+Budget supports:
+104 employees
+
+Budget Gap:
+16 employees
+```
+
+وهذا فرق مهم جدًا.
+
+---
+
+# 17.15 Annual Headcount Budget
+
+لكل:
+
+```text
+Company
+Department
+Project
+Job
+Grade
+Month
+```
+
+يحدد:
+
+* Budgeted HC
+* Base Salary
+* Allowances
+* Bonus
+* Employer Social Insurance
+* Medical Insurance
+* Overtime Estimate
+* Training
+* PPE
+* Equipment
+* Recruitment Cost
+
+---
+
+# 17.16 People Cost Engine
+
+وهذا من أقوى الأجزاء في النظام.
+
+الـManual الحالي بالفعل يطلب Payroll Cost Reports by Project وتوزيع Allowance وKPI costs، ولذلك Module 17 يجب أن يجمعها في Total People Cost Model. 
+
+## Employee Cost
+
+ليس Salary فقط.
+
+```text
+Base Salary
++
+Fixed Allowances
++
+Variable Allowances
++
+Overtime
++
+KPI Bonus
++
+Employer Social Insurance
++
+Medical Insurance
++
+Training Cost
++
+PPE
++
+Uniform
++
+Transportation
++
+Accommodation
++
+Mobile
++
+Laptop Allocation
++
+Other Benefits
+```
+
+=
+
+# Fully Loaded Employee Cost
+
+---
+
+# 17.17 Direct vs Indirect People Cost
+
+يجب تصنيف التكلفة:
+
+### Direct Labor
+
+موظفون مرتبطون مباشرة بالمشروع.
+
+### Indirect Labor
+
+مثل:
+
+* HR
+* Finance
+* IT
+* Admin
+* Management
+
+ثم يمكن توزيع Indirect Cost باستخدام Allocation Rules.
+
+مثلاً:
+
+```text
+Headcount
+Revenue
+Working Hours
+FTE
+Direct Payroll
+Manual Allocation
+```
+
+---
+
+# 17.18 Project People Cost
+
+لكل Project:
+
+```text
+Direct Payroll
+Overtime
+Allowances
+KPI
+Insurance
+Benefits
+Indirect Allocation
+Contractors
+Outsourced Labor
+```
+
+ثم:
+
+```text
+Total Project People Cost
+```
+
+ويمكن حساب:
+
+```text
+People Cost / Project Revenue
+```
+
+مثال:
+
+```text
+Project Revenue      30M
+People Cost           9M
+
+People Cost Ratio = 30%
+```
+
+---
+
+# 17.19 FTE Management
+
+Headcount وحده قد يكون مضللًا.
+
+لذلك نحتاج:
+
+## FTE — Full Time Equivalent
+
+مثلاً:
+
+* Full-time = 1.0
+* Half-time = 0.5
+* Employee 50% Project A + 50% Project B
+
+يحسب:
+
+```text
+0.5 FTE → Project A
+0.5 FTE → Project B
+```
+
+فتصبح People Cost Allocation أدق.
+
+---
+
+# 17.20 Workforce Utilization
+
+لكل Employee / Team:
+
+```text
+Available Capacity
+vs
+Allocated Capacity
+```
+
+مثل:
+
+```text
+Engineer A
+
+Project A = 50%
+Project B = 30%
+
+Total Utilization = 80%
+Available = 20%
+```
+
+Alerts:
+
+```text
+>100% Overallocated
+<60% Underutilized
+```
+
+القيم thresholds يجب أن تكون Configurable.
+
+---
+
+# 17.21 Bench & Unallocated Workforce
+
+خصوصًا لشركة Projects/Telecom.
+
+النظام يجب أن يعرض:
+
+```text
+Active Employees
+Not allocated to active project
+```
+
+مثلاً:
+
+```text
+Total HC      3,800
+Allocated     3,520
+Bench           280
+
+Bench Rate = 7.4%
+```
+
+ثم:
+
+```text
+Monthly Bench Cost = EGP 4.1M
+```
+
+هذه Metric تنفيذية قوية جدًا.
+
+---
+
+# 17.22 Recruitment Analytics
+
+من Module 05.
+
+KPIs:
+
+* Hiring Requests
+* Open Vacancies
+* Vacancy Aging
+* Applicants
+* Shortlisted
+* Interviewed
+* Offered
+* Accepted
+* Joined
+* Rejected
+* Offer Decline
+* Time to Fill
+* Time to Hire
+* Cost per Hire
+* Source Effectiveness
+* Candidate Drop-Off
+* Hiring Manager SLA
+* Recruiter Productivity
+
+---
+
+# 17.23 Recruitment Funnel
+
+مثلاً:
+
+```text
+Applicants       1,240
+↓
+Screened           620
+↓
+Shortlisted        310
+↓
+Interviewed        180
+↓
+Offers              70
+↓
+Accepted            58
+↓
+Joined              51
+```
+
+ويظهر Conversion لكل Stage.
+
+---
+
+# 17.24 Onboarding Analytics
+
+من Module 06.
+
+مثل:
+
+* Joining Rate
+* No Show Rate
+* Document Completion
+* Contract Completion
+* Medical Clearance
+* HSE Clearance
+* System Activation
+* Equipment Readiness
+* Time to Productivity
+* Onboarding SLA Compliance
+
+والـManual يحدد مراحل واضحة من Document Collection إلى Employment Activation، ما يجعل قياس Cycle Time لكل Stage ممكنًا. 
+
+---
+
+# 17.25 Attendance Analytics
+
+من Module 07:
+
+* Attendance Rate
+* Absenteeism
+* Late Arrival
+* Early Leave
+* Missing Punch
+* Overtime
+* Shift Compliance
+* Site Attendance
+* Field Attendance
+* Working Hours
+* Productivity Hours
+* Location Allowance Exposure
+
+---
+
+# 17.26 Leave Analytics
+
+من Module 08:
+
+* Leave Utilization
+* Leave Liability
+* Sick Leave
+* Annual Leave
+* Unplanned Absence
+* Department Absence Rate
+* Critical Coverage Gaps
+
+---
+
+# 17.27 Payroll Analytics
+
+من Module 09:
+
+* Gross Payroll
+* Net Payroll
+* Employer Cost
+* OT Cost
+* Allowance Cost
+* Bonus Cost
+* Deduction
+* Payroll Variance
+* Payroll Error Rate
+* Cost per Employee
+* Cost per FTE
+* Project Payroll Cost
+
+---
+
+# 17.28 Performance Analytics
+
+من Module 10:
+
+* Performance Distribution
+* Average Rating
+* KPI Achievement
+* High Performers
+* Low Performers
+* Performance Trend
+* Department Comparison
+* Manager Rating Distribution
+
+لكن يجب وضع Guardrail:
+
+**Performance analytics ليست Rank Employees blindly.**
+
+يجب كشف:
+
+```text
+Manager Rating Bias
+Grade Bias
+Project Bias
+Insufficient Evaluation Data
+```
+
+---
+
+# 17.29 Learning Analytics
+
+من Module 11:
+
+* Training Hours
+* Training Cost
+* Completion Rate
+* Certification Rate
+* Expiring Certifications
+* Skill Gaps
+* Competency Coverage
+* Mandatory Training Compliance
+
+---
+
+# 17.30 Talent & Succession Analytics
+
+من Module 12:
+
+* High Potential Employees
+* Ready Now
+* Ready <1 Year
+* Critical Positions
+* Succession Coverage
+* Bench Strength
+* Talent Risk
+* Promotion Rate
+* Internal Mobility Rate
+
+مثلاً:
+
+```text
+Critical Positions       48
+With Ready-Now Successor 31
+
+Succession Coverage = 64.6%
+```
+
+---
+
+# 17.31 Employee Relations Analytics
+
+من Module 13:
+
+لكن يجب أن يكون شديد السرية.
+
+KPIs على مستوى Aggregated فقط:
+
+* Cases Opened
+* Cases Closed
+* Case Aging
+* Average Resolution Time
+* Violation Categories
+* Appeal Rate
+* Recurrence
+
+ولا يظهر Sensitive Case Detail داخل Executive Dashboard إلا لمن لديه Permission.
+
+---
+
+# 17.32 HR Service Analytics
+
+Module 14:
+
+* Requests Created
+* Requests Resolved
+* SLA Compliance
+* Request Aging
+* Most Requested Services
+* HR Workload
+* Reopened Requests
+* Employee Satisfaction
+
+---
+
+# 17.33 Personnel Compliance Analytics
+
+Module 15:
+
+* Expiring Contracts
+* Missing Documents
+* Medical Insurance Coverage
+* Social Insurance Compliance
+* Missing Form 1
+* Contract Renewal Risk
+* Personnel File Completeness
+
+وهذا مرتبط مباشرةً بما ينص عليه الـManual بشأن استمرار HR Operations وPersonnel في متابعة insurance activation وcontract renewals وemployee record completeness. 
+
+---
+
+# 17.34 Offboarding Analytics
+
+Module 16:
+
+* Resignations
+* Terminations
+* Contract Expiration
+* Project End
+* Turnover
+* Voluntary Turnover
+* Involuntary Turnover
+* Regrettable Turnover
+* Exit Reasons
+* Clearance Time
+* Final Settlement Time
+* Asset Recovery Rate
+* Exit Interview Completion
+
+---
+
+# 17.35 Turnover Engine
+
+مثلاً:
+
+```text
+Turnover Rate =
+Leavers during period
+/
+Average Headcount
+× 100
+```
+
+لكن يجب ألا نكتفي بـOverall Turnover.
+
+نحتاج:
+
+* Voluntary
+* Involuntary
+* Regrettable
+* Non-Regrettable
+* Early Turnover
+* New Hire Turnover
+* Project Turnover
+* Manager Turnover
+
+---
+
+# 17.36 Early Attrition
+
+مثلاً:
+
+Employees leaving:
+
+```text
+< 30 Days
+< 90 Days
+< 6 Months
+< 12 Months
+```
+
+هذه مهمة جدًا لمعرفة مشاكل Hiring / Onboarding / Manager / Project.
+
+---
+
+# 17.37 Retention Analysis
+
+يستطيع النظام مقارنة:
+
+```text
+Turnover by Manager
+Turnover by Project
+Turnover by Grade
+Turnover by Recruiter Source
+Turnover by Location
+Turnover by Salary Band
+Turnover by Tenure
+```
+
+لكن بدون تقديم Correlation على أنه Causation.
+
+مثلاً لا يقول النظام:
+
+> الموظفون استقالوا بسبب مدير X.
+
+بل:
+
+> Turnover under Manager X = 22%, compared with company average 11%; further investigation recommended.
+
+---
+
+# 17.38 Span of Control Analytics
+
+من Organization Structure:
+
+```text
+Direct Reports per Manager
+```
+
+مثلاً:
+
+| Manager   | Direct Reports |
+| --------- | -------------: |
+| Manager A |              3 |
+| Manager B |              9 |
+| Manager C |             27 |
+
+Alerts على:
+
+```text
+Too Narrow
+Optimal
+Too Wide
+```
+
+وتكون الحدود configurable حسب Job Family.
+
+---
+
+# 17.39 Organizational Layers
+
+يعرض:
+
+```text
+CEO
+↓
+Level 2
+↓
+Level 3
+↓
+Level 4
+↓
+...
+```
+
+ومؤشرات:
+
+* Number of Layers
+* Average Span
+* Management Ratio
+* Manager-to-Employee Ratio
+
+---
+
+# 17.40 Organization Cost
+
+يمكن رؤية:
+
+```text
+Sector Cost
+Department Cost
+Team Cost
+Management Cost
+Direct Workforce Cost
+Support Function Cost
+```
+
+---
+
+# 17.41 People Productivity Analytics
+
+يجب ألا تكون مجرد HR Metrics.
+
+نحتاج Business Productivity.
+
+مثلاً:
+
+### Revenue per Employee
+
+```text
+Revenue / Average FTE
+```
+
+### Revenue per Payroll EGP
+
+```text
+Revenue / Total People Cost
+```
+
+### Project Output per FTE
+
+حسب نوع المشروع.
+
+مثلاً Telecom:
+
+```text
+Sites completed / field FTE
+```
+
+أو:
+
+```text
+Meters executed / technician
+```
+
+أو:
+
+```text
+Tickets closed / support FTE
+```
+
+---
+
+# 17.42 Workforce Efficiency Matrix
+
+يمكن تصنيف Department/Project:
+
+```text
+High Cost + Low Output
+High Cost + High Output
+Low Cost + Low Output
+Low Cost + High Output
+```
+
+لكن تكون Decision Support وليست حكمًا آليًا.
+
+---
+
+# 17.43 People Cost Variance
+
+مقارنة:
+
+```text
+Budget
+vs
+Forecast
+vs
+Actual
+```
+
+مثلاً:
+
+| Cost       | Budget | Forecast | Actual |
+| ---------- | -----: | -------: | -----: |
+| Payroll    |    20M |    21.4M |  21.7M |
+| OT         |     1M |     1.8M |   1.9M |
+| Allowances |     2M |     2.3M |   2.2M |
+
+---
+
+# 17.44 Variance Analysis Engine
+
+يشرح النظام سبب الفرق.
+
+مثلاً:
+
+```text
+Payroll Budget Variance: +EGP 2.4M
+
+Drivers:
++1.1M additional HC
++0.7M overtime
++0.4M location allowance
++0.5M salary adjustments
+-0.3M delayed hiring
+```
+
+وهذا أفضل بكثير من Chart فقط.
+
+---
+
+# 17.45 Forecasting Engine
+
+Forecast يمكن أن يعمل:
+
+### Monthly
+
+3–18 months.
+
+Inputs:
+
+* Current HC
+* Planned Hiring
+* Pipeline
+* Attrition
+* Salary Review
+* Promotion
+* Contract Expiration
+* Project Start/End
+* Workforce Demand
+* Overtime
+* Inflation assumptions
+* Allowance changes
+
+Outputs:
+
+```text
+Forecast HC
+Forecast Payroll
+Forecast People Cost
+Forecast Hiring Demand
+Forecast Turnover
+```
+
+---
+
+# 17.46 Rolling Forecast
+
+بدل Budget ثابت سنة كاملة:
+
+```text
+Actual Jan–Jul
++
+Forecast Aug–Dec
+```
+
+كل شهر يعاد Forecast.
+
+---
+
+# 17.47 Workforce Planning Workflow
+
+العملية نفسها تحتاج Governance.
+
+```text
+Planning Cycle Created
+        ↓
+Business Assumptions
+        ↓
+Departments Submit Workforce Demand
+        ↓
+HR Review
+        ↓
+Finance Cost Simulation
+        ↓
+Management Challenge
+        ↓
+Scenario Selection
+        ↓
+Headcount Approval
+        ↓
+Budget Approval
+        ↓
+Position Release
+        ↓
+Recruitment Plan
+        ↓
+Monthly Actual vs Plan
+        ↓
+Reforecast
+```
+
+---
+
+# 17.48 Workforce Request Categories
+
+يمكن أن يكون الطلب:
+
+* New Position
+* Replacement
+* Project Ramp-up
+* Seasonal
+* Temporary
+* Outsourcing
+* Internal Transfer
+* Succession
+* Strategic Hiring
+
+---
+
+# 17.49 Workforce Plan Versions
+
+لا نريد overwrite.
+
+مثلاً:
+
+```text
+FY2027_V1
+FY2027_V2
+FY2027_BoardApproved
+FY2027_Q1_Reforecast
+```
+
+كل Version:
+
+* Created By
+* Date
+* Assumptions
+* Approval
+* Comments
+
+---
+
+# 17.50 Freeze & Lock
+
+بعد اعتماد Budget:
+
+```text
+Approved Baseline
+```
+
+لا يمكن تعديله.
+
+أي تغيير يصبح:
+
+```text
+Budget Change Request
+```
+
+---
+
+# 17.51 Headcount Change Request
+
+مثلاً Manager يريد إضافة 10 Technicians.
+
+النظام يحسب تلقائيًا:
+
+```text
+Annual Salary Cost
+Insurance
+Benefits
+Equipment
+Allowances
+Recruitment Cost
+```
+
+ويقول:
+
+```text
+Requested HC: +10
+
+Annual Incremental People Cost:
+EGP 2.48M
+```
+
+ثم Approval.
+
+---
+
+# 17.52 Workforce Cost Simulation
+
+Manager يمكن أن يسأل:
+
+> لو زودنا 25 Technician في Alexandria لمدة 8 أشهر؟
+
+النظام يحسب:
+
+```text
+Salary
+Allowances
+Location Rules
+OT
+Insurance
+PPE
+Uniform
+Transportation
+Training
+Recruitment
+```
+
+Total:
+
+```text
+Scenario Cost
+```
+
+---
+
+# 17.53 Build vs Buy vs Outsource
+
+ميزة مهمة جدًا لشركة مشاريع.
+
+النظام يقارن:
+
+```text
+Hire Permanent
+vs
+Project Based Employee
+vs
+Daily Worker
+vs
+Outsource
+vs
+Subcontract
+```
+
+على:
+
+* Cost
+* Time to mobilize
+* Skills
+* Risk
+* Availability
+* Duration
+
+---
+
+# 17.54 Employee Cost Card
+
+للمصرح لهم:
+
+```text
+Employee
+Monthly Payroll
+Annual Cost
+Benefits
+OT
+Allowances
+KPI
+Employer Cost
+Project Allocation
+Cost Center
+```
+
+مع Salary Confidentiality.
+
+---
+
+# 17.55 Organizational Heatmap
+
+مثلاً:
+
+```text
+Headcount Gap
+Turnover
+Absence
+Performance
+People Cost
+Skill Gap
+```
+
+By:
+
+```text
+Department / Project
+```
+
+واللون مجرد Visualization وليس Decision Rule.
+
+---
+
+# 17.56 Executive People Dashboard
+
+CEO يرى عددًا محدودًا من KPIs:
+
+### Workforce
+
+* Active HC
+* FTE
+* HC Growth
+* Open Gap
+* New Hires
+* Leavers
+
+### Cost
+
+* Monthly People Cost
+* YTD People Cost
+* Budget Variance
+* People Cost / Revenue
+
+### Talent
+
+* Critical Roles
+* Succession Coverage
+* High Performers
+* Skill Gap
+
+### Risk
+
+* Turnover
+* Absenteeism
+* Compliance
+* Expiring Contracts
+* Critical Workforce Gap
+
+---
+
+# 17.57 People & Culture Manager Dashboard
+
+أوسع:
+
+* Workforce Structure
+* Hiring Funnel
+* Onboarding
+* Attendance
+* Leave
+* Payroll
+* Performance
+* L&D
+* Succession
+* ER Cases
+* Service Desk
+* Compliance
+* Offboarding
+* People Cost
+
+وهذا يتماشى مع وجود People & Culture Manager أعلى الوحدات التنظيمية المختلفة في الهيكل الحالي. 
+
+---
+
+# 17.58 HR Operations Dashboard
+
+يركز على:
+
+* Employees per Project
+* Missing Workforce
+* Deployments
+* Attendance
+* Leave
+* Project Allocation
+* Readiness
+* Operational Cases
+* Contract Issues
+* Offboarding
+
+وهو امتداد مباشر لمسؤوليات HR Operations الحالية في الـManual، والتي تشمل workforce management وattendance وleave وshift plans وmanpower planning. 
+
+---
+
+# 17.59 Project Manager Dashboard
+
+يجب ألا يرى كل HR Data.
+
+يرى فقط Team/Projects الخاصة به:
+
+* HC
+* Required HC
+* Gap
+* Attendance
+* Leave
+* OT
+* Training readiness
+* Certification
+* Payroll Cost **إذا كان مسموحًا**
+* Productivity
+* Project Allocation
+
+ولا يرى:
+
+* Disciplinary details
+* Other project salaries
+* Confidential HR cases
+
+---
+
+# 17.60 Finance Dashboard
+
+يرى:
+
+* Budgeted People Cost
+* Actual
+* Forecast
+* Variance
+* Payroll
+* Allowances
+* OT
+* KPI
+* Project Cost
+* Cost Center
+* FTE
+
+لكن ليس:
+
+* ER investigations
+* Performance comments
+* Medical details
+
+---
+
+# 17.61 Access Control
+
+Module 17 يحتاج Permission Model أقوى من معظم Modules.
+
+لأن حتى Aggregate Data يمكن أن يكشف Salary.
+
+مثلاً:
+
+Department فيه موظف واحد.
+
+لو ظهر:
+
+```text
+Average Salary = 48,000
+```
+
+فأنت عمليًا كشفت Salary.
+
+لذلك نحتاج:
+
+## Minimum Cohort Size
+
+مثلاً:
+
+```text
+Analytics values hidden if group size < 5
+```
+
+Configurable.
+
+---
+
+# 17.62 Data Security
+
+Classification:
+
+### Public Internal
+
+HC totals.
+
+### Restricted
+
+Performance.
+
+### Confidential
+
+Salary.
+
+### Highly Restricted
+
+ER Cases / Investigation.
+
+ويطبق Field-Level Security.
+
+---
+
+# 17.63 Analytics Semantic Layer
+
+هذه نقطة تقنية أساسية جدًا.
+
+لا تجعل كل Dashboard يحسب Metric بطريقته.
+
+نحتاج Metrics Catalog.
+
+مثلاً:
+
+```text
+Metric ID
+Metric Name
+Definition
+Formula
+Owner
+Source
+Frequency
+Dimensions
+Security Level
+Effective Date
+Version
+```
+
+مثال:
+
+**Turnover Rate**
+
+يكون له تعريف واحد رسمي.
+
+---
+
+# 17.64 KPI Dictionary
+
+لكل KPI:
+
+```text
+Name
+Business Definition
+Formula
+Numerator
+Denominator
+Data Source
+Owner
+Refresh
+Target
+Threshold
+Drill Down
+Security
+```
+
+---
+
+# 17.65 Data Quality Dashboard
+
+قبل Executive Dashboard يجب معرفة هل البيانات موثوقة أصلًا.
+
+مثلاً:
+
+```text
+Employee Project Missing      3.2%
+Manager Missing               0.4%
+Grade Missing                 1.1%
+Payroll Mapping Missing       0.2%
+Invalid Cost Center           0.7%
+```
+
+ثم:
+
+### Data Quality Score
+
+مثلاً:
+
+```text
+96.8%
+```
+
+---
+
+# 17.66 Data Quality Rules
+
+مثل:
+
+```text
+Active Employee must have:
+Position
+Manager
+Department
+Employment Type
+Project/Cost Center
+Valid Contract
+Payroll Status
+```
+
+حسب Business Rules.
+
+---
+
+# 17.67 Reconciliation Controls
+
+يجب إجراء Cross-System Reconciliation.
+
+مثلاً:
+
+```text
+HR Active Employees        3,824
+Payroll Active Employees   3,819
+Attendance Active          3,801
+ERP Active                 3,825
+```
+
+النظام يظهر:
+
+> 5 Employee mismatch between HR and Payroll.
+
+وهذا مهم لأن الـManual يشترط أن movements تنعكس بدقة داخل HR وPayroll وERP والأنظمة المرتبطة. 
+
+---
+
+# 17.68 Executive Alerts
+
+بدل انتظار فتح Dashboard.
+
+أمثلة:
+
+> 🔴 Payroll cost forecast will exceed FY budget by 8.4%.
+
+> 🟠 Ericsson project expected workforce gap: 34 technicians.
+
+> 🔴 Turnover increased from 9% to 18% in one project.
+
+> 🟠 17 critical certifications expire within 30 days.
+
+> 🔴 14 employees remain active in payroll after offboarding effective date.
+
+> 🟡 Bench cost exceeded EGP 2M this month.
+
+---
+
+# 17.69 Alert Configuration
+
+كل Alert:
+
+```text
+Metric
+Condition
+Threshold
+Period
+Severity
+Recipients
+Escalation
+```
+
+---
+
+# 17.70 HR Planning Calendar
+
+مثلاً:
+
+```text
+August
+Workforce assumption collection
+
+September
+Department plans
+
+October
+HR review
+
+November
+Finance challenge
+
+December
+Approval
+
+Monthly
+Actual vs Plan
+
+Quarterly
+Reforecast
+```
+
+Configurable لكل Company.
+
+---
+
+# 17.71 Executive Monthly People Pack
+
+يولد النظام تلقائيًا:
+
+### Page 1
+
+Executive Summary
+
+### Page 2
+
+Workforce
+
+### Page 3
+
+Recruitment
+
+### Page 4
+
+Turnover
+
+### Page 5
+
+People Cost
+
+### Page 6
+
+Performance
+
+### Page 7
+
+Talent
+
+### Page 8
+
+Risk
+
+### Page 9
+
+Forecast
+
+### Page 10
+
+Management Actions
+
+Export:
+
+* PDF
+* Excel
+* PowerPoint
+
+---
+
+# 17.72 AI People Intelligence Copilot
+
+هنا يمكن إضافة AI لكن **بعد تثبيت Metrics & Data Governance**.
+
+المدير يمكن أن يسأل:
+
+> Why did payroll increase in July?
+
+النظام يرد:
+
+```text
+Payroll increased by EGP 1.8M (+6.3%).
+
+Main drivers:
+1. 42 additional employees: +780K
+2. Overtime increase: +510K
+3. Outside-Cairo allowance: +340K
+4. Salary adjustments: +270K
+5. Offboarding savings: -100K
+```
+
+---
+
+# 17.73 Ask HR Data
+
+مثلاً:
+
+> Show me projects with more than 15% turnover and manpower shortage.
+
+أو:
+
+> Which departments exceeded headcount budget?
+
+أو:
+
+> How many technicians do we need for Q4?
+
+أو:
+
+> Compare Ericsson vs Huawei people cost per FTE.
+
+---
+
+# 17.74 AI Guardrails
+
+AI لا يجب أن يصدر:
+
+> Fire Ahmed.
+
+أو:
+
+> Employee X will resign.
+
+بدل ذلك:
+
+```text
+Workforce Risk Indicators
+```
+
+وتكون على مستوى decision support.
+
+أي Employee-Level Prediction يجب أن تخضع لضوابط شديدة جدًا، ويفضل ألا تستخدم في punitive decisions.
+
+---
+
+# 17.75 Workforce Risk Index
+
+يمكن بناؤه لكل:
+
+```text
+Project
+Department
+Job
+```
+
+وليس بالضرورة Employee.
+
+Factors:
+
+* Vacancy
+* Turnover
+* Absence
+* Skill Gap
+* Succession
+* Overtime
+* Bench
+* Contract Expiry
+
+مثلاً:
+
+```text
+Project Workforce Risk
+
+Demand Gap        High
+Turnover          Medium
+Certification     High
+Succession        Low
+Overtime          High
+
+Risk Score = 78/100
+```
+
+---
+
+# 17.76 Critical Role Risk
+
+لكل Position:
+
+```text
+Criticality
+Incumbent
+Successor
+Readiness
+Market Availability
+Time to Hire
+Business Impact
+```
+
+وينتج:
+
+```text
+Critical Talent Exposure
+```
+
+---
+
+# 17.77 What-If Simulator
+
+مثال:
+
+> ماذا يحدث إذا كسبنا Contract جديد يحتاج 400 Field Employees؟
+
+يدخل المستخدم:
+
+```text
+Start Date
+Duration
+Location
+Required Skills
+Headcount
+Salary assumptions
+```
+
+النظام يحسب:
+
+* Internal availability
+* Bench
+* Transfer possibilities
+* Recruitment gap
+* Time to fill
+* Training requirements
+* Monthly cost
+* Total contract people cost
+* Mobilization risk
+
+---
+
+# 17.78 Workforce Supply Marketplace
+
+ميزة مستقبلية قوية.
+
+بدل التوظيف فورًا، النظام يبحث داخليًا:
+
+```text
+Available Employees
+Project Ending Soon
+Bench Employees
+Transfer Candidates
+Qualified Successors
+Employees with matching skills
+```
+
+ثم External Hiring يكون آخر Gap.
+
+---
+
+# 17.79 Data Model — أهم Entities
+
+Module 17 يحتاج مثلًا:
+
+```text
+analytics_metric
+metric_definition
+metric_snapshot
+
+workforce_plan
+workforce_plan_version
+workforce_demand
+workforce_supply
+workforce_gap
+
+headcount_budget
+headcount_budget_line
+budget_change_request
+
+people_cost
+people_cost_component
+cost_allocation
+
+fte_allocation
+
+workforce_forecast
+forecast_assumption
+forecast_scenario
+
+organization_snapshot
+employee_snapshot
+
+analytics_alert
+alert_rule
+
+data_quality_rule
+data_quality_issue
+
+executive_report
+report_snapshot
+```
+
+---
+
+# 17.80 Snapshot Architecture
+
+نحتاج Daily أو Monthly snapshots مثل:
+
+```text
+employee_monthly_snapshot
+```
+
+تحتفظ بـ:
+
+```text
+Month
+Employee
+Company
+Department
+Position
+Grade
+Manager
+Project
+Employment Status
+FTE
+Salary
+Cost
+```
+
+وذلك يسمح بتحليل تاريخي صحيح.
+
+---
+
+# 17.81 Slowly Changing Dimensions
+
+تقنيًا أنصح باستخدام:
+
+### SCD Type 2
+
+خصوصًا:
+
+* Department
+* Position
+* Manager
+* Grade
+* Project
+* Employment Status
+
+بحيث نعرف:
+
+> أين كان الموظف في فبراير؟
+
+وليس فقط أين هو الآن.
+
+---
+
+# 17.82 Multi-Company Architecture
+
+لأن النظام SaaS Multi-Company:
+
+```text
+Tenant
+Company
+Legal Entity
+Business Unit
+```
+
+كل Tenant يرى بياناته فقط.
+
+والـSuper Admin الخاص بشركة A لا يستطيع رؤية Company B.
+
+---
+
+# 17.83 Currency Management
+
+في حالة توسع دولي:
+
+```text
+EGP
+USD
+SAR
+EUR
+MGA
+...
+```
+
+يجب دعم:
+
+* Local Currency
+* Reporting Currency
+* Exchange Rate Snapshot
+
+حتى يمكن مقارنة People Cost بين الدول.
+
+---
+
+# 17.84 Time Grain
+
+كل Metric يمكن عرضه:
+
+* Daily
+* Weekly
+* Monthly
+* Quarterly
+* YTD
+* Rolling 3
+* Rolling 6
+* Rolling 12
+
+---
+
+# 17.85 Drill-Down
+
+مثلاً:
+
+```text
+Company People Cost
+↓
+Business Unit
+↓
+Department
+↓
+Project
+↓
+Job Family
+↓
+Grade
+↓
+Employee
+```
+
+آخر مستوى فقط للمصرح لهم.
+
+---
+
+# 17.86 Comparison Modes
+
+النظام يسمح:
+
+```text
+Actual vs Budget
+
+Actual vs Forecast
+
+Current Month vs Previous
+
+Current vs Last Year
+
+Department vs Company
+
+Project vs Project
+
+Location vs Location
+```
+
+---
+
+# 17.87 Executive Action Tracker
+
+لا نريد Analytics بلا Action.
+
+مثلاً Alert:
+
+> Turnover = 22%
+
+يخلق Action:
+
+```text
+Action:
+Investigate Ericsson technician turnover.
+
+Owner:
+HR Operations Manager
+
+Due:
+15-Aug
+
+Status:
+Open
+```
+
+وبذلك:
+
+**Insight → Action → Owner → Due Date → Closure**
+
+---
+
+# 17.88 Decision Log
+
+لكل workforce decision:
+
+```text
+Decision
+Date
+Data Snapshot
+Scenario
+Approver
+Reason
+Expected Impact
+Actual Impact
+```
+
+وهذه ميزة قوية جدًا للحوكمة.
+
+---
+
+# 17.89 Analytics Approval
+
+ليس كل Dashboard يحتاج approval.
+
+لكن:
+
+* Official Headcount Report
+* Annual Workforce Plan
+* Budget
+* Forecast Submission
+* Board People Pack
+
+يجب أن يكون لها:
+
+```text
+Draft
+Reviewed
+Approved
+Published
+Locked
+```
+
+---
+
+# 17.90 Suggested Roles
+
+### CEO
+
+Executive view.
+
+### People & Culture Manager
+
+Full HR Intelligence.
+
+### OD
+
+Org, workforce planning, succession, performance.
+
+### Talent Acquisition
+
+Recruitment intelligence.
+
+### Payroll
+
+People cost/payroll analytics.
+
+### Personnel
+
+Employee records/compliance.
+
+### HR Operations
+
+Project workforce.
+
+### Finance
+
+Cost/budget.
+
+### Project Manager
+
+Own project only.
+
+### Department Manager
+
+Own hierarchy.
+
+### Auditor
+
+Read-only historical.
+
+### System Admin
+
+Technical configuration without unnecessary salary access.
+
+---
+
+# 17.91 Module Navigation
+
+أقترح القائمة:
+
+```text
+Module 17
+│
+├── Executive People Overview
+│
+├── Workforce Analytics
+│
+├── Organization Analytics
+│
+├── Workforce Planning
+│
+├── Headcount Budget
+│
+├── Workforce Forecast
+│
+├── People Cost
+│
+├── FTE & Utilization
+│
+├── Recruitment Analytics
+│
+├── Attendance & Absence Analytics
+│
+├── Performance & Talent Analytics
+│
+├── Turnover & Retention
+│
+├── Compliance Analytics
+│
+├── Project Workforce Analytics
+│
+├── Scenario Planning
+│
+├── Alerts & Risks
+│
+├── Executive Reports
+│
+├── Data Quality
+│
+└── KPI & Metric Dictionary
+```
+
+---
+
+# 17.92 أهم Dashboard أريد إضافته لشركة Afro تحديدًا
+
+**Project Workforce Command Center**
+
+لأن طبيعة الشركة Project-Based.
+
+يعرض لكل Client / Project:
+
+```text
+Required HC
+Active HC
+FTE
+Gap
+Open Recruitment
+Joining Pipeline
+Attendance
+Absence
+OT
+Deployment Readiness
+Certifications
+Turnover
+Bench
+Payroll
+Allowances
+People Cost
+Cost vs Budget
+```
+
+مثال:
+
+```text
+ERICSSON
+Required: 720
+Actual: 668
+Committed: 691
+Gap: 29
+
+People Cost: EGP 12.4M/month
+Budget: EGP 11.9M
+Variance: +4.2%
+
+Turnover: 14.6%
+OT: +19%
+Workforce Risk: HIGH
+```
+
+وهذا مناسب جدًا لأن الهيكل الحالي نفسه يحتوي HR Operations موجهًا لحسابات/عملاء مثل Huawei & Nokia وEricsson. 
+
+---
+
+# 17.93 أهم قاعدة تصميم في Module 17
+
+يجب منع الخطأ الشائع:
+
+```text
+Dashboard
+→ Chart
+→ Chart
+→ Chart
+→ Chart
+```
+
+التسلسل الصحيح:
+
+```text
+Business Question
+        ↓
+Defined Metric
+        ↓
+Trusted Data
+        ↓
+Variance
+        ↓
+Root Cause
+        ↓
+Forecast
+        ↓
+Risk
+        ↓
+Recommended Action
+        ↓
+Owner
+```
+
+أي أن الـDashboard يجب أن تقول:
+
+> **What happened?**
+
+ثم:
+
+> **Why?**
+
+ثم:
+
+> **What is likely to happen?**
+
+ثم:
+
+> **What decision is needed?**
+
+---
+
+# 17.94 علاقته بكل النظام
+
+بعد Module 17 أصبحت لدينا دورة مكتملة فعليًا:
+
+```text
+Organization
+↓
+Recruitment
+↓
+Onboarding
+↓
+Employee
+↓
+Attendance
+↓
+Leave
+↓
+Payroll
+↓
+Performance
+↓
+Learning
+↓
+Career
+↓
+Employee Relations
+↓
+HR Services
+↓
+Personnel
+↓
+Offboarding
+↓
+Analytics
+↓
+Planning
+↓
+Management Decisions
+```
+
+والأهم أن الـAnalytics تعود بعد ذلك لتغذي Modules السابقة:
+
+```text
+Workforce Gap
+→ Recruitment
+
+Skill Gap
+→ Learning
+
+Succession Gap
+→ Career Management
+
+High Turnover
+→ HR Operations
+
+Cost Overrun
+→ Workforce Plan
+
+Headcount Gap
+→ Budget / Recruitment
+
+Productivity Gap
+→ Performance / Training
+```
+
+وبالتالي يصبح النظام **closed-loop HR management system** وليس مجرد مجموعة Modules منفصلة.
+
+---
+
+## نقطة أرى أنها مهمة قبل الانتقال للـModule التالي
+
+بعد Module 17، عندنا تقريبًا **Employee Lifecycle + People Operations + People Intelligence** كاملين.
+
+لكن يوجد Layer لا أنصح بخلطه داخل Module 17، وهو:
+
+**Policies, Governance, HR Audit, Regulatory Compliance, Delegation of Authority, Internal Controls, Data Privacy & HR Risk Management.**
+
+الـManual نفسه يؤكد أن العمليات يجب أن تلتزم بالـpolicies والقوانين والـSLAs، وأن كل التغييرات تحتاج documented approvals، وأن البيانات confidential، وأن العمليات يجب أن تكون traceable وقابلة للـaudit. 
+
+لذلك الترتيب الذي أراه أقوى بعد ذلك هو:
+
+> **Module 18 — HR Governance, Policies, Delegation of Authority, Internal Controls, Audit, Compliance, Data Privacy & HR Risk Management**
+
+وبهذا Module 17 يقول للإدارة **ماذا يحدث وماذا سيحدث**، بينما Module 18 يضمن أن **ما يحدث يتم وفق القواعد والصلاحيات والسياسات والقانون مع Evidence وAudit Trail كامل**.

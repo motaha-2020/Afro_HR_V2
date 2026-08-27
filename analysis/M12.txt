@@ -1,0 +1,1995 @@
+تمام. **Module 12** هنا هو أول Module يبدأ يتحرك من إدارة الموظف اليومية إلى **Talent Decision Engine** فعليًا.
+
+الـManual الحالي يذكر أن **salary changes, KPI incentives, promotions, transfers, and employment status changes** يجب أن تكون مدعومة بموافقات موثقة، لكنه لا يعرّف حتى الآن دورة مستقلة لإدارة **career paths, talent reviews, succession, promotion readiness, internal mobility**. 
+كما أن وجود **Organizational Development** داخل هيكل People & Culture يجعل من المنطقي أن تكون OD هي الجهة المالكة لحوكمة هذا الـModule، مع مشاركة Managers وP&C Management والإدارة التنفيذية حسب مستوى القرار. 
+
+# Module 12 — Career Management, Talent Review, Succession Planning, Promotions & Internal Mobility
+
+## 12.1 الهدف الأساسي
+
+الوحدة تجيب على 6 أسئلة رئيسية:
+
+1. ما المسار الوظيفي الممكن لكل موظف؟
+2. هل الموظف جاهز للترقية الآن أم لا؟
+3. ما الوظائف الحرجة التي تحتاج بديلًا؟
+4. من هم الـSuccessors المحتملون لكل Position؟
+5. من هم الـHigh Potentials والـCritical Talents؟
+6. هل يمكن شغل Vacancy داخليًا قبل فتح Recruitment خارجي؟
+
+الـflow الأساسي:
+
+```text
+Performance
++
+Competency
++
+Experience
++
+Potential
++
+Career Interest
++
+Business Need
+↓
+Talent Decision
+↓
+Promotion / Succession / Development / Internal Move
+```
+
+---
+
+# 12.2 الفصل بين Performance وPotential
+
+دي نقطة شديدة الأهمية.
+
+لازم النظام لا يفترض أن:
+
+> High Performance = High Potential
+
+ممكن موظف يكون ممتاز جدًا في وظيفته الحالية، لكن غير مناسب لمنصب إداري أعلى.
+
+مثال:
+
+```text
+Employee A
+
+Performance = Outstanding
+Leadership Readiness = Low
+Potential = Medium
+```
+
+إذن:
+
+> Strong Performer — Not Currently Ready for Management
+
+وفي المقابل موظف آخر:
+
+```text
+Performance = Exceeds Expectations
+Potential = High
+Learning Agility = High
+Leadership = High
+```
+
+قد يكون:
+
+> Future Leadership Candidate
+
+---
+
+# 12.3 Talent Profile
+
+لكل موظف ننشئ:
+
+## Talent Profile
+
+ويحتوي على:
+
+* Current Position
+* Grade
+* Department
+* Business Unit
+* Manager
+* Project
+* Employment Type
+* Years in Company
+* Years in Role
+* Total Experience
+* Performance History
+* Competency Profile
+* Certifications
+* Critical Skills
+* Career Interests
+* Mobility Preferences
+* Promotion History
+* Development Plan
+* Potential Rating
+* Succession Status
+* Talent Classification
+* Retention Risk
+* Readiness Status
+
+---
+
+# 12.4 Career Architecture
+
+يعتمد أساسًا على **Module 02 — Organization Structure & Job Architecture**.
+
+لكل Job نحدد:
+
+### Vertical Career Path
+
+مثال:
+
+```text
+Fiber Engineer
+↓
+Senior Fiber Engineer
+↓
+Fiber Supervisor
+↓
+Project Manager
+↓
+Senior Project Manager
+↓
+Operations Manager
+```
+
+---
+
+### Technical Career Path
+
+ليس كل موظف لازم يتحول Manager.
+
+مثال:
+
+```text
+Fiber Engineer
+↓
+Senior Fiber Engineer
+↓
+Technical Expert
+↓
+Principal Engineer
+↓
+Technical Advisor
+```
+
+---
+
+### Lateral Career Path
+
+مثلاً:
+
+```text
+Project Engineer
+→ Planning Engineer
+→ Cost Control Engineer
+```
+
+---
+
+### Cross-Functional Path
+
+مثلاً:
+
+```text
+Project Manager
+→ PMO
+→ Business Operations
+```
+
+---
+
+# 12.5 Career Path Rules
+
+لكل Transition:
+
+```text
+Current Job
+→ Target Job
+```
+
+نحدد:
+
+* Minimum Grade
+* Minimum Experience
+* Time in Role
+* Performance Requirement
+* Competency Requirement
+* Certification Requirement
+* Education Requirement
+* Language Requirement
+* Mandatory Training
+* Required Projects
+* Required Exposure
+* Approval Level
+
+---
+
+# 12.6 Career Readiness Score
+
+النظام يحسب Readiness، لكن لا يجعل القرار آليًا.
+
+مثلاً:
+
+```text
+Readiness Score =
+Performance       25%
+Competencies      30%
+Experience        15%
+Potential         15%
+Certifications    10%
+Mobility           5%
+```
+
+لكن كل Weight configurable.
+
+---
+
+# 12.7 Readiness Categories
+
+بدل رقم فقط:
+
+### Ready Now
+
+يلبي تقريبًا كل المتطلبات.
+
+### Ready < 6 Months
+
+Gap صغير.
+
+### Ready 6–12 Months
+
+يحتاج تطويرًا محدودًا.
+
+### Ready 1–2 Years
+
+Potential جيد لكن يحتاج خبرة.
+
+### Long-Term Candidate
+
+### Not Ready
+
+### Not Interested
+
+### Not Eligible
+
+---
+
+# 12.8 Gap-to-Next-Role Analysis
+
+مثال:
+
+Employee:
+
+> Ahmed — Senior Site Engineer
+
+Target Role:
+
+> Project Manager
+
+النظام يقارن:
+
+| Requirement       | Required | Current | Gap |
+| ----------------- | -------: | ------: | --: |
+| Project Planning  |       L4 |      L4 |   0 |
+| Cost Control      |       L4 |      L3 |  -1 |
+| Leadership        |       L4 |      L2 |  -2 |
+| Client Management |       L3 |      L3 |   0 |
+| PMP               | Required | Missing | Gap |
+
+Output:
+
+```text
+Overall Readiness:
+68%
+
+Status:
+Ready in 6–12 Months
+```
+
+Development recommendations:
+
+* Leadership Program
+* Cost Control exposure
+* PMP Certification
+* Lead one small project
+
+وترسل تلقائيًا إلى Module 11.
+
+---
+
+# 12.9 Career Preferences
+
+لازم الموظف نفسه يقدر يسجل:
+
+* Desired Career Path
+* Desired Future Role
+* Willingness to Relocate
+* Preferred Location
+* Willingness to Travel
+* Functional Interest
+* Management vs Technical Track
+* International Assignment Interest
+
+لكن لا نجعل Preference = entitlement.
+
+هي مجرد Input في القرار.
+
+---
+
+# 12.10 Career Discussion
+
+كل Manager يستطيع عمل:
+
+## Career Conversation
+
+ويتم تسجيل:
+
+* Employee Aspirations
+* Manager Assessment
+* Development Needs
+* Target Role
+* Timeline
+* Agreed Actions
+* Follow-up Date
+
+---
+
+# 12.11 Talent Review Cycle
+
+OD ينشئ:
+
+## Talent Review Cycle
+
+مثلاً:
+
+> 2026 Annual Talent Review
+
+Population:
+
+* Managers
+* Critical Roles
+* High Performers
+* Specific Grades
+* Full Company
+
+---
+
+# 12.12 Talent Review Workflow
+
+```text
+Talent Cycle Created
+↓
+Employee Population Selected
+↓
+Manager Assessment
+↓
+Potential Assessment
+↓
+Talent Classification
+↓
+Calibration Meeting
+↓
+Succession Review
+↓
+Development Actions
+↓
+Executive Approval
+↓
+Published Internally
+↓
+Follow-up
+```
+
+---
+
+# 12.13 Potential Assessment
+
+Potential يمكن تقييمه بناءً على:
+
+* Learning Agility
+* Problem Complexity
+* Leadership Capacity
+* Strategic Thinking
+* Adaptability
+* Mobility
+* Aspiration
+* Ability to Handle Larger Scope
+
+لكن تكون Framework الشركة قابلة للتعديل.
+
+---
+
+# 12.14 Potential Rating
+
+مثلاً:
+
+```text
+High
+Medium
+Low
+```
+
+أو:
+
+```text
+P1 — High
+P2 — Moderate
+P3 — Current Role Fit
+```
+
+---
+
+# 12.15 9-Box Grid
+
+نظام Talent Review يدعم:
+
+## Performance × Potential Matrix
+
+مثال:
+
+```text
+               Potential
+           Low      Medium      High
+High       Strong   High        Future
+Perf.      Expert   Performer   Leader
+
+Medium     Core     Growth      Emerging
+           Talent   Talent      Talent
+
+Low        Risk     Watch       Untapped
+```
+
+لكن أسماء الـBoxes تكون Configurable.
+
+---
+
+# 12.16 Important Rule — 9 Box
+
+لازم النظام لا يصنف الموظف آليًا بدون Review.
+
+الـSystem ممكن يقترح:
+
+> Suggested Box
+
+لكن Final classification يحتاج:
+
+* Manager
+* OD
+* Calibration
+
+لأن Potential فيه judgment أكثر من KPI.
+
+---
+
+# 12.17 Talent Calibration
+
+نفس فكرة Module 10، لكن هنا نراجع:
+
+* Performance History
+* Potential
+* Readiness
+* Criticality
+* Career Interest
+* Mobility
+* Development Progress
+
+---
+
+# 12.18 Talent Categories
+
+الشركة يمكن تعريف Categories مثل:
+
+### High Potential
+
+### Critical Talent
+
+### Key Expert
+
+### Emerging Leader
+
+### Future Successor
+
+### Core Contributor
+
+### Performance Risk
+
+### Retention Risk
+
+---
+
+# 12.19 Critical Role Identification
+
+ليس كل Position يحتاج Succession Plan.
+
+النظام يسمح بتحديد:
+
+```text
+Critical Role = Yes / No
+```
+
+بناءً على:
+
+* Business Impact
+* Scarce Skills
+* Customer Dependency
+* Revenue Impact
+* Replacement Difficulty
+* Regulatory Requirement
+* Leadership Importance
+
+---
+
+# 12.20 Position Criticality Score
+
+مثلاً:
+
+```text
+Business Impact        30%
+Skill Scarcity         25%
+Replacement Time       20%
+Revenue Dependency     15%
+Compliance Impact      10%
+```
+
+ثم:
+
+```text
+Criticality = High
+```
+
+---
+
+# 12.21 Succession Plan
+
+لكل Critical Position:
+
+```text
+Position:
+Telecom Operations Director
+```
+
+النظام يحتفظ بـ:
+
+* Current Incumbent
+* Position Criticality
+* Risk of Vacancy
+* Expected Vacancy Date
+* Successors
+* Readiness
+* Development Actions
+* Emergency Replacement
+
+---
+
+# 12.22 Successor Pool
+
+مثلاً:
+
+| Candidate | Readiness | Match | Risk   |
+| --------- | --------- | ----: | ------ |
+| Ahmed     | Ready Now |   91% | Low    |
+| Karim     | <1 Year   |   82% | Medium |
+| Sara      | 1–2 Years |   75% | Low    |
+
+---
+
+# 12.23 Multiple Successors
+
+مهم جدًا:
+
+Position واحد:
+
+> أكثر من Successor.
+
+وفي المقابل:
+
+Employee واحد:
+
+> ممكن يكون Successor لأكثر من Position.
+
+يعني Relationship:
+
+```text
+Many-to-Many
+```
+
+---
+
+# 12.24 Emergency Successor
+
+لكل Critical Role يمكن تحديد:
+
+> Emergency Replacement
+
+وهو ليس بالضرورة أفضل Long-term successor.
+
+مثلاً:
+
+```text
+Emergency Coverage:
+Ahmed
+
+Permanent Successor:
+Karim
+```
+
+---
+
+# 12.25 Succession Risk
+
+النظام يظهر:
+
+### No Successor
+
+### One Successor Only
+
+### All Successors Not Ready
+
+### Successor Retention Risk
+
+### Successor Missing Certification
+
+---
+
+# 12.26 Succession Coverage KPI
+
+مثلاً:
+
+```text
+Critical Roles = 50
+Roles with Ready Successor = 34
+Coverage = 68%
+```
+
+---
+
+# 12.27 Bench Strength
+
+Dashboard:
+
+```text
+Ready Now Successors     42
+Ready <1 Year            65
+Ready 1–2 Years          88
+No Successor Positions   16
+```
+
+---
+
+# 12.28 Promotion Management
+
+الترقية لا تكون Button:
+
+> Promote Employee
+
+بل Workflow رسمي.
+
+```text
+Promotion Nomination
+↓
+Eligibility Check
+↓
+Performance Check
+↓
+Competency Check
+↓
+Budget / Headcount Check
+↓
+Position Availability
+↓
+Manager Approval
+↓
+OD / HR Review
+↓
+Management Approval
+↓
+Compensation Review
+↓
+Effective Date
+↓
+Employee Movement
+```
+
+وهذا يتماشى مع قاعدة الـManual التي تشترط وجود approval موثق لأي Promotion أو Transfer. 
+
+---
+
+# 12.29 Promotion Types
+
+يدعم:
+
+### Position Promotion
+
+### Grade Promotion
+
+### Career Level Promotion
+
+### Technical Promotion
+
+### Acting Promotion
+
+### Project Promotion
+
+### Exceptional Promotion
+
+---
+
+# 12.30 Promotion Eligibility Rules
+
+مثلاً:
+
+```text
+Minimum Time in Grade
+Minimum Time in Role
+Performance Threshold
+No Active PIP
+Required Competency
+Required Certification
+Required Education
+Disciplinary Status
+Position Availability
+Budget Availability
+```
+
+كلها Configurable.
+
+---
+
+# 12.31 Promotion Eligibility Example
+
+Employee:
+
+> Mohamed
+
+Target:
+
+> Senior Project Manager
+
+Requirements:
+
+```text
+Performance ≥ Exceeds
+3 years in current grade
+Leadership ≥ L4
+Project Management ≥ L4
+PMP = Valid
+No active disciplinary action
+```
+
+النظام يعطي:
+
+```text
+Eligible:
+No
+
+Reason:
+Leadership competency below requirement.
+```
+
+---
+
+# 12.32 Promotion Recommendation
+
+النظام يمكن يقترح:
+
+```text
+Eligible Candidates for Promotion
+```
+
+لكن لا يقرر تلقائيًا.
+
+مثلاً:
+
+| Employee | Eligibility | Readiness |
+| -------- | ----------: | --------: |
+| A        |        100% | Ready Now |
+| B        |         92% | Ready Now |
+| C        |         78% | <6 Months |
+
+---
+
+# 12.33 Promotion Budget Control
+
+قبل Final Approval:
+
+Integration مع Module 09.
+
+النظام يحسب:
+
+* Current Salary
+* Proposed Grade
+* Salary Range
+* Proposed Increase
+* Annual Cost Impact
+
+مثلاً:
+
+```text
+Current Annual Cost:
+360,000
+
+Proposed:
+430,000
+
+Incremental Cost:
+70,000
+```
+
+---
+
+# 12.34 Salary Range Check
+
+يرتبط Compensation Structure.
+
+لو Grade الجديد:
+
+```text
+Min: 25K
+Mid: 32K
+Max: 40K
+```
+
+والاقتراح:
+
+> 45K
+
+يظهر:
+
+> Above Grade Maximum
+
+ويحتاج Exception Approval.
+
+---
+
+# 12.35 Employee Movement Effective Date
+
+أي Promotion / Transfer يجب أن يحدد:
+
+* Effective Date
+* New Position
+* New Grade
+* New Manager
+* Department
+* Project
+* Cost Center
+* Location
+* Compensation Change
+
+ثم يحدث بقية الأنظمة.
+
+---
+
+# 12.36 Internal Mobility
+
+النظام يدير:
+
+### Internal Transfer
+
+### Department Transfer
+
+### Project Transfer
+
+### Location Transfer
+
+### Job Rotation
+
+### Temporary Assignment
+
+### Secondment
+
+### International Assignment
+
+### Cross-Functional Movement
+
+---
+
+# 12.37 Internal Job Marketplace
+
+ميزة قوية جدًا للمستقبل.
+
+عند وجود Vacancy:
+
+قبل فتح Recruitment خارجي:
+
+```text
+Check Internal Talent Pool
+```
+
+النظام يبحث عن:
+
+* Skill Match
+* Grade
+* Performance
+* Career Interest
+* Availability
+* Location
+* Readiness
+
+---
+
+# 12.38 Internal Vacancy Matching
+
+مثلاً:
+
+Vacancy:
+
+> Project Control Manager
+
+System candidates:
+
+```text
+Ahmed       91%
+Sara        86%
+Omar        78%
+```
+
+مع Reasons.
+
+---
+
+# 12.39 Internal Application
+
+Employee يستطيع التقديم على Internal Vacancy.
+
+Workflow:
+
+```text
+Employee Applies
+↓
+Current Manager Notification
+↓
+Eligibility Check
+↓
+Hiring Manager Review
+↓
+Interview
+↓
+Selection
+↓
+Transfer Approval
+```
+
+حسب Policy.
+
+---
+
+# 12.40 Internal Talent First Rule
+
+Configurable:
+
+مثلاً:
+
+```text
+Vacancy must remain internally open for 7 days
+before external recruitment.
+```
+
+لكن لا تكون ثابتة.
+
+---
+
+# 12.41 Integration with ATS
+
+لو لم يوجد Internal Candidate مناسب:
+
+```text
+Module 12
+Internal Talent Search
+↓
+No Suitable Candidate
+↓
+Module 05
+Recruitment Request
+```
+
+وبالتالي نقلل Hiring خارجي غير الضروري.
+
+---
+
+# 12.42 Talent Pool
+
+يمكن إنشاء Pools:
+
+### Leadership Pool
+
+### Project Manager Pool
+
+### Technical Experts Pool
+
+### Graduate Talent Pool
+
+### High Potential Pool
+
+### Critical Skills Pool
+
+---
+
+# 12.43 Talent Pool Criteria
+
+مثلاً:
+
+```text
+Performance >= 80
+Potential = High
+No PIP
+Competency Readiness >= 75
+```
+
+أو Manual nomination.
+
+---
+
+# 12.44 Development Assignment
+
+بدل تدريب فقط:
+
+موظف Successor يمكن إعطاؤه:
+
+* Acting Assignment
+* Project Leadership
+* Cross-functional Project
+* Mentoring
+* Job Rotation
+* Shadow Current Incumbent
+
+ثم نتابعها في Module 11.
+
+---
+
+# 12.45 Readiness Development Plan
+
+مثلاً:
+
+```text
+Successor:
+Ahmed
+
+Target Position:
+Operations Manager
+
+Gap:
+Commercial Exposure
+
+Action:
+Lead budgeting cycle
+
+Duration:
+6 Months
+
+Owner:
+Current Operations Manager
+```
+
+---
+
+# 12.46 Acting Assignment
+
+النظام يدير:
+
+```text
+Acting Position
+Start Date
+End Date
+Allowance
+Approval
+Assessment
+```
+
+ثم Module 09 يحسب Acting Allowance إن كانت Policy تسمح.
+
+---
+
+# 12.47 Job Rotation
+
+مثلاً:
+
+```text
+Employee
+Planning Department
+→ Cost Control
+3 Months
+```
+
+مع:
+
+* Objective
+* Host Manager
+* Start
+* End
+* Assessment
+
+---
+
+# 12.48 Mobility Constraints
+
+Employee قد يسجل:
+
+```text
+Cairo Only
+No Relocation
+Travel Allowed
+International Assignment = Yes
+```
+
+النظام يأخذها في Matching.
+
+---
+
+# 12.49 Retention Risk
+
+ممكن النظام يدعم:
+
+```text
+Retention Risk:
+Low / Medium / High
+```
+
+بناءً على:
+
+* Manager assessment
+* Tenure
+* Market scarcity
+* Employee feedback
+* Engagement signals لاحقًا
+
+لكن لا أنصح في النسخة الأولى باستخدام AI لتوقع Resignation تلقائيًا بدون بيانات قوية.
+
+---
+
+# 12.50 Loss Impact
+
+فرق مهم:
+
+```text
+Retention Risk
+```
+
+غير:
+
+```text
+Loss Impact
+```
+
+موظف:
+
+> Risk of leaving = Low
+
+لكن:
+
+> Impact if leaves = Critical
+
+ودي Talent Risk مختلفة.
+
+---
+
+# 12.51 Talent Risk Matrix
+
+مثلاً:
+
+|           | Low Impact | High Impact        |
+| --------- | ---------- | ------------------ |
+| High Risk | Monitor    | Critical Retention |
+| Low Risk  | Normal     | Protect            |
+
+---
+
+# 12.52 Retention Action Plan
+
+يمكن تسجيل:
+
+* Career Discussion
+* Compensation Review
+* Development Opportunity
+* Promotion Consideration
+* Role Expansion
+* Recognition
+* Project Assignment
+
+لكن بدون أن يقوم النظام بأي Compensation Adjustment تلقائي.
+
+---
+
+# 12.53 Promotion Calibration
+
+قبل Promotions النهائية:
+
+OD يعرض:
+
+* Promotion by Department
+* Promotion Rate
+* Performance Distribution
+* Gender / Location / Grade analytics إذا كانت السياسة تسمح
+* Budget Impact
+* Manager Recommendation Patterns
+
+والهدف اكتشاف inconsistencies.
+
+---
+
+# 12.54 Promotion Quotas
+
+قد تكون الشركة عندها Budget Cap وليس Quota أداء.
+
+مثلاً:
+
+```text
+Promotion Budget = EGP X
+```
+
+يفضل ألا نفرض Forced Ranking أو Forced Promotion Quota إلا إذا Policy تنص على ذلك.
+
+---
+
+# 12.55 Career History
+
+Employee Profile:
+
+```text
+2022
+Site Engineer
+
+2024
+Senior Site Engineer
+
+2026
+Site Supervisor
+```
+
+مع:
+
+* Grade changes
+* Transfers
+* Promotions
+* Temporary Assignments
+
+---
+
+# 12.56 Talent Card
+
+Executive View للموظف:
+
+```text
+Mohamed Ahmed
+
+Current Role:
+Project Manager
+
+Performance:
+Exceeds
+
+Potential:
+High
+
+Readiness:
+Ready <1 Year
+
+Critical Skills:
+FTTH / OSP / Cost Control
+
+Succession:
+Candidate for Senior PM
+
+Retention Risk:
+Medium
+```
+
+---
+
+# 12.57 Talent Dashboard
+
+مثلاً:
+
+```text
+Employees Reviewed          3,800
+High Potentials               210
+Critical Talents              125
+Ready Now Successors           94
+Critical Roles                 72
+Roles Without Successor        18
+Promotion Eligible            310
+Internal Mobility Candidates  185
+```
+
+---
+
+# 12.58 Succession Dashboard
+
+يعرض:
+
+* Critical Positions
+* Succession Coverage
+* Ready Now %
+* No Successor
+* Single Successor Risk
+* Retirement / Vacancy Risk
+* Development Status
+
+---
+
+# 12.59 Career Dashboard للموظف
+
+Employee يرى:
+
+```text
+Current Role
+Career Options
+Required Competencies
+My Gaps
+Development Actions
+Internal Opportunities
+Career Preferences
+```
+
+لكن:
+
+لا يرى:
+
+> "You are classified as High Potential"
+
+إلا إذا Policy تسمح بذلك.
+
+---
+
+# 12.60 Manager Dashboard
+
+Manager يرى:
+
+```text
+My Team
+
+Promotion Ready       3
+Ready <1 Year         5
+Critical Talent       2
+Successor Candidates  4
+Career Discussions Due 7
+```
+
+---
+
+# 12.61 OD Dashboard
+
+```text
+Talent Distribution
+9-Box
+Promotion Pipeline
+Succession Coverage
+Critical Roles
+Skill Readiness
+Internal Mobility
+Talent Risk
+Career Path Coverage
+```
+
+---
+
+# 12.62 Executive Dashboard
+
+يهم CEO / Leadership:
+
+```text
+Leadership Bench Strength
+Critical Roles Coverage
+High-Potential Population
+Successor Readiness
+Promotion Pipeline
+Key Talent Risk
+Internal Fill Rate
+External Dependency
+```
+
+---
+
+# 12.63 Internal Fill Rate
+
+KPI مهم:
+
+```text
+Internal Fill Rate =
+Vacancies Filled Internally
+/
+Total Filled Vacancies
+```
+
+مثلاً:
+
+> 32%
+
+ثم نتابع زيادته.
+
+---
+
+# 12.64 Promotion Effectiveness
+
+بعد Promotion بـ6–12 شهر:
+
+النظام يستطيع قياس:
+
+* Performance after promotion
+* Competency improvement
+* Manager feedback
+* Role success
+
+حتى نعرف هل Promotion decisions كانت جيدة.
+
+---
+
+# 12.65 Succession Effectiveness
+
+إذا Position أصبح vacant:
+
+النظام يتابع:
+
+```text
+Successor Activated?
+Time to Fill
+Performance After Placement
+```
+
+---
+
+# 12.66 Diversity of Succession Pool
+
+يمكن للنظام إظهار concentration risk:
+
+مثلاً:
+
+كل الـSuccessors من:
+
+> Department واحد
+
+أو:
+
+> Project واحد
+
+وده Risk تنظيمي.
+
+---
+
+# 12.67 Span Risk
+
+مثلاً موظف واحد:
+
+> Successor لـ7 Critical Positions
+
+ده ليس Strength.
+
+ده Risk.
+
+النظام يظهر:
+
+> Over-Concentration of Succession Dependency
+
+---
+
+# 12.68 AI داخل Module 12
+
+AI ممكن يستخدم في:
+
+### Career Path Recommendation
+
+بناءً على:
+
+* Experience
+* Skills
+* Performance
+* Interests
+
+---
+
+### Internal Job Matching
+
+---
+
+### Successor Shortlisting
+
+---
+
+### Competency Gap Summary
+
+---
+
+### Development Recommendation
+
+---
+
+### Talent Review Summary
+
+---
+
+### Career Conversation Preparation
+
+---
+
+لكن AI لا يقرر:
+
+* Promotion
+* High Potential
+* Termination
+* Salary Increase
+
+بل:
+
+> Recommendation / Decision Support فقط.
+
+---
+
+# 12.69 Explainable AI
+
+لو AI يقترح:
+
+> Ahmed 89% match for PM role
+
+لازم يظهر:
+
+```text
+Why?
+
+Project Management        Strong
+FTTH Experience            Strong
+Leadership                 Moderate
+Cost Control               Strong
+PMP                        Missing
+```
+
+وليس Score غامض.
+
+---
+
+# 12.70 Promotion Notifications
+
+مثلاً:
+
+### Manager
+
+Promotion cycle opened.
+
+### OD
+
+Pending reviews.
+
+### Approver
+
+Promotion request awaiting approval.
+
+### Employee
+
+Promotion approved.
+
+لكن employee لا يحصل على Notification قبل Final Approval.
+
+---
+
+# 12.71 Talent Confidentiality
+
+دي وحدة حساسة جدًا.
+
+Performance Score قد يكون visible بدرجة معينة.
+
+لكن:
+
+* Potential Rating
+* Succession
+* Retention Risk
+* Talent Classification
+* Executive Comments
+
+تحتاج صلاحيات stricter.
+
+---
+
+# 12.72 Fine-Grained Permissions
+
+مثلاً:
+
+### Employee
+
+يرى:
+
+* Career Path
+* Career Preferences
+* Competency Gaps
+* Internal Jobs
+* Approved Movement
+
+---
+
+### Manager
+
+يرى:
+
+* Team Career Data
+* Promotion Readiness
+* Development
+* Nomination
+
+---
+
+### OD
+
+يرى:
+
+* Full Talent Data
+
+---
+
+### P&C Manager
+
+يرى:
+
+* Company-level Talent
+
+---
+
+### Executive
+
+يرى:
+
+* Strategic Succession
+
+---
+
+### Payroll
+
+يرى فقط:
+
+* Approved movement
+* Grade
+* Effective Date
+* Compensation impact
+
+ولا يرى Potential / 9-Box.
+
+---
+
+# 12.73 Audit Trail
+
+أي قرار:
+
+* Potential Rating
+* Talent Box
+* Successor Nomination
+* Promotion
+* Transfer
+
+يجب تسجيل:
+
+```text
+Before
+After
+Changed By
+Date
+Reason
+Approval
+```
+
+---
+
+# 12.74 Effective-Dated Talent Data
+
+مهم جدًا.
+
+لا نمسح القديم.
+
+مثلاً:
+
+```text
+Potential 2025 = Medium
+Potential 2026 = High
+```
+
+نحتفظ بتاريخ كامل.
+
+---
+
+# 12.75 Exception Workflow
+
+مثلاً:
+
+Employee لا يحقق:
+
+> Time in Grade
+
+لكن الإدارة تريد Exceptional Promotion.
+
+```text
+Standard Eligibility Failed
+↓
+Exception Request
+↓
+Reason
+↓
+Higher Approval
+↓
+Approved / Rejected
+```
+
+---
+
+# 12.76 Promotion Freeze
+
+Admin يستطيع تحديد:
+
+```text
+Promotion Freeze
+```
+
+حسب:
+
+* Company
+* Department
+* Grade
+* Period
+
+ويمنع التنفيذ إلا Exception.
+
+---
+
+# 12.77 Position Vacancy Dependency
+
+لازم نحدد Policy:
+
+هل Promotion:
+
+### Requires Vacant Position
+
+أم:
+
+### Grade Promotion Only
+
+أم:
+
+### In-place Promotion
+
+النظام يدعم الثلاثة.
+
+---
+
+# 12.78 Headcount Integration
+
+Promotion أو Transfer لازم يراجع:
+
+```text
+Approved Position
+Approved Headcount
+Budget
+```
+
+خصوصًا لو الانتقال يخلق Vacancy خلفه.
+
+---
+
+# 12.79 Backfill Trigger
+
+مثلاً:
+
+Ahmed promoted.
+
+وظيفته القديمة تصبح:
+
+```text
+Vacant
+```
+
+النظام يستطيع:
+
+```text
+Internal Talent Search
+↓
+Module 05 Recruitment
+```
+
+لو لا يوجد بديل داخلي.
+
+---
+
+# 12.80 Chain Succession
+
+أحيانًا Promotion واحدة تحرك 3 وظائف:
+
+```text
+Director retires
+↓
+Manager promoted to Director
+↓
+Senior Manager promoted to Manager
+↓
+Senior Position becomes vacant
+```
+
+النظام يستطيع عرض:
+
+> Succession Chain Impact.
+
+---
+
+# 12.81 Workforce Scenario
+
+مستقبلًا:
+
+```text
+What happens if 3 project managers leave?
+```
+
+يعرض:
+
+* Successors
+* Readiness
+* Internal coverage
+* Hiring requirement
+* Training gap
+
+ودي ميزة قوية جدًا للإدارة.
+
+---
+
+# 12.82 Core Data Model
+
+أقترح Entities مثل:
+
+```text
+CareerPath
+CareerPathStep
+CareerTransitionRule
+
+EmployeeCareerPreference
+CareerDiscussion
+
+TalentReviewCycle
+TalentAssessment
+PotentialAssessment
+TalentClassification
+
+CriticalPosition
+PositionCriticality
+
+SuccessionPlan
+SuccessionCandidate
+SuccessionReadiness
+SuccessionDevelopmentAction
+
+PromotionCycle
+PromotionNomination
+PromotionEligibility
+PromotionApproval
+PromotionDecision
+
+InternalVacancy
+InternalApplication
+InternalCandidateMatch
+
+EmployeeMovement
+TransferRequest
+JobRotation
+ActingAssignment
+
+TalentPool
+TalentPoolMember
+
+RetentionRisk
+RetentionAction
+
+CareerAuditLog
+```
+
+---
+
+# 12.83 العلاقات الرئيسية
+
+```text
+Employee
+│
+├── Performance History
+├── Competency Profile
+├── Career Preferences
+├── Potential
+├── Talent Classification
+├── Succession Nominations
+├── Promotion Readiness
+├── Internal Applications
+└── Career History
+```
+
+---
+
+# 12.84 التكامل مع Modules السابقة
+
+```text
+Module 02
+Job Architecture
+↓
+Career Paths / Position Requirements
+
+Module 09
+Compensation
+↓
+Promotion Cost / New Salary
+
+Module 10
+Performance
+↓
+Performance History
+
+Module 11
+Competency & Development
+↓
+Skill Readiness
+
+Module 12
+Talent Decision
+```
+
+ثم:
+
+```text
+Promotion
+↓
+Module 02
+New Position
+
+Module 09
+New Compensation
+
+Module 03
+New Permissions
+
+Module 07
+New Schedule / Location
+
+Module 05
+Backfill Vacancy
+```
+
+وده مهم جدًا: **Promotion ليست مجرد تغيير Job Title**، بل Event يطلق Changes عبر النظام كله.
+
+---
+
+# 12.85 الـWorkflow النهائي للـTalent Management
+
+```text
+Performance Results
+        +
+Competency Profile
+        +
+Career Interest
+        +
+Business Need
+        ↓
+Talent Review
+        ↓
+Potential Assessment
+        ↓
+Calibration
+        ↓
+Talent Classification
+        ↓
+Career Readiness
+        ↓
+┌────────────────────────────┐
+│                            │
+Promotion                Succession
+│                            │
+Internal Mobility        Development
+│                            │
+Career Move              Talent Pool
+└────────────────────────────┘
+        ↓
+Approved Employee Movement
+        ↓
+Update HR / Payroll / Security / Project
+```
+
+---
+
+# أهم 3 قرارات تصميمية في Module 12
+
+**الأول:** لا نجعل الترقية معتمدة فقط على KPI.
+لازم تجمع **Performance + Competency + Experience + Potential + Business Need + Position/Budget Availability**.
+
+**الثاني:** لا نخلط **Potential** مع **Performance**. لأن ده سيؤدي إلى ترقية أفضل الفنيين إلى Managers رغم أنهم قد لا يكونون مناسبين للإدارة.
+
+**الثالث:** Internal Mobility وSuccession يجب أن يعملا على **Position Architecture الحقيقية** من Module 02، وليس مجرد Job Titles مكتوبة يدويًا.
+
+وبعد Module 12، الترتيب المنطقي جدًا عندي هو **Module 13 — Employee Relations, Grievances, Disciplinary Actions, Investigations & Case Management**؛ لأن الـManual الحالي لديه Investigation & Disciplinary Process داخل HR Operations بالفعل، لكنه يحتاج أن يتحول إلى Case Management مستقل بصلاحيات عالية، Evidence، SLA، Legal involvement، Appeal، disciplinary matrix، وربط آمن بالـPerformance والـPayroll دون خلط الوظائف. 

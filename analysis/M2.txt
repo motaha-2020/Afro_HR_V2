@@ -1,0 +1,1766 @@
+تمام. ننتقل الآن إلى **Module 02 — Organization Structure & Job Architecture**. هذا الموديول مهم جدًا لأن كل شيء بعده تقريبًا سيعتمد عليه: الصلاحيات، الـReporting Lines، الموافقات، الـPayroll، الـKPI، الـManpower Planning، الـProject Assignment وحتى الـAI.
+
+المصدر الحالي عندكم بالفعل يوضح وجود **Administrative Reporting Line** و**Functional Reporting Line** داخل هيكل People & Culture، كما يوضح تقسيم الإدارة إلى Organizational Development وTalent Acquisition وER & Compliance وPayroll وPersonnel وHR Operations، وبعض HR Operations مرتبطين بحسابات أو عملاء مثل Huawei & Nokia وEricsson.  كذلك الـOperations Manual يربط الموظف منذ مرحلة Hiring بعناصر مثل Position Title وProject Code وProject Name وDirect Manager وWork Location، ويستمر استخدام هذه العلاقات خلال Onboarding وHR Operations وPayroll Project Allocation. 
+
+# Module 02 — Organization Structure & Job Architecture
+
+الهدف ليس فقط رسم Org Chart.
+
+الموديول يجب أن يجيب باستمرار عن أسئلة مثل:
+
+> الموظف ده تابع لأي شركة وإدارة ومشروع؟
+
+> مين مديره الإداري؟
+
+> مين مديره الوظيفي؟
+
+> شغال على كام مشروع؟
+
+> الـPosition بتاعه إيه؟
+
+> Grade كام؟
+
+> مين البديل أو الـsuccessor المحتمل؟
+
+> الوظيفة دي موجود منها كام Position معتمد وكام Position مشغول؟
+
+> مين له صلاحية الموافقة على Leave أو Hiring أو Salary Change؟
+
+ولهذا أنا أقترح أن نقسم الموديول إلى قسمين رئيسيين:
+
+```text
+Organization Structure
++
+Job Architecture
+```
+
+---
+
+# 1. Organization Structure
+
+النظام يجب ألا يفترض Hierarchy ثابتة مثل:
+
+Company → Department → Section فقط.
+
+لأن شركات المقاولات أحيانًا تستخدم:
+
+```text
+Company
+↓
+Business Unit
+↓
+Sector
+↓
+Department
+↓
+Section
+```
+
+وشركة أخرى:
+
+```text
+Company
+↓
+Region
+↓
+Project
+↓
+Site
+```
+
+أو:
+
+```text
+Company
+↓
+Account
+↓
+Client
+↓
+Project
+```
+
+لذلك الأفضل بناء **Flexible Organization Tree**.
+
+---
+
+# 2. Organization Unit
+
+نحتاج Entity عامة اسمها مثلًا:
+
+**Organization Unit**
+
+وكل Unit لها Type.
+
+مثلاً:
+
+```text
+Organization Unit Types
+
+Company
+Business Unit
+Division
+Sector
+Department
+Section
+Region
+Area
+Branch
+Office
+Project Office
+Support Function
+Shared Service
+```
+
+ثم كل شركة تحدد الأنواع التي تستخدمها.
+
+مثلاً Afro قد يكون عندها:
+
+```text
+Afro Egypt
+│
+├── Telecom Business Unit
+│   ├── Operations
+│   ├── Projects
+│   ├── PMO
+│   └── Technical Office
+│
+├── Finance
+├── People & Culture
+├── Supply Chain
+└── IT
+```
+
+---
+
+# 3. لماذا Organization Unit عامة أفضل؟
+
+لو صممنا Database كده:
+
+```text
+Company
+Department
+Section
+```
+
+ثم بعد سنة الشركة قالت:
+
+> عايزين Sector بين Business Unit وDepartment.
+
+سنحتاج تعديل Database والـAPI والـUI.
+
+الأفضل:
+
+```text
+OrgUnit
+-------
+Id
+TenantId
+ParentOrgUnitId
+OrgUnitTypeId
+Code
+Name
+...
+```
+
+وده يسمح ببناء أي Hierarchy.
+
+---
+
+# 4. Org Unit Types Settings
+
+Company Super Admin يستطيع تعريف:
+
+```text
+Business Unit
+Sector
+Department
+Section
+Region
+Branch
+```
+
+ويحدد لكل نوع:
+
+Parent Allowed Types
+
+مثلاً:
+
+```text
+Department
+Can be under:
+Business Unit
+Sector
+```
+
+لكن لا يكون تحت Employee أو Project.
+
+---
+
+# 5. Organization Tree
+
+واجهة أساسية جدًا.
+
+مثلاً بالعربي:
+
+```text
+الشركة
+│
+├── قطاع الاتصالات
+│   ├── إدارة المشروعات
+│   │   ├── PMO
+│   │   ├── Project Control
+│   │   └── Site Operations
+│   │
+│   └── الإدارة الفنية
+│
+├── الموارد البشرية
+├── المالية
+└── سلسلة الإمداد
+```
+
+المستخدم يستطيع:
+
+Expand / Collapse
+
+Search
+
+Filter
+
+Create Child
+
+Move Unit
+
+Archive Unit
+
+View Manager
+
+View Headcount
+
+View Vacancies.
+
+---
+
+# 6. Org Unit Data
+
+كل Organization Unit تحتاج تقريبًا:
+
+```text
+Code
+Arabic Name
+English Name
+French Name
+Type
+Parent Unit
+Manager
+Cost Center
+Location
+Effective From
+Effective To
+Status
+Description
+```
+
+وممكن لاحقًا:
+
+Budget
+
+Headcount Budget
+
+Default Policies
+
+Approval Rules.
+
+---
+
+# 7. Effective Dating
+
+دي نقطة ضرورية جدًا.
+
+لو Department انتقل من Sector إلى Sector آخر، لا نمسح العلاقة القديمة.
+
+نخزن:
+
+```text
+Effective From
+Effective To
+```
+
+مثلاً:
+
+```text
+Technical Office
+
+Jan–Jun
+Parent = Operations
+
+From July
+Parent = Projects
+```
+
+وبالتالي نعرف شكل الشركة **في أي تاريخ سابق**.
+
+وده مهم جدًا للـAudit والـPayroll والـKPI والتقارير.
+
+---
+
+# 8. Organization Versioning
+
+في الشركات الكبيرة ممكن يكون عندك:
+
+Current Structure
+
+Approved Future Structure.
+
+مثلاً إعادة هيكلة تبدأ 1 يناير.
+
+إذن نحتاج مفهوم:
+
+```text
+Draft
+Approved
+Effective
+Expired
+```
+
+بحيث OD يستطيع تجهيز Structure جديدة بدون التأثير على النظام الحالي.
+
+---
+
+# 9. Organization Change Workflow
+
+مثلاً:
+
+OD creates new Department
+
+↓
+
+HR Manager Review
+
+↓
+
+CEO / Authorized Management Approval
+
+↓
+
+Effective Date
+
+↓
+
+System activates automatically.
+
+ده أفضل من أي شخص يغير Org Chart مباشرة.
+
+---
+
+# 10. Cost Center Mapping
+
+كل Org Unit يمكن ربطها بـ:
+
+Cost Center.
+
+لكن لا نفرض Cost Center واحد.
+
+لأن Project أو Department أحيانًا له أكثر من Cost Center حسب النظام المالي.
+
+نحتاج:
+
+```text
+Org Unit
+↕
+Cost Center Mapping
+```
+
+وده مهم للتكامل مع Nama ERP.
+
+---
+
+# 11. Client Structure
+
+Client ليس بالضرورة جزءًا من Org Chart الداخلي.
+
+لذلك أفضل الفصل بين:
+
+```text
+Internal Organization
+```
+
+و:
+
+```text
+Commercial / Project Structure
+```
+
+مثلاً:
+
+```text
+Client
+↓
+Program
+↓
+Project
+↓
+Region
+↓
+Site
+```
+
+بينما داخليًا:
+
+```text
+Business Unit
+↓
+Department
+↓
+Project Management Office
+```
+
+الموظف يمكن يكون تابع إداريًا لـDepartment، لكن يعمل على Client Project.
+
+---
+
+# 12. Project Structure
+
+نحتاج Project Entity منفصلة عن Org Unit.
+
+مثلاً:
+
+```text
+Client: Telecom Egypt
+Project: FTTH Fiberization
+Region: East Delta
+Site: Mansoura
+```
+
+المشروع يحتوي:
+
+Project Code
+
+Project Name
+
+Client
+
+Contract
+
+Project Manager
+
+Business Unit
+
+Start Date
+
+End Date
+
+Status
+
+Cost Center
+
+Locations.
+
+---
+
+# 13. Multi-Project Assignment
+
+كما اتفقنا، الموظف ممكن يعمل على أكثر من مشروع.
+
+لذلك:
+
+```text
+Employee
+↓
+EmployeeAssignment
+↓
+Project
+```
+
+ولا نجعل Project داخل Employee Table مباشرة.
+
+مثلاً:
+
+```text
+Employee: Mohamed
+
+Project A
+Role: Project Manager
+Allocation: 60%
+
+Project B
+Role: Project Manager
+Allocation: 40%
+```
+
+---
+
+# 14. Reporting Lines
+
+هنا واحدة من أهم وظائف Module 02.
+
+لن يكون هناك Manager واحد فقط.
+
+نحتاج أنواع Reporting Lines.
+
+## Administrative Manager
+
+المسؤول الإداري الأساسي.
+
+مثلاً:
+
+HR Operations Specialist
+
+يتبع:
+
+HR Operations Manager.
+
+---
+
+## Functional Manager
+
+المسؤول عن الـprofessional/technical function.
+
+وده مستخدم بالفعل في Org Chart الموجود عندكم كـFunctional Reporting Line. 
+
+---
+
+## Project Manager
+
+المسؤول أثناء Project Assignment.
+
+---
+
+## Site Manager / Supervisor
+
+المسؤول اليومي في الموقع.
+
+---
+
+## Matrix Manager
+
+للحالات التي يكون فيها الموظف تابع لأكثر من جهة.
+
+---
+
+# 15. Employee Reporting Relations
+
+نحتاج جدول مثل:
+
+```text
+EmployeeReportingLine
+---------------------
+EmployeeId
+ManagerEmployeeId
+RelationType
+ProjectId
+EffectiveFrom
+EffectiveTo
+IsPrimary
+```
+
+مثلاً:
+
+```text
+Ahmed
+Administrative Manager = HR Manager
+
+Functional Manager = HR Operations Lead
+
+Project Manager = Vodafone PM
+```
+
+---
+
+# 16. Primary Manager
+
+رغم وجود أكثر من Manager، النظام يحتاج تحديد:
+
+**Primary Manager**
+
+لأغراض:
+
+General approvals
+
+Employee Profile
+
+Default workflow.
+
+لكن Workflow نفسه يمكن أن يستخدم Manager آخر حسب نوع الطلب.
+
+مثلاً:
+
+Leave → Project Manager
+
+Salary Change → Administrative Manager + HR
+
+Technical Training → Functional Manager.
+
+---
+
+# 17. Job Architecture
+
+ده القسم الثاني من الموديول.
+
+نحتاج نفرق بين:
+
+```text
+Job
+Position
+Employee
+```
+
+ودي نقطة كثير من HR systems بتخلط بينهم.
+
+---
+
+# 18. Job vs Position
+
+مثلاً:
+
+**Job**
+
+```text
+Fiber Technician
+```
+
+وده تعريف وظيفي عام.
+
+أما Position:
+
+```text
+Fiber Technician – Position #FT-001
+Project = WE
+Location = Cairo
+```
+
+يعني ممكن يكون عندنا 100 Position لنفس Job.
+
+---
+
+# 19. Job Family
+
+نقسم الوظائف إلى Job Families.
+
+مثلاً:
+
+```text
+Project Management
+Engineering
+Fiber Operations
+Civil Works
+HSE
+Finance
+HR
+Supply Chain
+IT
+Sales
+```
+
+---
+
+# 20. Job Function
+
+داخل Job Family ممكن يكون عندنا Function.
+
+مثلاً:
+
+```text
+Engineering
+│
+├── OSP
+├── ISP
+├── FTTH
+├── Wireless
+├── Power
+└── Transmission
+```
+
+---
+
+# 21. Job Profile
+
+كل Job يحتوي:
+
+```text
+Job Code
+Arabic Title
+English Title
+French Title
+Job Family
+Job Function
+Job Level
+Grade Range
+Description
+Responsibilities
+Minimum Education
+Minimum Experience
+Required Skills
+Required Certifications
+HSE Requirements
+Medical Requirements
+```
+
+---
+
+# 22. Job Level
+
+مثلاً:
+
+```text
+L1 Entry
+L2 Junior
+L3 Specialist
+L4 Senior
+L5 Lead
+L6 Manager
+L7 Senior Manager
+L8 Director
+L9 Executive
+```
+
+لكن تكون configurable لكل Company.
+
+---
+
+# 23. Grade Structure
+
+مثلاً:
+
+```text
+G1
+G2
+G3
+...
+G15
+```
+
+أو:
+
+```text
+A
+B
+C
+D
+```
+
+كل شركة تحدد نظامها.
+
+---
+
+# 24. Grade Data
+
+Grade ممكن يحتوي:
+
+```text
+Code
+Name
+Minimum Salary
+Midpoint
+Maximum Salary
+Annual Leave Entitlement
+Medical Class
+Benefit Class
+Transport Class
+Phone Allowance
+Overtime Eligibility
+```
+
+لكن Salary Bands تعتبر Sensitive.
+
+مش أي User يشوفها.
+
+---
+
+# 25. Salary Band
+
+الأفضل نفصل:
+
+```text
+Grade
+```
+
+عن:
+
+```text
+Compensation Band
+```
+
+لأن في بعض الشركات نفس Grade له Salary Band مختلفة حسب Country أو Business Unit.
+
+مثلاً:
+
+```text
+Grade G7
+
+Egypt
+20k–30k EGP
+
+Madagascar
+Different Band
+```
+
+---
+
+# 26. Position Management
+
+Position هو المقعد الفعلي في الهيكل.
+
+مثلاً:
+
+```text
+Position ID: PM-0042
+Job: Project Manager
+Org Unit: Telecom Projects
+Location: Cairo
+Grade: G10
+Status: Filled
+```
+
+---
+
+# 27. Position Status
+
+Position ممكن يكون:
+
+```text
+Draft
+Approved
+Vacant
+Filled
+Frozen
+Temporary
+Closed
+```
+
+---
+
+# 28. Approved Position
+
+هنا نربط Recruitment بالهيكل.
+
+لا أحب Hiring Request بدون approved position في الوضع الطبيعي.
+
+السيناريو:
+
+```text
+Position Approved
+↓
+Position becomes Vacant
+↓
+Hiring Request
+↓
+Recruitment
+↓
+Candidate hired
+↓
+Position becomes Filled
+```
+
+وده يعطي Workforce Governance أقوى بكثير.
+
+---
+
+# 29. Replacement Hiring
+
+المصدر الحالي عندكم يطلب في Replacement Position إدخال HR Code واسم الموظف المستقيل. 
+
+في النظام الجديد الأفضل يكون:
+
+```text
+Vacancy Type = Replacement
+
+Replacing Employee
+Replacing Position
+Reason
+Last Working Date
+```
+
+فيعرف النظام تلقائيًا الـJob والـGrade والـProject.
+
+---
+
+# 30. New Position Hiring
+
+لو Hiring Type:
+
+New Position
+
+لازم يكون فيه:
+
+Position Approval.
+
+مثلاً:
+
+```text
+New Position Request
+↓
+Manpower Budget Check
+↓
+HR/OD Review
+↓
+Finance Review
+↓
+Management Approval
+↓
+Position Created
+↓
+Recruitment Starts
+```
+
+---
+
+# 31. Headcount Control
+
+لكل Org Unit نحتاج:
+
+```text
+Approved Positions
+Filled Positions
+Vacant Positions
+Frozen Positions
+```
+
+مثلاً:
+
+```text
+Fiber Operations
+
+Approved = 120
+Filled = 96
+Vacant = 18
+Frozen = 6
+```
+
+---
+
+# 32. Headcount Budget
+
+Version 1 الأفضل يدعم:
+
+```text
+Budget Year
+Org Unit
+Job
+Grade
+Approved HC
+Approved Cost
+```
+
+مثلاً:
+
+```text
+2027
+
+FTTH Operations
+Technicians
+Approved HC = 250
+```
+
+ثم نقارن:
+
+Plan vs Actual.
+
+---
+
+# 33. Position Occupancy History
+
+لو Ahmed كان يشغل Position A ثم انتقل إلى Position B:
+
+لا نمسح القديم.
+
+نخزن:
+
+```text
+PositionAssignment
+------------------
+Employee
+Position
+From
+To
+Reason
+```
+
+---
+
+# 34. Acting Assignment
+
+ميزة مهمة جدًا.
+
+مثلاً:
+
+Employee Job = Senior Engineer
+
+لكن يعمل:
+
+Acting Project Manager
+
+لمدة 3 أشهر.
+
+نحتاج:
+
+```text
+Acting Assignment
+Start
+End
+Acting Position
+Allowance
+Approval
+```
+
+---
+
+# 35. Dual Role
+
+ممكن موظف يكون عنده أكثر من Role/Position في نفس الوقت.
+
+مثلاً:
+
+```text
+Primary Position:
+Project Manager
+
+Secondary Responsibility:
+PMO Coordinator
+```
+
+نحتاج دعم:
+
+Primary Position
+
+Secondary Position
+
+Acting Position
+
+Project Role.
+
+---
+
+# 36. Job Description Management
+
+OD يستطيع إنشاء Job Description.
+
+يشمل:
+
+Purpose
+
+Responsibilities
+
+KPIs
+
+Skills
+
+Education
+
+Experience
+
+Certifications
+
+Reporting To
+
+Supervises
+
+Working Conditions
+
+HSE Requirements.
+
+---
+
+# 37. Job Description Versioning
+
+لا نمسح JD القديمة.
+
+مثلاً:
+
+```text
+Fiber Technician JD
+
+Version 1
+2025
+
+Version 2
+2026
+```
+
+لأن متطلبات الوظيفة ممكن تتغير.
+
+---
+
+# 38. Skills Framework
+
+Job Architecture يجب يرتبط بـSkills.
+
+مثلاً:
+
+Fiber Technician:
+
+```text
+Fiber Splicing        Level 3
+OTDR Testing          Level 2
+Cable Preparation     Level 3
+HSE                    Level 2
+```
+
+ثم Employee Skills نقدر نقارنها بـJob Requirements.
+
+---
+
+# 39. Competency Gap
+
+النظام يستطيع بعد ذلك حساب:
+
+```text
+Required Skill
+vs
+Employee Skill
+```
+
+مثلاً:
+
+OTDR Required Level = 3
+
+Employee Level = 1
+
+Gap = 2.
+
+وده يدخل Training Planning.
+
+---
+
+# 40. Certification Requirements
+
+Job:
+
+Rigger
+
+يحتاج مثلًا:
+
+Working at Heights
+
+Medical Clearance
+
+Safety Training.
+
+الـmanual عندكم بالفعل يربط بعض الأدوار الحساسة بفحوص طبية وSafety Courses قبل الـdeployment. 
+
+في Job Architecture سنخزن هذه المتطلبات كـrules، وليس نص فقط.
+
+---
+
+# 41. Position Requirements by Project
+
+ممكن نفس Job يحتاج متطلبات إضافية حسب Client.
+
+مثلاً:
+
+Fiber Technician في Project A:
+
+Huawei Certification
+
+وفي Project B:
+
+Customer-specific training.
+
+إذن:
+
+```text
+Job Requirements
++
+Project Requirements
+```
+
+ويتم دمجهم عند Assignment.
+
+---
+
+# 42. Locations
+
+Organization Module يحتاج Location Master.
+
+مثلاً:
+
+```text
+Country
+Governorate / Region
+City
+Office
+Warehouse
+Project Site
+```
+
+لكن GIS الحقيقي سيكون Module أو Service منفصل لاحقًا.
+
+---
+
+# 43. Work Location
+
+Position يمكن يكون:
+
+```text
+Office
+Site
+Hybrid
+Remote
+Multiple Sites
+Mobile Workforce
+```
+
+وده يؤثر لاحقًا على Attendance Policy.
+
+---
+
+# 44. Default Policy Assignment
+
+Position أو Org Unit يمكن أن يحدد:
+
+Default Attendance Policy
+
+Default Leave Policy
+
+Default Payroll Policy
+
+Default KPI Template
+
+Default HSE Requirements.
+
+مثلاً:
+
+```text
+Fiber Technician
+→ Field Attendance Policy
+→ Productivity Payroll Policy
+→ HSE Field Policy
+```
+
+---
+
+# 45. Org-Based Permissions
+
+الموديول ده يرتبط مباشرة بـPermissions.
+
+مثلاً:
+
+Department Manager يرى:
+
+```text
+Org Unit = His Department
++
+Child Units
+```
+
+Regional Manager:
+
+```text
+Region = East
+```
+
+Project Manager:
+
+```text
+Assigned Projects
+```
+
+---
+
+# 46. Org Scope vs Project Scope
+
+لازم نفرق بينهم.
+
+مثلاً HR Manager:
+
+```text
+Org Scope = HR Department
+```
+
+لكن HR Operations Specialist:
+
+```text
+Project Scope = Huawei & Nokia
+```
+
+وده قريب جدًا من الواقع الظاهر في Org Chart الحالي عندكم. 
+
+---
+
+# 47. Approval Chain Generation
+
+بدل كتابة كل Approval يدويًا، النظام يستطيع استخدام الهيكل.
+
+مثلاً:
+
+```text
+Employee
+↓
+Direct Manager
+↓
+Department Head
+↓
+Sector Head
+↓
+CEO
+```
+
+ويولد Approval Chain ديناميكي.
+
+---
+
+# 48. Delegation
+
+مهم جدًا لو Manager في إجازة.
+
+نحتاج:
+
+```text
+Delegation
+
+From User
+To User
+Start
+End
+Allowed Modules
+Allowed Approvals
+```
+
+مثلاً:
+
+Leave approvals فقط.
+
+وليس Payroll approval.
+
+---
+
+# 49. Manager Replacement
+
+لو Manager غادر الشركة، لا نريد Workflows تتوقف.
+
+System Alert:
+
+```text
+5 employees have no active manager
+```
+
+أو:
+
+```text
+Pending approvals assigned to inactive manager
+```
+
+---
+
+# 50. Span of Control
+
+ميزة تحليلية مهمة.
+
+مثلاً:
+
+```text
+Manager A
+Direct Reports = 38
+```
+
+AI / Analytics يقدر يكتشف:
+
+High Span of Control.
+
+---
+
+# 51. Organization Analytics
+
+Dashboard OD يمكن يحتوي:
+
+Total Positions
+
+Filled Positions
+
+Vacancies
+
+Headcount
+
+Layers
+
+Span of Control
+
+Manager-to-Employee Ratio
+
+Open Positions
+
+Acting Positions
+
+Employees without Manager
+
+Employees without Position
+
+Duplicate Roles
+
+Organization Cost.
+
+---
+
+# 52. Job Architecture Dashboard
+
+مثلاً:
+
+Jobs Count
+
+Job Families
+
+Grades
+
+Salary Bands
+
+Positions
+
+Vacancies
+
+Critical Roles
+
+Skill Gaps
+
+Certification Gaps.
+
+---
+
+# 53. AI Functions داخل Module 02
+
+الـAI هنا ممكن يكون مفيد جدًا.
+
+### Org Assistant
+
+> مين مدير أحمد الإداري والوظيفي؟
+
+### Organization Query
+
+> اعرضلي كل Departments تحت Telecom Business Unit.
+
+### Workforce Query
+
+> كام Position فاضي في Fiber Operations؟
+
+### Org Analysis
+
+> فين الإدارات اللي عندها Span of Control عالي؟
+
+### Job Description Drafting
+
+OD يقول:
+
+> اعمل Job Description لـFTTH Project Manager.
+
+AI ينشئ Draft فقط، ثم OD يراجع ويعتمد.
+
+### Job Matching
+
+> الموظف ده أقرب لأي Position مفتوح؟
+
+---
+
+# 54. AI Governance هنا
+
+الـAI لا يغير Structure مباشرة.
+
+لو المستخدم قال:
+
+> انقل Ahmed تحت Operations.
+
+AI يجهز:
+
+```text
+Requested Change
+
+Employee: Ahmed
+Current Unit: PMO
+New Unit: Operations
+Effective Date: ...
+```
+
+ثم Confirmation + Workflow.
+
+---
+
+# 55. الشاشات الأساسية
+
+أقترح Menu داخل الموديول:
+
+```text
+Organization Overview
+Organization Tree
+Org Units
+Locations
+Jobs
+Job Families
+Job Functions
+Grades
+Salary Bands
+Positions
+Reporting Lines
+Headcount Plan
+Org Changes
+Job Descriptions
+Skills Requirements
+Org Analytics
+```
+
+---
+
+# 56. Organization Tree UI
+
+الشاشة لازم تكون Visual لكن ليست مجرد Diagram.
+
+أفضل layout:
+
+```text
+┌────────────────────────────────────────────┐
+│ Search | As of Date | Company | View       │
+├────────────────────────────────────────────┤
+│                                            │
+│               CEO                          │
+│                │                           │
+│        ┌───────┼────────┐                  │
+│        HR    Finance   Telecom             │
+│                        │                   │
+│                 ┌──────┼───────┐           │
+│               PMO   Projects  TO           │
+│                                            │
+└────────────────────────────────────────────┘
+```
+
+مع click على أي Node لعرض:
+
+Manager
+
+Headcount
+
+Positions
+
+Vacancies
+
+Cost Center
+
+Child Units.
+
+---
+
+# 57. Arabic RTL
+
+في العربية:
+
+Sidebar يمين.
+
+Org tree نفسه لا يحتاج قلب منطقي كامل، لكن Controls وLabels تكون RTL.
+
+مثلاً:
+
+```text
+الإدارة
+الرئيس المباشر
+عدد الموظفين
+الوظائف الشاغرة
+```
+
+---
+
+# 58. English / French LTR
+
+نفس البيانات بدون تصميم شاشة مختلف جذريًا.
+
+فقط Direction + Labels.
+
+---
+
+# 59. Database Entities المبدئية
+
+أتوقع Entities مثل:
+
+```text
+OrganizationUnit
+OrganizationUnitType
+OrganizationUnitHistory
+OrganizationVersion
+
+JobFamily
+JobFunction
+Job
+JobDescription
+JobDescriptionVersion
+
+Grade
+CompensationBand
+
+Position
+PositionHistory
+PositionAssignment
+
+ReportingRelationship
+
+Location
+
+CostCenterMapping
+
+SkillRequirement
+CertificationRequirement
+
+HeadcountPlan
+HeadcountBudget
+
+Delegation
+```
+
+---
+
+# 60. أهم العلاقات
+
+```text
+Tenant
+  │
+  └── OrganizationUnit
+         │
+         ├── Job
+         │    └── Position
+         │          └── Employee
+         │
+         └── Manager
+```
+
+لكن Project منفصل:
+
+```text
+Employee
+   │
+   ├── Primary Position
+   │
+   └── Project Assignments
+          │
+          ├── Project A
+          └── Project B
+```
+
+---
+
+# 61. Business Rules الأساسية
+
+أقترح نعتمد من الآن:
+
+1. كل Employee Active يجب أن يكون له Primary Position أو Exception موثقة.
+2. كل Position يتبع Tenant واحد.
+3. Position يمكن أن تكون Vacant أو Filled، ولا يمكن ملؤها بأكثر من الحد المسموح إلا لو Allow Multiple Occupancy.
+4. Manager Relationship يكون Effective-Dated.
+5. Org Unit لا تُحذف إذا عليها Employees أو History.
+6. نقل Org Unit لا يمسح التاريخ.
+7. Job ≠ Position.
+8. Project Assignment ≠ Organization Assignment.
+9. Employee يمكن يكون في أكثر من Project.
+10. Primary Administrative Manager واحد في نفس الوقت.
+11. Functional Manager يمكن أن يكون مختلفًا.
+12. Approval Chains يمكن اشتقاقها من Organization Hierarchy.
+13. Salary Bands لها Field-Level Security.
+14. Job Requirements يمكن أن يتم Override لها حسب Project.
+15. أي Structure Change كبير يحتاج Workflow + Effective Date.
+
+---
+
+# 62. ما يدخل MVP
+
+في MVP:
+
+Organization Tree
+
+Flexible Org Units
+
+Company / Business Unit / Department / Section
+
+Arabic / English / French names
+
+Primary Manager
+
+Functional Manager
+
+Locations
+
+Job Families
+
+Jobs
+
+Grades
+
+Positions
+
+Position Status
+
+Primary Employee Position
+
+Multi-Project Assignment
+
+Basic Headcount
+
+Basic Org Chart
+
+Audit.
+
+---
+
+# 63. ما يدخل Version 1
+
+Organization Versions
+
+Future-dated restructuring
+
+Salary Bands
+
+Headcount Budget
+
+Acting Positions
+
+Delegation
+
+Job Description Versioning
+
+Skills Framework
+
+Competency Mapping
+
+Certification Requirements
+
+Position Approval Workflow
+
+Advanced Span of Control
+
+Succession links
+
+Advanced Org Analytics.
+
+---
+
+# 64. Definition of Done
+
+نعتبر Module 02 ناجح عندما نقدر ننفذ السيناريو ده:
+
+```text
+Company Super Admin
+↓
+Creates Organization Structure
+↓
+Creates Telecom Business Unit
+↓
+Creates Projects Department
+↓
+Creates Project Manager Job
+↓
+Creates Grade G10
+↓
+Creates 5 Project Manager Positions
+↓
+Assigns Mohamed to one Position
+↓
+Sets Administrative Manager
+↓
+Sets Functional Manager
+↓
+Assigns Mohamed to 3 Projects
+↓
+Defines Allocation %
+↓
+System shows correct reporting lines
+↓
+Headcount & vacancy dashboard updates
+↓
+Permissions can use this hierarchy
+```
+
+ولو السيناريو ده يعمل صح، نكون جهزنا القاعدة التي سيبنى عليها Employee Master، Recruitment، Payroll، Attendance، KPI والصلاحيات.
+
+**الخطوة المنطقية التالية هي Module 03 — Identity, Users, Roles, Permissions & Security**، لأنه بعد أن عرفنا شكل الشركة والوظائف والعلاقات، نقدر الآن نحدد بدقة: *مين يشوف إيه، في أي شركة، إدارة، مشروع، فريق، وField، وبأي Action*.

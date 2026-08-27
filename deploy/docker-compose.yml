@@ -1,0 +1,56 @@
+# =============================================================================
+# Afro_HR_V2 — server stack for 100.122.6.64
+# Host 5432 is already taken on this server, so Postgres is published on 55432.
+# Bring up with:  docker compose -p afrohr up -d
+# =============================================================================
+services:
+  afrohr-db:
+    image: postgres:17-alpine
+    container_name: afrohr-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: afro_hr
+      POSTGRES_USER: afro
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      TZ: Africa/Cairo
+    ports:
+      - "55432:5432"
+    volumes:
+      - afrohr_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U afro -d afro_hr"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    networks: [afrohr]
+
+  # Runs every migration + seed once, in order, then exits 0.
+  # Re-running is safe only after `afrohr-db` is reset; migrations are not yet
+  # idempotent (no migration-history table until the ASP.NET layer owns it).
+  afrohr-migrate:
+    image: postgres:17-alpine
+    container_name: afrohr-migrate
+    depends_on:
+      afrohr-db:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - ../db:/db:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      'set -e;
+       for f in /db/migrations/V*.sql /db/seed/S*.sql; do
+         echo "-- applying $$f";
+         psql -h afrohr-db -U afro -d afro_hr -v ON_ERROR_STOP=1 --single-transaction -q -f "$$f";
+       done;
+       echo "migrations + seed applied"'
+    restart: "no"
+    networks: [afrohr]
+
+volumes:
+  afrohr_pgdata:
+
+networks:
+  afrohr:
+    name: afrohr

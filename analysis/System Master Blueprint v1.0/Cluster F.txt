@@ -1,0 +1,3889 @@
+تمام. ننتقل إلى **Cluster F**، وهنا نبدأ فعليًا بناء **Talent & Organization Capability Engine** للنظام.
+
+هناك نقطة يجب تثبيتها أولًا: المستند الحالي يثبت وجود **Organizational Development** كوظيفة مستقلة داخل People & Culture، كما أن الـManual يشير إلى technical competency أثناء التوظيف، وإلى training/certifications وHSE readiness أثناء onboarding، وإلى أن promotions/transfers تحتاج documented approvals. لكنه **لا يحتوي حاليًا على نموذج تشغيلي كامل** لإدارة Learning أو Competency أو Career أو Succession أو Talent Review أو Organization Design؛ لذلك ما يلي هو **التصميم المقترح للنظام** المبني فوق هذه الأسس، وليس نقلًا حرفيًا من الـManual.    
+
+# Cluster F
+
+## Learning, Competency, Certifications, Career, Talent Review, Succession, Internal Mobility & Organization Development ERD
+
+الفكرة الأساسية هنا:
+
+> **Skill ≠ Competency ≠ Course ≠ Certification ≠ Career Readiness ≠ Performance ≠ Potential ≠ Succession Readiness ≠ Position Criticality**
+
+هذه المفاهيم يجب أن تكون مترابطة، لكن لو جمعناها في Tables قليلة سنحصل على نظام Talent ضعيف جدًا.
+
+---
+
+# 1. الهدف المعماري لـCluster F
+
+Cluster F يجب أن يجيب عن أسئلة إدارية حقيقية مثل:
+
+```text
+ما المهارات المطلوبة لهذا الـPosition؟
+ما مستوى الموظف الحالي؟
+ما الـGap؟
+ما التدريب المطلوب لسد الـGap؟
+هل حصل الموظف فعلًا على الكفاءة أم حضر Course فقط؟
+هل الشهادة ما زالت Valid؟
+هل الموظف مؤهل للعمل في Project معين؟
+هل هو Ready للترقية؟
+إلى أي Position يمكنه الانتقال؟
+من هم Successors للـCritical Positions؟
+ما خطورة خروج موظف معين؟
+هل لدينا Bench Strength؟
+ما الإدارات التي لديها Capability Gap؟
+هل الهيكل التنظيمي الحالي مناسب؟
+ما الوظائف المتكررة أو غير الواضحة؟
+```
+
+---
+
+# 2. Cluster F Domains
+
+أقترح تقسيمه إلى 15 Sub-Domains:
+
+```text
+F01 Skill & Competency Framework
+F02 Job / Position Capability Requirements
+F03 Employee Skill & Competency Profile
+F04 Learning Catalog & Learning Paths
+F05 Training Planning & Delivery
+F06 Assessments & Learning Outcomes
+F07 Certification & License Management
+F08 Development Plans
+F09 Career Architecture & Career Paths
+F10 Career Readiness & Internal Mobility
+F11 Talent Review & Potential
+F12 Critical Position & Succession Planning
+F13 Talent Pools & Bench Strength
+F14 Organization Development & Organization Design
+F15 Capability Analytics & Workforce Insights
+```
+
+---
+
+# 3. Architecture Overview
+
+```text
+JOB ARCHITECTURE
+      │
+      ▼
+POSITION / JOB
+      │
+      ├──────── Competency Requirements
+      │
+      ├──────── Skill Requirements
+      │
+      ├──────── Certification Requirements
+      │
+      ▼
+EMPLOYEE
+      │
+      ├──── Current Skills
+      ├──── Current Competencies
+      ├──── Certifications
+      ├──── Performance History
+      ├──── Experience
+      ├──── Learning History
+      │
+      ▼
+CAPABILITY GAP ENGINE
+      │
+      ├──── Learning Plan
+      ├──── Development Plan
+      ├──── Career Readiness
+      ├──── Mobility Eligibility
+      │
+      ▼
+TALENT REVIEW
+      │
+      ├──── Performance
+      ├──── Potential
+      ├──── Readiness
+      ├──── Risk
+      │
+      ▼
+SUCCESSION
+      │
+      ├──── Critical Positions
+      ├──── Successors
+      ├──── Readiness
+      └──── Bench Strength
+
+                  ↓
+
+        ORGANIZATION DEVELOPMENT
+```
+
+---
+
+# 4. F01 — Skill Framework
+
+أول شيء: **Skill Library**.
+
+## skill
+
+```text
+skill
+-----
+skill_id PK
+tenant_id FK
+
+skill_code
+
+skill_name_ar
+skill_name_en
+skill_name_fr
+
+description
+
+skill_category_id FK
+
+skill_type
+
+measurement_method
+
+active_flag
+
+effective_from
+effective_to
+
+created_at
+created_by
+```
+
+---
+
+# 5. Skill Types
+
+مثلاً:
+
+```text
+Technical
+Functional
+Digital
+Software
+Tool
+Equipment
+Process
+Methodology
+Language
+Commercial
+Leadership
+Behavioral
+Safety
+Project-Specific
+Customer-Specific
+```
+
+مثال لشركة Telecom:
+
+```text
+Fiber Splicing
+OTDR Testing
+FTTH Design
+AutoCAD
+GIS
+OSP Survey
+Civil Works Supervision
+MS Project
+Primavera P6
+Power BI
+Excel
+Project Cost Control
+Risk Management
+Huawei Acceptance Process
+Nokia Documentation
+Working at Height
+```
+
+---
+
+# 6. Skill Category
+
+## skill_category
+
+```text
+skill_category_id PK
+
+parent_category_id FK nullable
+
+category_code
+
+category_name_ar
+category_name_en
+category_name_fr
+
+active_flag
+```
+
+Hierarchy:
+
+```text
+Telecom
+├── FTTH
+│   ├── Design
+│   ├── Civil
+│   ├── Fiber
+│   ├── Testing
+│   └── Acceptance
+│
+├── Mobile
+├── Transmission
+└── Data Center
+
+Management
+├── Project Management
+├── Commercial
+├── Leadership
+└── Finance
+```
+
+---
+
+# 7. Skill Proficiency Levels
+
+لا نخزن:
+
+```text
+Beginner / Good / Excellent
+```
+
+كـText.
+
+نعمل:
+
+## skill_proficiency_scale
+
+```text
+proficiency_scale_id PK
+
+scale_code
+scale_name
+
+min_level
+max_level
+```
+
+ثم:
+
+## skill_proficiency_level
+
+```text
+proficiency_level_id PK
+proficiency_scale_id FK
+
+level_number
+
+level_code
+level_name
+
+level_description
+
+behavioral_indicator
+```
+
+مثلاً:
+
+```text
+0 = No Exposure
+1 = Awareness
+2 = Basic
+3 = Working
+4 = Advanced
+5 = Expert
+```
+
+---
+
+# 8. Skill ≠ Competency
+
+هذه نقطة مهمة جدًا.
+
+**Skill**
+
+قدرة محددة:
+
+```text
+Fiber Splicing
+Power BI
+Excel
+Risk Analysis
+```
+
+أما:
+
+**Competency**
+
+قدرة أوسع تتكون من:
+
+```text
+Knowledge
+Skill
+Behavior
+Judgment
+Experience
+```
+
+مثلاً:
+
+```text
+Project Planning Competency
+Site Supervision Competency
+People Leadership Competency
+Commercial Management Competency
+```
+
+---
+
+# 9. Competency
+
+## competency
+
+```text
+competency_id PK
+tenant_id FK
+
+competency_code
+
+competency_name_ar
+competency_name_en
+competency_name_fr
+
+description
+
+competency_category_id FK
+
+competency_type
+
+assessment_method
+
+active_flag
+
+effective_from
+effective_to
+```
+
+---
+
+# 10. Competency Types
+
+```text
+Core
+Functional
+Technical
+Leadership
+Managerial
+Behavioral
+HSE
+Customer-Specific
+Role-Specific
+```
+
+---
+
+# 11. Competency Components
+
+Competency يمكن أن تعتمد على Skills متعددة.
+
+## competency_skill
+
+```text
+competency_skill_id PK
+
+competency_id FK
+skill_id FK
+
+required_skill_level
+
+weight
+
+mandatory_flag
+```
+
+مثلاً:
+
+```text
+Competency:
+FTTH Site Supervision
+
+Requires:
+Civil Works        Level 3
+Fiber Works        Level 3
+Reading Drawings   Level 3
+HSE                 Level 3
+QA/QC               Level 2
+Reporting           Level 2
+```
+
+---
+
+# 12. Competency Levels
+
+## competency_level
+
+```text
+competency_level_id PK
+
+competency_id FK
+
+level_number
+
+level_name
+
+level_description
+
+behavioral_indicators
+
+evidence_requirements
+```
+
+مثال:
+
+```text
+Level 1 – Understands
+Level 2 – Performs with Supervision
+Level 3 – Performs Independently
+Level 4 – Leads Others
+Level 5 – Subject Matter Expert
+```
+
+---
+
+# 13. F02 — Job Capability Requirements
+
+هنا نربط Cluster F بـCluster الخاص بـOrganization & Job Architecture.
+
+لا نضع requirements على اسم الوظيفة كنص.
+
+نعمل:
+
+## job_skill_requirement
+
+```text
+job_skill_requirement_id PK
+
+job_id FK
+skill_id FK
+
+required_level
+
+importance_weight
+
+mandatory_flag
+
+minimum_experience_months nullable
+
+effective_from
+effective_to
+```
+
+---
+
+# 14. Job Competency Requirement
+
+## job_competency_requirement
+
+```text
+job_competency_requirement_id PK
+
+job_id FK
+competency_id FK
+
+required_level
+
+importance_weight
+
+mandatory_flag
+
+effective_from
+effective_to
+```
+
+---
+
+# 15. Position Override
+
+قد يكون Job واحد لكن Position معين يحتاج Skill إضافية.
+
+مثلاً:
+
+```text
+Job:
+Project Manager
+
+Position:
+Project Manager – Huawei
+
+Position:
+Project Manager – Ericsson
+```
+
+لذلك:
+
+## position_capability_requirement
+
+```text
+position_capability_requirement_id PK
+
+position_id FK
+
+requirement_type
+
+skill_id FK nullable
+competency_id FK nullable
+certification_type_id FK nullable
+
+required_level nullable
+
+mandatory_flag
+
+effective_from
+effective_to
+```
+
+---
+
+# 16. Customer / Project Requirements
+
+لدينا في الواقع Employees يمكن أن يعملوا مع Huawei/Nokia/Ericsson، والـManual نفسه يشير إلى customer-specific requirements أثناء onboarding. 
+
+لذلك نحتاج:
+
+## assignment_capability_requirement
+
+```text
+assignment_capability_requirement_id PK
+
+project_id FK nullable
+customer_id FK nullable
+location_id FK nullable
+
+job_id FK nullable
+position_id FK nullable
+
+requirement_type
+
+skill_id FK nullable
+competency_id FK nullable
+certification_type_id FK nullable
+
+required_level nullable
+
+mandatory_flag
+
+effective_from
+effective_to
+```
+
+---
+
+# 17. مثال
+
+```text
+Project:
+Huawei FTTH Cairo
+
+Required:
+Huawei Site Access Certification
+Working at Heights
+FTTH OSP Level 3
+HSE Induction
+Customer Documentation Level 2
+```
+
+موظف قد يكون مناسبًا للوظيفة ولكن **غير مؤهل لهذا Project بالذات**.
+
+---
+
+# 18. F03 — Employee Skill Profile
+
+## employee_skill
+
+```text
+employee_skill_id PK
+
+employee_id FK
+skill_id FK
+
+current_level
+
+assessment_status
+
+source_type
+
+last_assessed_at
+
+assessed_by_user_id FK nullable
+
+confidence_score nullable
+
+valid_from
+valid_until nullable
+
+verification_status
+
+notes
+```
+
+---
+
+# 19. Skill Sources
+
+لا نعتبر كل Skill claim حقيقة.
+
+`source_type`:
+
+```text
+Employee Self Assessment
+Manager Assessment
+Formal Assessment
+Training Result
+Certification
+Project Experience
+Imported Historical Record
+Peer Assessment
+AI Inference
+```
+
+لكن:
+
+> AI Inference لا تتحول تلقائيًا إلى Verified Skill.
+
+---
+
+# 20. Skill Evidence
+
+## employee_skill_evidence
+
+```text
+skill_evidence_id PK
+
+employee_skill_id FK
+
+evidence_type
+
+source_entity_type
+source_entity_id
+
+document_id FK nullable
+
+evidence_date
+
+verified_by
+verified_at
+
+verification_status
+```
+
+مثلاً:
+
+```text
+Course completed
+Assessment passed
+Certification
+Project assignment
+Manager validation
+Work sample
+```
+
+---
+
+# 21. Employee Competency
+
+## employee_competency
+
+```text
+employee_competency_id PK
+
+employee_id FK
+competency_id FK
+
+current_level
+
+assessment_method
+
+assessment_id FK nullable
+
+last_assessment_date
+
+assessed_by_user_id FK
+
+valid_until nullable
+
+status
+```
+
+---
+
+# 22. Capability Gap
+
+بدلاً من تخزين gap يدويًا، نحسبها.
+
+## employee_capability_gap
+
+يمكن Materialized Table أو calculated view:
+
+```text
+employee_capability_gap
+-----------------------
+employee_id
+target_job_id
+target_position_id nullable
+
+requirement_type
+
+skill_id nullable
+competency_id nullable
+certification_type_id nullable
+
+required_level
+current_level
+
+gap_value
+
+criticality
+
+mandatory_flag
+
+gap_status
+```
+
+---
+
+# 23. مثال
+
+```text
+Employee: Ahmed
+
+Target Position:
+Senior Project Manager
+
+Requirement              Required   Current   Gap
+-------------------------------------------------
+Planning                     4         3       1
+Risk Management              4         2       2
+Commercial Mgmt              3         2       1
+Leadership                   4         3       1
+PMP Certification            Yes       Yes     0
+```
+
+---
+
+# 24. F04 — Learning Catalog
+
+Course ≠ Skill.
+
+Course هو intervention لتطوير Skill أو Competency.
+
+## learning_item
+
+```text
+learning_item_id PK
+
+tenant_id FK
+
+learning_code
+
+learning_title_ar
+learning_title_en
+learning_title_fr
+
+learning_type
+
+description
+
+provider_type
+provider_id FK nullable
+
+delivery_mode
+
+duration_hours
+
+difficulty_level
+
+language_code
+
+cost_amount nullable
+currency_id FK nullable
+
+certificate_issued_flag
+
+assessment_required
+
+passing_score nullable
+
+active_flag
+```
+
+---
+
+# 25. Learning Types
+
+```text
+Course
+Workshop
+Webinar
+Bootcamp
+Coaching
+Mentoring
+On-the-Job Training
+Shadowing
+Job Rotation
+Self Study
+E-learning
+Simulation
+Technical Practice
+Leadership Program
+External Certification Preparation
+```
+
+---
+
+# 26. Learning Item Capability Map
+
+## learning_item_capability
+
+```text
+learning_item_capability_id PK
+
+learning_item_id FK
+
+skill_id FK nullable
+competency_id FK nullable
+
+expected_level_from nullable
+expected_level_to nullable
+
+contribution_weight
+
+primary_flag
+```
+
+وهنا لا نقول:
+
+> الموظف حضر Course إذًا أصبح Level 4.
+
+الـCourse قد يساعد، لكن competency change يحتاج Assessment.
+
+---
+
+# 27. Learning Prerequisite
+
+## learning_prerequisite
+
+```text
+learning_prerequisite_id PK
+
+learning_item_id FK
+
+prerequisite_type
+
+prerequisite_learning_item_id FK nullable
+skill_id FK nullable
+competency_id FK nullable
+certification_type_id FK nullable
+
+minimum_level nullable
+
+mandatory_flag
+```
+
+---
+
+# 28. Learning Path
+
+## learning_path
+
+```text
+learning_path_id PK
+
+path_code
+path_name
+
+path_type
+
+target_job_id FK nullable
+target_position_id FK nullable
+
+description
+
+active_flag
+```
+
+---
+
+# 29. Learning Path Item
+
+## learning_path_item
+
+```text
+learning_path_item_id PK
+
+learning_path_id FK
+learning_item_id FK
+
+sequence_number
+
+mandatory_flag
+
+minimum_score nullable
+
+completion_required_flag
+```
+
+مثلاً:
+
+```text
+FTTH Supervisor Development Path
+1 HSE Fundamentals
+2 OSP Civil
+3 Fiber Installation
+4 OTDR Testing
+5 Quality Inspection
+6 Site Documentation
+7 Supervisor Assessment
+```
+
+---
+
+# 30. F05 — Training Demand
+
+التدريب لا يبدأ من "مين عاوز Course؟"
+
+يجب أن يأتي من Demand Source.
+
+## learning_need
+
+```text
+learning_need_id PK
+
+employee_id FK nullable
+team_id FK nullable
+department_id FK nullable
+project_id FK nullable
+
+need_source
+
+skill_id FK nullable
+competency_id FK nullable
+
+current_level
+target_level
+
+priority
+
+business_reason
+
+requested_by
+
+identified_at
+
+status
+```
+
+---
+
+# 31. Learning Need Sources
+
+```text
+Capability Gap
+Performance Review
+Development Plan
+Manager Request
+Employee Request
+New Technology
+New Project
+Customer Requirement
+Compliance
+Certification Expiry
+Succession Plan
+Promotion Readiness
+Organizational Change
+Audit Finding
+HSE Requirement
+```
+
+---
+
+# 32. Annual Learning Plan
+
+## learning_plan
+
+```text
+learning_plan_id PK
+
+tenant_id FK
+company_id FK
+
+plan_year
+
+plan_name
+
+budget_amount
+
+currency_id FK
+
+status
+
+prepared_by
+approved_by
+
+approved_at
+```
+
+---
+
+# 33. Learning Plan Line
+
+## learning_plan_line
+
+```text
+learning_plan_line_id PK
+
+learning_plan_id FK
+
+learning_need_id FK nullable
+learning_item_id FK
+
+target_population_type
+
+department_id FK nullable
+project_id FK nullable
+
+planned_participants
+
+planned_cost
+
+planned_quarter
+
+priority
+
+status
+```
+
+---
+
+# 34. Training Session
+
+## learning_session
+
+```text
+learning_session_id PK
+
+learning_item_id FK
+
+session_code
+
+provider_id FK nullable
+instructor_id FK nullable
+
+start_datetime
+end_datetime
+
+delivery_mode
+
+location_id FK nullable
+meeting_url nullable
+
+capacity
+
+cost
+
+currency_id FK
+
+session_status
+```
+
+---
+
+# 35. Enrollment
+
+## learning_enrollment
+
+```text
+learning_enrollment_id PK
+
+learning_session_id FK
+employee_id FK
+
+enrollment_source
+
+enrolled_at
+
+approval_status
+
+attendance_status
+
+completion_status
+
+final_score nullable
+
+pass_flag nullable
+
+completion_date nullable
+
+certificate_id FK nullable
+```
+
+---
+
+# 36. Attendance داخل Training
+
+لا تستخدم Attendance Cluster B نفسه كـtraining attendance transaction.
+
+نعمل:
+
+## learning_session_attendance
+
+```text
+learning_session_attendance_id PK
+
+learning_session_id FK
+employee_id FK
+
+session_date
+
+attendance_status
+
+check_in_time nullable
+check_out_time nullable
+
+attendance_percentage
+
+recorded_by
+```
+
+Cluster B للعمل اليومي.
+
+Cluster F لحضور التدريب.
+
+---
+
+# 37. Training Cost
+
+## learning_cost
+
+```text
+learning_cost_id PK
+
+learning_session_id FK
+
+cost_type
+
+amount
+currency_id FK
+
+vendor_id FK nullable
+
+invoice_reference nullable
+
+project_id FK nullable
+cost_center_id FK nullable
+```
+
+أنواع:
+
+```text
+Trainer
+Venue
+Travel
+Accommodation
+Material
+Certification Exam
+Platform
+Meals
+Other
+```
+
+---
+
+# 38. F06 — Assessment Engine
+
+هذا Engine مهم جدًا ويمكن أن يستخدمه Recruitment وLearning وCareer.
+
+## assessment_definition
+
+```text
+assessment_definition_id PK
+
+assessment_code
+
+assessment_name
+
+assessment_type
+
+target_type
+
+scoring_method
+
+passing_score
+
+validity_months nullable
+
+active_flag
+```
+
+---
+
+# 39. Assessment Types
+
+```text
+Skill Assessment
+Competency Assessment
+Technical Assessment
+Practical Assessment
+Behavioral Assessment
+Leadership Assessment
+Language Assessment
+Certification Exam
+Readiness Assessment
+360 Assessment
+Knowledge Test
+```
+
+---
+
+# 40. Assessment Instance
+
+## employee_assessment
+
+```text
+employee_assessment_id PK
+
+employee_id FK
+
+assessment_definition_id FK
+
+assessment_reason
+
+related_learning_session_id FK nullable
+related_job_id FK nullable
+related_position_id FK nullable
+
+scheduled_at
+completed_at
+
+assessor_user_id FK nullable
+external_assessor_id FK nullable
+
+score
+result
+
+assessment_status
+```
+
+---
+
+# 41. Assessment Result Detail
+
+## assessment_result
+
+```text
+assessment_result_id PK
+
+employee_assessment_id FK
+
+skill_id FK nullable
+competency_id FK nullable
+
+measured_level
+
+score
+
+result
+
+assessor_comment
+```
+
+---
+
+# 42. F07 — Certifications
+
+Certification ≠ Training.
+
+موظف قد يحمل certification من جهة خارجية بدون حضور Course داخلي.
+
+## certification_type
+
+```text
+certification_type_id PK
+
+certification_code
+certification_name
+
+issuer_type
+
+certification_category
+
+validity_required_flag
+default_validity_months nullable
+
+renewal_required
+
+verification_method
+
+active_flag
+```
+
+---
+
+# 43. Employee Certification
+
+## employee_certification
+
+```text
+employee_certification_id PK
+
+employee_id FK
+certification_type_id FK
+
+certificate_number
+
+issuer_name
+
+issue_date
+expiry_date nullable
+
+verification_status
+
+verified_at
+verified_by
+
+document_id FK
+
+status
+
+renewal_status
+```
+
+---
+
+# 44. Certification Status
+
+```text
+Pending Verification
+Valid
+Expiring Soon
+Expired
+Suspended
+Revoked
+Rejected
+Renewal In Progress
+```
+
+---
+
+# 45. Certification Requirement
+
+## certification_requirement
+
+```text
+certification_requirement_id PK
+
+requirement_scope
+
+job_id FK nullable
+position_id FK nullable
+project_id FK nullable
+customer_id FK nullable
+location_id FK nullable
+
+certification_type_id FK
+
+mandatory_flag
+
+minimum_validity_days
+
+effective_from
+effective_to
+```
+
+---
+
+# 46. مثال مهم
+
+Technician قد يمتلك:
+
+```text
+Professional Practice License
+Working at Heights
+Customer Safety Induction
+Technical Skill Certificate
+```
+
+الـManual بالفعل يشترط بعض skill licenses/certificates وHSE/customer requirements أثناء onboarding، لذلك يجب ربط certification readiness بعملية deployment وليس مجرد Employee Profile. 
+
+---
+
+# 47. Deployment Readiness
+
+نستطيع تكوين View:
+
+```text
+employee_assignment_readiness
+-----------------------------
+employee_id
+project_id
+position_id
+
+skill_ready
+competency_ready
+certification_ready
+hse_ready
+medical_ready
+
+overall_ready
+
+blocking_reason
+```
+
+وهذه تغذي:
+
+```text
+Employee Activation
+Project Assignment
+Roster Eligibility
+```
+
+---
+
+# 48. Certification Expiry Engine
+
+Events:
+
+```text
+certification.expiring_90_days
+certification.expiring_60_days
+certification.expiring_30_days
+certification.expired
+```
+
+ثم:
+
+```text
+Employee
+Manager
+HR Operations
+Training Team
+HSE
+```
+
+حسب النوع.
+
+---
+
+# 49. F08 — Individual Development Plan
+
+## development_plan
+
+```text
+development_plan_id PK
+
+employee_id FK
+
+plan_type
+
+plan_year
+
+source_type
+
+performance_review_id FK nullable
+talent_review_id FK nullable
+succession_candidate_id FK nullable
+
+target_job_id FK nullable
+target_position_id FK nullable
+
+start_date
+target_completion_date
+
+status
+
+employee_acknowledged
+manager_approved
+hr_approved
+```
+
+---
+
+# 50. Development Plan Item
+
+## development_plan_item
+
+```text
+development_plan_item_id PK
+
+development_plan_id FK
+
+development_area_type
+
+skill_id FK nullable
+competency_id FK nullable
+
+current_level nullable
+target_level nullable
+
+development_action_type
+
+learning_item_id FK nullable
+
+action_description
+
+owner_type
+
+target_date
+
+status
+
+completion_evidence_id FK nullable
+```
+
+---
+
+# 51. Development Actions لا يجب أن تكون Training فقط
+
+```text
+Formal Course
+Coaching
+Mentoring
+Shadowing
+Stretch Assignment
+Job Rotation
+Project Assignment
+Acting Role
+Reading
+Certification
+Workshop
+Cross-Functional Assignment
+Leadership Assignment
+```
+
+وهذا مهم للـSuccession.
+
+---
+
+# 52. F09 — Career Architecture
+
+Cluster 02 عندنا يملك Job Architecture.
+
+Cluster F يملك **Career Relationships** بين الوظائف.
+
+## career_track
+
+```text
+career_track_id PK
+
+track_code
+track_name
+
+track_type
+
+job_family_id FK
+
+description
+
+active_flag
+```
+
+---
+
+# 53. Career Track Types
+
+```text
+Technical
+Professional
+Managerial
+Leadership
+Project Management
+Commercial
+Support
+```
+
+حتى لا نجبر الخبير الفني أن يصبح Manager لكي يترقى.
+
+---
+
+# 54. Career Level
+
+## career_level
+
+```text
+career_level_id PK
+
+career_track_id FK
+
+level_code
+
+level_name
+
+sequence_number
+
+grade_id FK nullable
+
+description
+```
+
+---
+
+# 55. Job Career Mapping
+
+## job_career_level
+
+```text
+job_career_level_id PK
+
+job_id FK
+career_level_id FK
+
+primary_mapping_flag
+```
+
+---
+
+# 56. Career Path Transition
+
+هذه Table محورية.
+
+## career_transition
+
+```text
+career_transition_id PK
+
+from_job_id FK
+to_job_id FK
+
+transition_type
+
+difficulty_level
+
+minimum_tenure_months nullable
+
+minimum_performance_rating nullable
+
+minimum_readiness_score nullable
+
+approval_required
+
+active_flag
+```
+
+---
+
+# 57. Transition Types
+
+```text
+Promotion
+Lateral Move
+Cross-Functional Move
+Technical Progression
+Managerial Progression
+Project Move
+Temporary Assignment
+Development Move
+Demotion
+```
+
+---
+
+# 58. Transition Requirement
+
+## career_transition_requirement
+
+```text
+career_transition_requirement_id PK
+
+career_transition_id FK
+
+requirement_type
+
+skill_id FK nullable
+competency_id FK nullable
+certification_type_id FK nullable
+
+required_level nullable
+
+mandatory_flag
+```
+
+---
+
+# 59. Career Map Example
+
+```text
+Project Coordinator
+       ↓
+Project Engineer
+       ↓
+Senior Project Engineer
+       ↓
+Project Manager
+       ↓
+Senior Project Manager
+       ↓
+Program Manager
+       ↓
+PMO / Sector Leadership
+```
+
+لكن يمكن أن يكون:
+
+```text
+Senior Engineer
+        ├──── Project Manager Track
+        └──── Technical Expert Track
+```
+
+---
+
+# 60. F10 — Career Readiness Engine
+
+## employee_career_readiness
+
+يفضل أن تكون calculated snapshot.
+
+```text
+employee_career_readiness_id PK
+
+employee_id FK
+target_job_id FK
+target_position_id FK nullable
+
+assessment_date
+
+skills_score
+competency_score
+certification_score
+experience_score
+performance_score
+learning_score
+
+overall_readiness_score
+
+readiness_status
+
+blocking_gap_count
+
+calculation_rule_version
+
+calculated_at
+```
+
+---
+
+# 61. Readiness Status
+
+```text
+Not Eligible
+Development Required
+Partially Ready
+Ready Soon
+Ready Now
+```
+
+---
+
+# 62. نقطة مهمة
+
+`Ready Now` لا تعني:
+
+> Promote Automatically.
+
+هي تعني فقط:
+
+```text
+Capability Ready
+```
+
+ولا تزال هناك:
+
+```text
+Position availability
+Budget
+Manpower approval
+Managerial approval
+Talent review
+Employment rules
+```
+
+---
+
+# 63. Internal Opportunity
+
+## internal_opportunity
+
+```text
+internal_opportunity_id PK
+
+position_id FK
+
+opportunity_type
+
+opening_reason
+
+open_date
+close_date
+
+eligibility_rule_id FK
+
+visibility_scope
+
+status
+```
+
+---
+
+# 64. Internal Application
+
+## internal_application
+
+```text
+internal_application_id PK
+
+internal_opportunity_id FK
+employee_id FK
+
+application_date
+
+application_source
+
+eligibility_status
+
+readiness_score
+
+manager_notification_status
+
+application_status
+
+selected_flag
+```
+
+---
+
+# 65. Internal Mobility Request
+
+## employee_mobility_request
+
+```text
+mobility_request_id PK
+
+employee_id FK
+
+mobility_type
+
+current_position_id FK
+requested_position_id FK nullable
+requested_department_id FK nullable
+requested_project_id FK nullable
+requested_location_id FK nullable
+
+reason
+
+requested_at
+
+readiness_assessment_id FK nullable
+
+workflow_instance_id FK
+
+status
+```
+
+---
+
+# 66. Internal Mobility لا تساوي Transfer Transaction
+
+Cluster F يحدد:
+
+```text
+Candidate
+Eligibility
+Readiness
+Selection
+```
+
+أما تنفيذ نقل الموظف رسميًا في Employee Master يكون عبر:
+
+```text
+Approved Employee Movement
+```
+
+إلى Cluster الخاص بالـEmployee Lifecycle.
+
+---
+
+# 67. F11 — Talent Review
+
+هذه ليست Performance Review ثانية.
+
+Performance يجيب:
+
+> ماذا حقق الموظف؟
+
+Talent Review يجيب:
+
+> ما القيمة المستقبلية والجاهزية والمخاطر المتعلقة بهذا الموظف؟
+
+---
+
+# 68. Talent Review Cycle
+
+## talent_review_cycle
+
+```text
+talent_review_cycle_id PK
+
+cycle_name
+cycle_year
+
+company_id FK
+
+start_date
+end_date
+
+review_scope
+
+status
+
+calibration_required
+```
+
+---
+
+# 69. Talent Review
+
+## employee_talent_review
+
+```text
+employee_talent_review_id PK
+
+talent_review_cycle_id FK
+employee_id FK
+
+reviewer_user_id FK
+
+performance_rating_snapshot
+
+potential_rating
+
+readiness_rating
+
+retention_risk
+
+loss_impact
+
+mobility_willingness
+
+critical_skill_flag
+
+successor_flag
+
+talent_category
+
+manager_comment
+
+hr_comment
+
+calibrated_flag
+
+finalized_at
+```
+
+---
+
+# 70. Performance vs Potential
+
+نفصلهم.
+
+مثلاً:
+
+```text
+Performance:
+Low / Medium / High
+
+Potential:
+Low / Medium / High
+```
+
+وينتج 9-Box.
+
+---
+
+# 71. 9-Box
+
+```text
+                 POTENTIAL
+             Low   Med   High
+          ┌──────┬──────┬──────┐
+High Perf │ P7   │ P8   │ P9   │
+          ├──────┼──────┼──────┤
+Med Perf  │ P4   │ P5   │ P6   │
+          ├──────┼──────┼──────┤
+Low Perf  │ P1   │ P2   │ P3   │
+          └──────┴──────┴──────┘
+```
+
+لكن لا نخزن `9box = P9` فقط.
+
+نحتفظ بالـdimensions الأساسية.
+
+---
+
+# 72. Potential Rating
+
+لا يجب أن تكون:
+
+> Manager feels employee has high potential.
+
+نحتاج Criteria.
+
+## potential_assessment_dimension
+
+```text
+potential_dimension_id PK
+
+dimension_code
+dimension_name
+
+weight
+
+description
+```
+
+مثل:
+
+```text
+Learning Agility
+Leadership Capacity
+Problem Complexity
+Adaptability
+Aspiration
+Mobility
+Strategic Thinking
+People Influence
+```
+
+---
+
+# 73. Employee Potential Score
+
+## employee_potential_score
+
+```text
+employee_potential_score_id PK
+
+employee_talent_review_id FK
+potential_dimension_id FK
+
+score
+evidence_comment
+```
+
+---
+
+# 74. Calibration
+
+أحد أخطر الأخطاء في Talent Systems هو الاعتماد على Manager Rating فقط.
+
+## talent_calibration_session
+
+```text
+calibration_session_id PK
+
+talent_review_cycle_id FK
+
+business_unit_id FK nullable
+
+session_date
+
+facilitator_user_id FK
+
+status
+```
+
+---
+
+# 75. Calibration Participant
+
+## talent_calibration_participant
+
+```text
+calibration_participant_id PK
+
+calibration_session_id FK
+user_id FK
+
+role
+```
+
+---
+
+# 76. Calibration Decision
+
+## talent_calibration_decision
+
+```text
+calibration_decision_id PK
+
+calibration_session_id FK
+employee_talent_review_id FK
+
+original_performance
+final_performance
+
+original_potential
+final_potential
+
+change_reason
+
+approved_by
+```
+
+وبالتالي لا نفقد original manager view.
+
+---
+
+# 77. Retention Risk
+
+## employee_retention_risk
+
+```text
+employee_retention_risk_id PK
+
+employee_id FK
+
+assessment_date
+
+flight_risk
+loss_impact
+
+risk_level
+
+risk_reason_code
+
+reviewer_user_id FK
+
+mitigation_required
+```
+
+---
+
+# 78. Flight Risk ≠ Loss Impact
+
+مثلاً:
+
+```text
+Employee A
+Flight Risk = High
+Loss Impact = Low
+
+Employee B
+Flight Risk = Low
+Loss Impact = Critical
+```
+
+يحتاجان إجراءات مختلفة.
+
+---
+
+# 79. F12 — Critical Position
+
+Succession يجب أن يبدأ من **Position**, وليس Employee.
+
+## position_criticality_assessment
+
+```text
+position_criticality_assessment_id PK
+
+position_id FK
+
+assessment_date
+
+business_impact_score
+replacement_difficulty_score
+scarcity_score
+customer_dependency_score
+revenue_dependency_score
+safety_dependency_score
+knowledge_dependency_score
+
+criticality_score
+
+criticality_level
+
+assessed_by
+approved_by
+```
+
+---
+
+# 80. Position Criticality
+
+مثلاً:
+
+```text
+Normal
+Important
+Critical
+Mission Critical
+```
+
+---
+
+# 81. لماذا Position وليس Job؟
+
+قد يكون لدينا:
+
+```text
+Job = Project Manager
+```
+
+لكن:
+
+```text
+Position A = PM Project Small
+Position B = PM Strategic Customer
+```
+
+الثاني قد يكون Critical جدًا.
+
+---
+
+# 82. Succession Plan
+
+## succession_plan
+
+```text
+succession_plan_id PK
+
+position_id FK
+
+plan_year
+
+position_criticality_snapshot
+
+incumbent_employee_id FK nullable
+
+vacancy_risk
+
+emergency_cover_required
+
+status
+
+owner_user_id FK
+
+approved_at
+```
+
+---
+
+# 83. Succession Candidate
+
+## succession_candidate
+
+```text
+succession_candidate_id PK
+
+succession_plan_id FK
+employee_id FK
+
+nomination_source
+
+readiness_level
+
+readiness_score
+
+potential_rating_snapshot
+performance_rating_snapshot
+
+strengths_summary
+development_gaps
+
+retention_risk
+
+priority_rank
+
+candidate_status
+
+nominated_at
+```
+
+---
+
+# 84. Succession Readiness
+
+```text
+Ready Now
+Ready < 6 Months
+Ready 6–12 Months
+Ready 1–2 Years
+Ready > 2 Years
+Emergency Cover Only
+Not Ready
+```
+
+---
+
+# 85. Succession Candidate Gap
+
+## succession_candidate_gap
+
+```text
+succession_candidate_gap_id PK
+
+succession_candidate_id FK
+
+gap_type
+
+skill_id FK nullable
+competency_id FK nullable
+certification_type_id FK nullable
+
+current_level
+required_level
+
+development_action_required
+```
+
+ثم يربط تلقائيًا بـDevelopment Plan.
+
+---
+
+# 86. Emergency Successor
+
+مهم جدًا.
+
+قد يكون الشخص غير Ready بالكامل لكن يستطيع تولي المهمة مؤقتًا.
+
+```text
+Emergency Cover ≠ Permanent Successor
+```
+
+لذلك نحافظ على:
+
+```text
+emergency_cover_flag
+```
+
+منفصل عن readiness.
+
+---
+
+# 87. Succession Coverage
+
+نحسب:
+
+```text
+Critical Position Coverage
+```
+
+مثلاً:
+
+```text
+Critical Positions = 40
+
+With Ready Now Successor = 18
+With Ready <12m = 12
+No Successor = 10
+```
+
+---
+
+# 88. Bench Strength
+
+```text
+Bench Strength Ratio =
+Ready Successors / Critical Positions
+```
+
+لكن يمكن تحليلها:
+
+```text
+Ready Now Bench
+Ready Soon Bench
+Long-Term Bench
+```
+
+---
+
+# 89. F13 — Talent Pools
+
+Succession مرتبط بPosition محدد.
+
+Talent Pool أوسع.
+
+## talent_pool
+
+```text
+talent_pool_id PK
+
+pool_code
+pool_name
+
+pool_type
+
+business_unit_id FK nullable
+job_family_id FK nullable
+
+eligibility_rule_id FK
+
+active_flag
+```
+
+---
+
+# 90. Talent Pool Examples
+
+```text
+Future Project Managers
+Emerging Leaders
+FTTH Technical Experts
+High Potential Engineers
+Critical Field Supervisors
+Commercial Leadership Pool
+```
+
+---
+
+# 91. Talent Pool Member
+
+## talent_pool_member
+
+```text
+talent_pool_member_id PK
+
+talent_pool_id FK
+employee_id FK
+
+entry_date
+
+entry_reason
+
+readiness_level
+
+status
+
+review_date
+
+exit_date nullable
+exit_reason nullable
+```
+
+---
+
+# 92. F14 — Organization Development
+
+هذه المنطقة مختلفة عن Organization Structure نفسها.
+
+Cluster Organization Structure يملك:
+
+```text
+Company
+Business Unit
+Department
+Position
+Reporting Line
+Job
+Grade
+```
+
+أما OD في Cluster F فيحلل ويقترح التغيير.
+
+---
+
+# 93. Organization Design Review
+
+## organization_design_review
+
+```text
+organization_design_review_id PK
+
+review_code
+
+company_id FK
+business_unit_id FK nullable
+department_id FK nullable
+
+review_reason
+
+baseline_date
+
+review_start_date
+review_end_date
+
+review_status
+
+owner_user_id FK
+
+approved_by nullable
+```
+
+---
+
+# 94. Review Reasons
+
+```text
+Growth
+Restructuring
+Cost Reduction
+New Business
+New Customer
+New Geography
+Merger
+Project Expansion
+Productivity Issue
+Leadership Change
+Span of Control Issue
+Duplicated Roles
+Capability Gap
+```
+
+---
+
+# 95. Organization Snapshot
+
+حتى لا تتغير الأرقام أثناء التحليل:
+
+## organization_snapshot
+
+```text
+organization_snapshot_id PK
+
+organization_design_review_id FK
+
+snapshot_date
+
+structure_version_id FK
+
+employee_count
+position_count
+vacancy_count
+
+total_cost nullable
+
+snapshot_payload
+```
+
+---
+
+# 96. Organization Diagnostic
+
+## organization_diagnostic
+
+```text
+organization_diagnostic_id PK
+
+organization_design_review_id FK
+
+diagnostic_type
+
+organization_entity_type
+organization_entity_id
+
+metric_name
+metric_value
+
+threshold_value nullable
+
+diagnostic_status
+```
+
+---
+
+# 97. Diagnostics
+
+مثلاً:
+
+```text
+Span of Control
+Management Layers
+Manager-to-Employee Ratio
+Vacancy Rate
+Role Duplication
+Cost per Employee
+Capability Gap
+Critical Position Coverage
+Succession Coverage
+Turnover
+Workload Distribution
+Grade Compression
+Organization Depth
+```
+
+---
+
+# 98. Span of Control
+
+مثلاً:
+
+```text
+Manager A
+Direct Reports = 2
+
+Manager B
+Direct Reports = 24
+```
+
+النظام يرفع Signals.
+
+لكن لا يقول تلقائيًا إن الهيكل غلط.
+
+---
+
+# 99. Organization Design Proposal
+
+## organization_design_proposal
+
+```text
+organization_design_proposal_id PK
+
+organization_design_review_id FK
+
+proposal_version
+
+proposal_name
+
+business_case
+
+expected_benefit
+
+estimated_cost_impact
+
+headcount_impact
+
+status
+```
+
+---
+
+# 100. Proposed Organization Change
+
+## organization_change_item
+
+```text
+organization_change_item_id PK
+
+organization_design_proposal_id FK
+
+change_type
+
+target_entity_type
+target_entity_id nullable
+
+parent_entity_id nullable
+
+proposed_name nullable
+
+proposed_parent_id nullable
+
+proposed_manager_position_id nullable
+
+effective_date nullable
+
+business_reason
+
+status
+```
+
+---
+
+# 101. Change Types
+
+```text
+Create Department
+Merge Department
+Close Department
+Rename Department
+Move Department
+Create Position
+Close Position
+Move Position
+Change Reporting Line
+Change Job
+Change Grade
+Change Span
+Create Team
+Split Team
+```
+
+---
+
+# 102. Approval وبعدها فقط Implementation
+
+المسار:
+
+```text
+OD Review
+↓
+Proposal
+↓
+Simulation
+↓
+Approval
+↓
+Effective Date
+↓
+Organization Structure Change
+```
+
+Cluster F **لا يعدل الـlive org structure أثناء الدراسة**.
+
+---
+
+# 103. Scenario Simulation
+
+## organization_scenario
+
+```text
+organization_scenario_id PK
+
+organization_design_review_id FK
+
+scenario_name
+
+scenario_version
+
+headcount
+manager_count
+layer_count
+
+annual_cost
+
+position_count
+critical_position_count
+
+description
+```
+
+مثلاً:
+
+```text
+Scenario A – Current
+Scenario B – Merge 2 Departments
+Scenario C – Create Regional Structure
+```
+
+---
+
+# 104. Position Impact
+
+## organization_change_employee_impact
+
+```text
+impact_id PK
+
+organization_change_item_id FK
+
+employee_id FK
+
+current_position_id FK
+
+proposed_position_id FK nullable
+
+impact_type
+
+salary_impact_flag
+location_impact_flag
+reporting_change_flag
+
+employee_action_required
+
+status
+```
+
+---
+
+# 105. أنواع Impact
+
+```text
+No Change
+Reporting Line Change
+Transfer
+Promotion
+Demotion
+Role Change
+Location Change
+Position Redundant
+Redeployment Required
+```
+
+ثم تذهب إلى Employee Movement workflow.
+
+---
+
+# 106. Organization Capability Map
+
+هذه من أقوى Outputs.
+
+يمكن تحليل:
+
+```text
+Department
+Required Capability
+Available Capability
+Gap
+Risk
+```
+
+مثلاً:
+
+```text
+FTTH Delivery
+
+Capability             Required    Available    Gap
+----------------------------------------------------
+Project Management        45           39        6
+OSP Supervision            80           55       25
+OTDR Testing               40           38        2
+Commercial Mgmt            20            8       12
+```
+
+---
+
+# 107. F15 — Capability Demand
+
+## workforce_capability_demand
+
+```text
+capability_demand_id PK
+
+company_id FK
+
+business_unit_id FK nullable
+department_id FK nullable
+project_id FK nullable
+
+forecast_period
+
+capability_type
+
+skill_id FK nullable
+competency_id FK nullable
+
+required_headcount
+
+required_level
+
+demand_source
+
+status
+```
+
+---
+
+# 108. Capability Supply
+
+يمكن احتسابه من:
+
+```text
+employee_skill
+employee_competency
+availability
+assignment
+certification validity
+```
+
+فينتج:
+
+```text
+Supply vs Demand
+```
+
+---
+
+# 109. Example
+
+```text
+2027 FTTH Target
+
+Need:
+120 Project Managers
+350 Supervisors
+600 Fiber Technicians
+
+Qualified Supply:
+95 PMs
+290 Supervisors
+480 Technicians
+
+Gap:
+25 PM
+60 Supervisors
+120 Technicians
+```
+
+وهنا يتحول Cluster F إلى input لـ:
+
+```text
+Recruitment
+Learning
+Internal Mobility
+Manpower Planning
+```
+
+---
+
+# 110. Relationship with Recruitment
+
+عند Candidate Assessment:
+
+```text
+Candidate
+↓
+Technical Assessment
+↓
+Skill Profile
+↓
+Hire
+↓
+Employee Skill Profile
+```
+
+لكن نحتاج قاعدة:
+
+> Candidate assessment لا يتحول دائمًا إلى Verified Employee Competency.
+
+يمكن نقل النتيجة كـhistorical evidence ثم إعادة assessment حسب السياسة.
+
+---
+
+# 111. Relationship with Performance
+
+Performance يعطي:
+
+```text
+Performance Rating
+Goals
+Behavior Ratings
+Development Areas
+```
+
+Cluster F يأخذ هذه كـinputs.
+
+ولكن:
+
+```text
+Performance Rating ≠ Potential
+```
+
+وهذا فصل مهم جدًا.
+
+---
+
+# 112. Relationship with Cluster E
+
+Employee Relations يمكن أن يرسل فقط approved outcome إذا كان له تأثير رسمي.
+
+مثلاً:
+
+```text
+Active Final Warning
+```
+
+قد يؤثر على Mobility Eligibility حسب Policy.
+
+لكن Cluster F لا يرى:
+
+```text
+Complaint details
+Witnesses
+Evidence
+Open allegations
+```
+
+---
+
+# 113. Relationship with Payroll / Compensation
+
+Promotion selection يحدث في Cluster F.
+
+لكن salary change:
+
+```text
+Approved Promotion
+↓
+Employee Movement
+↓
+Compensation Change
+↓
+Payroll
+```
+
+لا يقوم Cluster F بتعديل salary.
+
+الـManual يشترط أصلًا أن promotions/transfers وأي salary change تكون مدعومة approvals قبل التنفيذ. 
+
+---
+
+# 114. Relationship with HSE
+
+الـCertification Engine يكون shared.
+
+لكن يمكن ownership هكذا:
+
+```text
+Certification Master
+      ↓
+Cluster F
+
+HSE Certification Requirement
+      ↓
+HSE Module
+
+Employee Certificate
+      ↓
+Cluster F shared record
+```
+
+ولا ننشئ نسختين من شهادة الموظف.
+
+---
+
+# 115. Relationship with Projects
+
+Project Manager يستطيع البحث:
+
+```text
+Give me employees available for Huawei Project
+```
+
+ويطبق النظام:
+
+```text
+Job Fit
++ Skill Fit
++ Certification Validity
++ HSE Readiness
++ Customer Approval
++ Availability
+```
+
+فينتج:
+
+```text
+Eligible
+Conditionally Eligible
+Not Eligible
+```
+
+---
+
+# 116. Skill Passport
+
+كل موظف يمكن أن يكون لديه:
+
+# Employee Capability Passport
+
+```text
+Employee
+Position
+Job Family
+
+Skills
+Competencies
+Certifications
+Languages
+Training
+Project Experience
+Assessments
+Career Interests
+Readiness
+Development Plan
+```
+
+لكن Employee يرى بياناته، بينما Talent classifications يمكن أن تكون restricted.
+
+---
+
+# 117. Career Preferences
+
+## employee_career_preference
+
+```text
+employee_career_preference_id PK
+
+employee_id FK
+
+preferred_job_family_id FK nullable
+preferred_job_id FK nullable
+
+mobility_type
+
+preferred_location_id FK nullable
+
+willing_to_relocate
+
+managerial_interest
+technical_track_interest
+
+career_interest_notes
+
+updated_at
+```
+
+هذا يمنع خطأ:
+
+> HR يضع الموظف successor لوظيفة لا يريدها أصلًا.
+
+---
+
+# 118. Mobility Constraint
+
+## employee_mobility_constraint
+
+```text
+mobility_constraint_id PK
+
+employee_id FK
+
+constraint_type
+
+constraint_value
+
+valid_from
+valid_to nullable
+
+employee_declared_flag
+
+status
+```
+
+مثل:
+
+```text
+Location
+Travel
+Customer
+Shift
+Availability Date
+```
+
+---
+
+# 119. Talent Review Security
+
+ليست كل بيانات Talent Review ظاهرة للموظف.
+
+مثلاً:
+
+```text
+Career Plan         Employee Visible
+Skill Gaps          Employee Visible
+Learning Plan       Employee Visible
+
+Potential Rating    Restricted
+Flight Risk         Restricted
+Succession Rank     Restricted
+Replacement Risk    Restricted
+Talent Pool Notes   Restricted
+```
+
+---
+
+# 120. Bias Control
+
+نحتاج audit.
+
+## talent_decision_evidence
+
+```text
+talent_decision_evidence_id PK
+
+employee_talent_review_id FK
+
+evidence_type
+
+source_entity_type
+source_entity_id
+
+weight
+
+included_by
+```
+
+حتى نستطيع معرفة:
+
+> لماذا تم تصنيف Employee كHigh Potential؟
+
+---
+
+# 121. AI Layer
+
+AI يمكن أن يساعد في:
+
+```text
+Skill extraction from CV
+Skill extraction from job descriptions
+Capability gap summaries
+Learning recommendation
+Career path suggestions
+Internal candidate matching
+Succession candidate suggestions
+Duplicate competency detection
+Organization span analysis
+Skill demand forecasting
+Development plan drafting
+```
+
+---
+
+# 122. لكن AI لا يقرر
+
+لا يجب أن يقوم تلقائيًا بـ:
+
+```text
+Promote Employee
+Reject Promotion
+Mark Low Potential
+Remove Succession Candidate
+Terminate Position
+Change Grade
+Change Salary
+```
+
+AI = Decision Support.
+
+---
+
+# 123. AI Candidate Matching
+
+يمكن مثلاً:
+
+```text
+Position Fit =
+
+35% Skills
+25% Competencies
+15% Experience
+10% Certifications
+10% Performance
+5% Mobility
+```
+
+لكن الـweights configurable.
+
+ولا تستخدم protected personal attributes.
+
+---
+
+# 124. Skill Inference
+
+يمكن AI أن يستنتج:
+
+```text
+Employee worked 4 FTTH projects
+Role = OSP Supervisor
+```
+
+فيقترح:
+
+```text
+Possible Skill:
+FTTH OSP Supervision
+Confidence 82%
+```
+
+لكن:
+
+```text
+Status = Suggested
+```
+
+إلى أن يتم:
+
+```text
+Manager Verification
+or
+Assessment
+```
+
+---
+
+# 125. Skill Validity
+
+بعض Skills تحتاج إعادة إثبات.
+
+مثلاً:
+
+```text
+Basic Excel
+```
+
+لا تحتاج expiry.
+
+لكن:
+
+```text
+Working at Heights
+Customer Access
+Safety Certification
+```
+
+تحتاج validity.
+
+فنضع validity في Certification أو assessment rule، وليس Skill نفسها دائمًا.
+
+---
+
+# 126. Versioning
+
+هذه المنطقة تحتاج Versioning شديد.
+
+مثل:
+
+```text
+Job Competency Profile V1
+2026
+
+Job Competency Profile V2
+2027
+```
+
+لأن job requirements تتغير.
+
+لا تعدل requirements القديمة overwrite.
+
+---
+
+# 127. Capability Profile Version
+
+## job_capability_profile
+
+```text
+job_capability_profile_id PK
+
+job_id FK
+
+profile_version
+
+effective_from
+effective_to
+
+status
+
+approved_by
+approved_at
+```
+
+ثم requirements ترتبط بالـprofile.
+
+---
+
+# 128. Learning Catalog Version
+
+نفس الشيء:
+
+```text
+Course v1
+Course v2
+```
+
+خصوصًا لو content أو passing score تغير.
+
+---
+
+# 129. Certification Version
+
+مثلاً Customer Certification requirements تتغير.
+
+نحتاج:
+
+```text
+certification_requirement.effective_from
+certification_requirement.effective_to
+```
+
+---
+
+# 130. Main ERD
+
+```text
+                         JOB
+                          │
+              ┌───────────┼─────────────┐
+              │           │             │
+              ▼           ▼             ▼
+           SKILL      COMPETENCY    CERTIFICATION
+              │           │             │
+              └──────┬────┴──────┬──────┘
+                     │           │
+                     ▼           ▼
+             JOB CAPABILITY REQUIREMENT
+                         │
+                         ▼
+                      EMPLOYEE
+                         │
+        ┌────────────────┼─────────────────┐
+        ▼                ▼                 ▼
+ EMPLOYEE_SKILL   EMPLOYEE_COMPETENCY  EMP_CERT
+        │                │                 │
+        └────────────────┼─────────────────┘
+                         ▼
+                    GAP ENGINE
+                         │
+         ┌───────────────┼───────────────┐
+         ▼               ▼               ▼
+    LEARNING PLAN   DEVELOPMENT PLAN  READINESS
+         │                                │
+         ▼                                ▼
+ TRAINING / ASSESSMENT                CAREER PATH
+                                          │
+                                          ▼
+                                  INTERNAL MOBILITY
+                                          │
+                                          ▼
+                                    TALENT REVIEW
+                                          │
+                            ┌─────────────┼───────────┐
+                            ▼             ▼           ▼
+                        POTENTIAL      TALENT POOL  RETENTION
+                                          │
+                                          ▼
+                                  SUCCESSION PLAN
+                                          │
+                                          ▼
+                                  CRITICAL POSITION
+                                          │
+                                          ▼
+                               ORGANIZATION DEVELOPMENT
+```
+
+---
+
+# 131. Core Tables
+
+تقريبًا سنحتاج:
+
+```text
+skill
+skill_category
+skill_proficiency_scale
+skill_proficiency_level
+
+competency
+competency_category
+competency_level
+competency_skill
+
+job_capability_profile
+job_skill_requirement
+job_competency_requirement
+position_capability_requirement
+assignment_capability_requirement
+
+employee_skill
+employee_skill_evidence
+employee_competency
+employee_capability_gap
+
+learning_item
+learning_item_capability
+learning_prerequisite
+learning_path
+learning_path_item
+
+learning_need
+learning_plan
+learning_plan_line
+learning_session
+learning_enrollment
+learning_session_attendance
+learning_cost
+
+assessment_definition
+employee_assessment
+assessment_result
+
+certification_type
+employee_certification
+certification_requirement
+
+development_plan
+development_plan_item
+
+career_track
+career_level
+job_career_level
+career_transition
+career_transition_requirement
+employee_career_readiness
+employee_career_preference
+employee_mobility_constraint
+
+internal_opportunity
+internal_application
+employee_mobility_request
+
+talent_review_cycle
+employee_talent_review
+potential_assessment_dimension
+employee_potential_score
+talent_calibration_session
+talent_calibration_participant
+talent_calibration_decision
+employee_retention_risk
+
+position_criticality_assessment
+succession_plan
+succession_candidate
+succession_candidate_gap
+
+talent_pool
+talent_pool_member
+
+organization_design_review
+organization_snapshot
+organization_diagnostic
+organization_design_proposal
+organization_change_item
+organization_change_employee_impact
+organization_scenario
+
+workforce_capability_demand
+```
+
+نحن نتحدث عن حوالي **55–60 Table**، لكن مرة أخرى هذا ليس تضخمًا عشوائيًا؛ السبب هو فصل المفاهيم التي عادة تُخلط في HR systems.
+
+---
+
+# 132. أهم Business Rules
+
+أثبت هذه القواعد منذ البداية:
+
+1. حضور Course لا يعني اكتساب Competency.
+2. Skill وCompetency كيانان مختلفان.
+3. Certification قد تنتهي بينما Skill لا تنتهي.
+4. Capability Requirement يرتبط بـJob ويمكن override على Position/Project/Customer.
+5. Employee Self Assessment لا يعتبر Verified Skill وحده.
+6. Job requirements تكون versioned.
+7. Readiness نتيجة حساب وليست Promotion Approval.
+8. Performance لا يساوي Potential.
+9. Potential لا يحدد من Manager وحده بدون calibration.
+10. Succession يركز على Position criticality وليس فقط high performers.
+11. كل Successor له readiness level.
+12. Ready Now لا يعني automatic promotion.
+13. Emergency Cover يختلف عن Permanent Successor.
+14. Employee preference يجب أن تدخل في Career/Mobility.
+15. Internal Mobility selection لا تعدل Employee Master مباشرة.
+16. Approved movement فقط هو الذي يحدث Position change.
+17. OD proposals لا تعدل live structure قبل approval/effective date.
+18. Organization Design يستخدم scenarios قبل التنفيذ.
+19. Critical Position لا تعتمد فقط على grade أو seniority.
+20. Talent Review data لها صلاحيات أعلى من Learning data.
+21. Open grievance/investigation لا تستخدم ضد employee في Talent decisions.
+22. AI recommendations لا تتحول إلى final talent decisions تلقائيًا.
+23. Certification expiry يمكن أن يمنع deployment.
+24. Project eligibility تجمع Skill + Certification + HSE + Availability.
+25. Skill gaps يجب أن تغذي Recruitment وLearning معًا.
+
+---
+
+# 133. أهم State Machines
+
+### Learning Need
+
+```text
+Identified
+↓
+Reviewed
+↓
+Approved
+↓
+Planned
+↓
+Scheduled
+↓
+Completed
+↓
+Outcome Assessed
+↓
+Closed
+```
+
+### Certification
+
+```text
+Submitted
+↓
+Verification
+↓
+Valid
+↓
+Expiring Soon
+↓
+Renewal
+↓
+Valid
+
+or
+
+Expired
+```
+
+### Development Plan
+
+```text
+Draft
+↓
+Employee Review
+↓
+Manager Review
+↓
+Approved
+↓
+In Progress
+↓
+Effectiveness Review
+↓
+Completed
+```
+
+### Internal Mobility
+
+```text
+Opportunity Open
+↓
+Application / Nomination
+↓
+Eligibility Check
+↓
+Readiness Assessment
+↓
+Manager / HR Review
+↓
+Selection
+↓
+Approval
+↓
+Employee Movement
+```
+
+### Succession
+
+```text
+Critical Position Identified
+↓
+Successor Nomination
+↓
+Assessment
+↓
+Readiness Classification
+↓
+Development Plan
+↓
+Periodic Review
+↓
+Ready
+```
+
+---
+
+# 134. Dashboards
+
+## Learning Dashboard
+
+```text
+Training Hours
+Training Cost
+Participation
+Completion Rate
+Pass Rate
+Capability Gaps Closed
+Training Effectiveness
+Certification Expiry
+Training Cost / Employee
+```
+
+---
+
+# 135. Capability Dashboard
+
+```text
+Top Skill Gaps
+Skill Coverage
+Competency Coverage
+Project Readiness
+Department Capability Risk
+Critical Skill Scarcity
+Supply vs Demand
+```
+
+---
+
+# 136. Career Dashboard
+
+```text
+Ready Now Employees
+Ready Soon Employees
+Internal Mobility Rate
+Promotion Pipeline
+Career Path Coverage
+Development Plans
+Cross-Functional Mobility
+```
+
+---
+
+# 137. Succession Dashboard
+
+```text
+Critical Positions
+Positions Without Successors
+Ready Now Coverage
+Ready Soon Coverage
+Bench Strength
+High Vacancy Risk
+High Loss Impact Employees
+Successor Development Progress
+```
+
+---
+
+# 138. OD Dashboard
+
+```text
+Headcount
+Positions
+Vacancies
+Span of Control
+Layers
+Manager Ratio
+Organization Cost
+Role Duplication
+Capability Gaps
+Critical Position Coverage
+Structure Change Scenarios
+```
+
+---
+
+# 139. أهم ناتج استراتيجي
+
+بعد اكتمال Cluster F نستطيع لأول مرة بناء سلسلة مترابطة:
+
+```text
+Business Strategy
+      ↓
+Organization Design
+      ↓
+Positions
+      ↓
+Required Capabilities
+      ↓
+Current Workforce Capabilities
+      ↓
+Capability Gap
+      ↓
+Build / Buy / Move
+      │
+      ├── Build → Learning
+      ├── Buy   → Recruitment
+      ├── Move  → Internal Mobility
+      └── Protect → Succession / Retention
+```
+
+وهذه في رأيي أهم نقطة في Cluster F كله.
+
+بدل أن تكون:
+
+> Training Department يعمل Courses
+> Recruitment يوظف بشكل منفصل
+> OD يعمل Org Chart
+> Performance يعمل Appraisal
+> Succession Excel مستقل
+
+يصبح لدينا **Workforce Capability System واحد**.
+
+---
+
+# 140. Cluster F Ownership Boundary
+
+### Cluster F يملك
+
+```text
+Skills
+Competencies
+Capability Profiles
+Learning
+Training
+Assessments
+Certifications
+Development Plans
+Career Paths
+Career Readiness
+Internal Opportunity Selection
+Talent Review
+Potential
+Calibration
+Talent Pools
+Succession
+Position Criticality
+OD Reviews
+Organization Design Proposals
+Capability Demand
+```
+
+### ولا يملك
+
+```text
+Employee Master
+Live Organization Structure
+Payroll
+Salary Calculation
+Performance Transactions
+Recruitment Applications
+Attendance
+Employee Relations Cases
+Final Employee Movement
+```
+
+بل يتبادل معها controlled inputs/outputs.
+
+---
+
+# 141. أهم فصل معماري أخير
+
+أريد تثبيت هذه السلسلة لأنها تمنع كثيرًا من أخطاء HR Systems:
+
+```text
+TRAINING
+≠
+LEARNING
+
+LEARNING
+≠
+SKILL
+
+SKILL
+≠
+COMPETENCY
+
+COMPETENCY
+≠
+PERFORMANCE
+
+PERFORMANCE
+≠
+POTENTIAL
+
+POTENTIAL
+≠
+READINESS
+
+READINESS
+≠
+PROMOTION
+
+PROMOTION
+≠
+SUCCESSION
+
+SUCCESSION
+≠
+ORGANIZATION DESIGN
+```
+
+لكن جميعها يجب أن تكون **connected by evidence and controlled workflows**.
+
+بهذا يكون **Cluster F** قد غطى Modules **11 + 12 + 20** بشكل مترابط وقابل للتوسع إلى Workforce Planning وStrategic Talent Management، بدل ثلاثة Modules منفصلة لا تتبادل البيانات بشكل فعلي.
+
+**الخطوة التالية المنطقية الآن هي Cluster G — Personnel, Contracts, Employee Documents, Social & Medical Insurance, Benefits, Compliance, Occupational Health/HSE Readiness & Employee Legal Record ERD**. هنا سنبني الـofficial employment record layer، مع `Contract Versioning + Document Vault + Expiry Engine + Social Insurance + Medical Insurance + Dependents + Benefit Eligibility + Occupational Fitness + Legal Compliance` ونفصله بوضوح عن Cluster F certifications وعن Cluster E confidential case evidence.

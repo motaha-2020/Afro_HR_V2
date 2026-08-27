@@ -1,0 +1,3677 @@
+تمام. **Cluster G** سيكون هو **Official Employment Record & Compliance Layer** للنظام؛ أي المصدر الرسمي الذي يثبت قانونيًا وتشغيليًا حالة الموظف، وليس مجرد مكان لحفظ صور المستندات.
+
+الـManual يدعم هذا الاتجاه بوضوح: Personnel مسؤول عن جمع والتحقق من المستندات وإنشاء Personnel File، ثم إعداد عقد العمل والتأمينات والـNDA والسياسات والتسجيل بالتأمين الطبي والـPayroll، كما يطلب متابعة المستندات الناقصة أو المنتهية، تفعيل التأمين الاجتماعي والطبي، تجديد العقود، والمحافظة على اكتمال وصحة Employee Record طوال دورة حياة الموظف. كذلك لا يسمح بتفعيل الموظف أو نشره في Safety-sensitive roles قبل استكمال المتطلبات الإلزامية والطبية وHSE. 
+
+وفي الهيكل الحالي توجد **Personnel Section** مستقلة بقيادة Personnel Section Head ومعها Personnel Specialists، بينما ER & Compliance وظيفة منفصلة؛ لذلك سنحافظ على الفصل بين **Personnel legal/administrative record** وبين **Employee Relations confidential cases**. 
+
+# Cluster G
+
+## Personnel, Contracts, Employee Documents, Social & Medical Insurance, Benefits, Compliance, Occupational Health/HSE Readiness & Employee Legal Record ERD
+
+الفصل الأساسي هنا هو:
+
+> **Employee Master ≠ Personnel File ≠ Contract ≠ Document ≠ Insurance Enrollment ≠ Benefit Enrollment ≠ Medical Fitness ≠ HSE Certification ≠ Compliance Status**
+
+كلها مترابطة، لكنها ليست Entity واحدة.
+
+---
+
+# 1. الهدف المعماري
+
+Cluster G يجب أن يجيب عن أسئلة مثل:
+
+```text
+هل ملف الموظف مكتمل قانونيًا؟
+
+ما العقد الساري الآن؟
+
+ما العقود السابقة؟
+
+هل العقد سينتهي قريبًا؟
+
+هل الموظف مسجل بالتأمين الاجتماعي؟
+
+من أي تاريخ؟
+
+ما حالة التأمين الطبي؟
+
+من هم Dependents؟
+
+ما الـBenefits المستحق لها؟
+
+هل Medical Fitness ما زالت سارية؟
+
+هل الموظف مسموح له بالعمل في هذا الموقع؟
+
+ما المستندات التي ستنتهي خلال 30 / 60 / 90 يوم؟
+
+ما الذي يمنع Employee Activation؟
+
+هل توجد Compliance Exception؟
+
+من وافق عليها؟
+
+هل توجد مستندات أصلية بحوزة الشركة؟
+
+هل تم ردها عند Offboarding؟
+```
+
+---
+
+# 2. Cluster G Domains
+
+أقسمه إلى 16 Domains:
+
+```text
+G01 Personnel Record
+G02 Personnel Document Requirements
+G03 Employee Document Vault
+G04 Document Verification & Versioning
+G05 Contract Management
+G06 Contract Amendments & Renewals
+G07 Social Insurance
+G08 Medical Insurance
+G09 Dependents & Beneficiaries
+G10 Benefits Administration
+G11 Occupational Medical Fitness
+G12 HSE / Work Readiness
+G13 Legal & Employment Compliance
+G14 Expiry & Renewal Engine
+G15 Personnel Transactions & Government Forms
+G16 Personnel Audit, Retention & Archiving
+```
+
+---
+
+# 3. Architectural Position
+
+```text
+                    EMPLOYEE MASTER
+                          │
+                          ▼
+              ┌──────────────────────┐
+              │      CLUSTER G       │
+              │                      │
+              │ Personnel Record     │
+              │ Contracts            │
+              │ Documents            │
+              │ Social Insurance     │
+              │ Medical Insurance    │
+              │ Benefits             │
+              │ Medical Fitness      │
+              │ HSE Readiness        │
+              │ Compliance           │
+              └──────────┬───────────┘
+                         │
+         ┌───────────────┼────────────────┐
+         ▼               ▼                ▼
+    Onboarding        Payroll       Offboarding
+         │               │                │
+         ▼               ▼                ▼
+   Activation Gate   validated        legal closure
+                     inputs
+```
+
+---
+
+# 4. أهم Boundary
+
+Cluster G سيكون:
+
+> **System of Record for employee legal/personnel status**
+
+بينما:
+
+### Employee Master يملك
+
+```text
+employee identity
+employment status
+position
+department
+manager
+company
+assignment
+```
+
+### Cluster G يملك
+
+```text
+contracts
+official documents
+insurance records
+benefits enrollment
+government forms
+medical fitness
+personnel compliance
+legal employment file
+```
+
+---
+
+# 5. G01 — Personnel Record
+
+لا أريد `employee` Table تتحول إلى 200 Columns.
+
+نعمل:
+
+## employee_personnel_record
+
+```text
+employee_personnel_record
+-------------------------
+personnel_record_id PK
+
+tenant_id FK
+company_id FK
+employee_id FK UNIQUE
+
+personnel_file_number
+
+record_status
+
+personnel_owner_team_id FK
+personnel_specialist_user_id FK nullable
+
+employment_legal_status
+
+legal_employer_entity_id FK
+
+original_file_location nullable
+
+physical_file_flag
+
+file_opened_at
+file_closed_at nullable
+
+compliance_status
+
+last_compliance_check_at
+
+next_compliance_review_at
+
+created_at
+created_by
+
+updated_at
+updated_by
+```
+
+---
+
+# 6. Personnel Record Status
+
+```text
+Draft
+Pending Documents
+Under Verification
+Complete
+Active
+Incomplete
+Compliance Hold
+Suspended
+Offboarding
+Closed
+Archived
+```
+
+---
+
+# 7. Employment Legal Status
+
+منفصل عن HR Employee Status.
+
+مثلاً:
+
+```text
+Pending Contract
+Contracted
+Insurance Pending
+Fully Compliant
+Temporary Exception
+Contract Expired
+Legal Hold
+Separation Pending
+Separated
+```
+
+---
+
+# 8. G02 — Document Requirement Master
+
+المشكلة الشائعة أن Required Documents تكون hard-coded.
+
+الصحيح:
+
+## personnel_document_type
+
+```text
+personnel_document_type
+-----------------------
+document_type_id PK
+
+tenant_id FK
+
+document_code
+
+document_name_ar
+document_name_en
+document_name_fr
+
+document_category
+
+issuing_authority
+
+document_scope
+
+requires_original
+requires_copy
+requires_verification
+requires_expiry_date
+
+sensitive_flag
+
+retention_policy_id FK
+
+active_flag
+```
+
+---
+
+# 9. Document Categories
+
+مثلاً:
+
+```text
+Identity
+Education
+Military
+Social Insurance
+Employment
+Criminal Record
+Medical
+Professional
+Tax
+Banking
+Contractual
+Government Form
+Dependent Document
+Other
+```
+
+الـManual الحالي يذكر فعليًا مستندات مثل Birth Certificate، qualification certificate، military certificate، Form 6/social insurance printout، Kaab Amal، police clearance، National ID، Form 111، Engineers Syndicate card، technician skill certificate، professional practice license. 
+
+---
+
+# 10. Document Requirement Rule
+
+ليس كل Employee يحتاج نفس المستندات.
+
+## document_requirement_rule
+
+```text
+document_requirement_rule_id PK
+
+document_type_id FK
+
+company_id FK nullable
+
+employment_type_id FK nullable
+employee_category_id FK nullable
+job_id FK nullable
+position_id FK nullable
+job_family_id FK nullable
+
+nationality_id FK nullable
+gender_rule nullable
+
+project_id FK nullable
+customer_id FK nullable
+location_id FK nullable
+
+requirement_level
+
+required_before_stage
+
+valid_from
+valid_to
+
+active_flag
+```
+
+---
+
+# 11. Requirement Levels
+
+```text
+Mandatory
+Conditional
+Optional
+Recommended
+Not Applicable
+```
+
+---
+
+# 12. Required Before Stage
+
+```text
+Before Offer
+Before Joining
+Before Contract Signing
+Before Activation
+Before Payroll
+Before Deployment
+Before Customer Access
+Before Renewal
+```
+
+هذه نقطة مهمة جدًا.
+
+المستند قد يكون Mandatory، لكن ليس بالضرورة أن يمنع Joining.
+
+---
+
+# 13. Employee Document Checklist
+
+## employee_document_requirement
+
+```text
+employee_document_requirement_id PK
+
+employee_id FK
+document_type_id FK
+
+requirement_rule_id FK
+
+requirement_status
+
+due_date
+
+blocking_activation_flag
+blocking_payroll_flag
+blocking_deployment_flag
+
+waiver_allowed_flag
+
+fulfilled_document_id FK nullable
+
+created_at
+```
+
+---
+
+# 14. Checklist Status
+
+```text
+Required
+Requested
+Submitted
+Under Review
+Verified
+Rejected
+Expired
+Missing
+Waived
+Not Applicable
+```
+
+---
+
+# 15. G03 — Document Vault
+
+لا نخزن الملفات نفسها داخل business tables.
+
+## employee_document
+
+```text
+employee_document
+-----------------
+employee_document_id PK
+
+employee_id FK
+document_type_id FK
+
+document_number nullable
+
+document_title
+
+issue_date nullable
+expiry_date nullable
+
+issuing_authority nullable
+issuing_country_id FK nullable
+
+document_status
+
+verification_status
+
+original_received_flag
+original_received_at nullable
+
+original_returned_flag
+original_returned_at nullable
+
+storage_object_id FK
+
+document_version_no
+
+supersedes_document_id FK nullable
+
+confidentiality_level
+
+created_at
+created_by
+```
+
+---
+
+# 16. Storage Object
+
+## document_storage_object
+
+```text
+storage_object_id PK
+
+tenant_id FK
+
+storage_provider
+
+storage_path
+
+original_filename
+
+mime_type
+
+file_size
+
+content_hash
+
+encryption_key_reference
+
+virus_scan_status
+
+uploaded_at
+uploaded_by
+```
+
+وبذلك لو غيرنا S3 / Azure Blob / local/private object storage لا نغير HR schema.
+
+---
+
+# 17. Original Document Custody
+
+بعض الوثائق الأصلية يمكن أن تكون مع الشركة.
+
+نعمل:
+
+## document_custody_event
+
+```text
+document_custody_event_id PK
+
+employee_document_id FK
+
+event_type
+
+event_date
+
+received_from
+handed_to
+
+storage_location
+
+acknowledgement_document_id FK nullable
+
+processed_by_user_id FK
+
+notes
+```
+
+Events:
+
+```text
+Original Received
+Stored
+Moved
+Returned
+Employee Acknowledged
+Lost Reported
+Archived
+```
+
+---
+
+# 18. Document Verification
+
+## employee_document_verification
+
+```text
+verification_id PK
+
+employee_document_id FK
+
+verification_method
+
+verification_status
+
+verified_by_user_id FK
+
+verified_at
+
+verification_source
+
+verification_reference nullable
+
+rejection_reason nullable
+
+notes
+```
+
+---
+
+# 19. Verification Status
+
+```text
+Pending
+Verified
+Rejected
+Needs Clarification
+Suspected Invalid
+Expired
+```
+
+---
+
+# 20. Document Versioning
+
+قاعدة مهمة:
+
+> لا نستبدل National ID القديم بالجديد وكأن القديم لم يكن موجودًا.
+
+نعمل:
+
+```text
+National ID v1
+Expired
+
+National ID v2
+Active
+```
+
+العلاقة:
+
+```text
+employee_document.supersedes_document_id
+```
+
+وبذلك يبقى التاريخ Audit-able.
+
+---
+
+# 21. G04 — Personnel File Completeness
+
+بدلاً من boolean:
+
+```text
+file_complete = yes
+```
+
+نحسب:
+
+## employee_compliance_snapshot
+
+```text
+compliance_snapshot_id PK
+
+employee_id FK
+
+snapshot_date
+
+required_document_count
+verified_document_count
+missing_document_count
+expired_document_count
+
+contract_compliant
+social_insurance_compliant
+medical_insurance_compliant
+medical_fitness_compliant
+hse_compliant
+
+overall_compliance_score
+
+overall_compliance_status
+
+blocking_issue_count
+
+calculated_at
+```
+
+---
+
+# 22. Compliance Status
+
+```text
+Compliant
+Conditionally Compliant
+Incomplete
+Non-Compliant
+Blocked
+Under Review
+```
+
+---
+
+# 23. G05 — Contract Management
+
+هذه من أهم مناطق الـCluster.
+
+لا نضع:
+
+```text
+employee.contract_start_date
+employee.contract_end_date
+```
+
+فقط.
+
+نحتاج Lifecycle كامل.
+
+## employment_contract
+
+```text
+employment_contract
+-------------------
+contract_id PK
+
+tenant_id FK
+company_id FK
+
+employee_id FK
+
+contract_number
+
+contract_type_id FK
+
+contract_version
+
+legal_employer_entity_id FK
+
+employment_type_id FK
+
+job_id FK
+position_id FK nullable
+
+work_location_id FK nullable
+
+project_id FK nullable
+
+contract_start_date
+contract_end_date nullable
+
+signing_date nullable
+
+probation_start_date nullable
+probation_end_date nullable
+
+working_schedule_reference_id FK nullable
+
+base_compensation_reference_id FK nullable
+
+notice_period_days nullable
+
+renewal_type
+
+auto_renew_flag
+
+contract_status
+
+signed_employee_flag
+signed_company_flag
+
+document_id FK
+
+effective_from
+effective_to nullable
+
+supersedes_contract_id FK nullable
+
+created_at
+created_by
+```
+
+---
+
+# 24. Contract Types
+
+## contract_type
+
+```text
+Permanent
+Fixed Term
+Project Based
+Temporary
+Daily Worker
+Part-Time
+Internship
+Consultant
+Outsourced
+Probationary
+Other
+```
+
+لكن هذه تكون configurable لكل Company/Country.
+
+---
+
+# 25. Contract Status
+
+```text
+Draft
+Prepared
+Pending Approval
+Pending Signature
+Signed
+Active
+Expiring Soon
+Renewal Pending
+Expired
+Superseded
+Terminated
+Cancelled
+Archived
+```
+
+---
+
+# 26. Contract Versioning
+
+مثلاً:
+
+```text
+CTR-2026-00123 v1
+Position = Project Engineer
+
+↓ Promotion
+
+CTR-2026-00123 v2
+Position = Senior Project Engineer
+```
+
+لكن يجب التفريق بين:
+
+```text
+Contract Amendment
+```
+
+و
+
+```text
+New Contract
+```
+
+حسب legal configuration.
+
+---
+
+# 27. Contract Clause
+
+إذا أردنا مستوى قويًا جدًا:
+
+## contract_clause
+
+```text
+contract_clause_id PK
+
+contract_id FK
+
+clause_type_id FK
+
+clause_code
+
+clause_text_snapshot
+
+mandatory_flag
+
+source_template_clause_id FK nullable
+```
+
+---
+
+# 28. Contract Template
+
+## contract_template
+
+```text
+contract_template_id PK
+
+company_id FK
+
+contract_type_id FK
+
+country_id FK
+
+language_code
+
+template_version
+
+effective_from
+effective_to
+
+document_template_id FK
+
+active_flag
+```
+
+---
+
+# 29. Contract Template Rule
+
+مثلاً:
+
+```text
+Egypt
++
+Fixed Term
++
+Blue Collar
+=
+Template EG-FT-BC-V03
+```
+
+ولا يختار المستخدم Word file يدويًا كل مرة.
+
+---
+
+# 30. G06 — Contract Amendment
+
+## contract_amendment
+
+```text
+contract_amendment_id PK
+
+contract_id FK
+
+amendment_number
+
+amendment_type
+
+reason
+
+requested_date
+effective_date
+
+workflow_instance_id FK
+
+approval_status
+
+amendment_document_id FK
+
+new_contract_version_id FK nullable
+
+status
+```
+
+---
+
+# 31. Amendment Types
+
+```text
+Position Change
+Salary Change
+Location Change
+Project Change
+Working Hours
+Title Change
+Contract Duration
+Benefit Change
+Legal Entity Change
+Other
+```
+
+لاحظ أن Salary Calculation ليست هنا.
+
+Cluster G يسجل **legal contractual reference**، بينما Compensation Engine هو المالك المالي.
+
+---
+
+# 32. Contract Renewal
+
+## contract_renewal
+
+```text
+contract_renewal_id PK
+
+contract_id FK
+
+current_end_date
+
+proposed_start_date
+proposed_end_date
+
+renewal_reason
+
+renewal_term_months
+
+manager_recommendation
+
+hr_recommendation
+
+business_approval_status
+
+employee_acceptance_status
+
+new_contract_id FK nullable
+
+renewal_status
+
+initiated_at
+completed_at
+```
+
+---
+
+# 33. Renewal Workflow
+
+```text
+Contract Expiry Detected
+↓
+Renewal Case Created
+↓
+Manager Recommendation
+↓
+HR / Personnel Review
+↓
+Budget / Business Approval
+↓
+Employee Confirmation
+↓
+New Contract / Amendment
+↓
+Signatures
+↓
+Activation
+```
+
+---
+
+# 34. Contract Expiry Rules
+
+مثلاً configurable:
+
+```text
+90 days → Personnel notification
+60 days → Manager decision required
+30 days → Escalation
+15 days → Critical
+0 days  → Contract Expired
+```
+
+---
+
+# 35. Contract Renewal Decision
+
+لا نجعل expiry تلقائيًا renew.
+
+Possible decisions:
+
+```text
+Renew
+Renew with Changes
+Convert Contract Type
+Do Not Renew
+Pending Business Decision
+Employee Declined
+Transfer Before Expiry
+```
+
+---
+
+# 36. Probation
+
+يجب أيضًا فصلها.
+
+## employee_probation
+
+```text
+employee_probation_id PK
+
+employee_id FK
+contract_id FK
+
+probation_start_date
+probation_end_date
+
+review_due_date
+
+manager_review_id FK nullable
+
+probation_result
+
+extension_allowed_flag
+extension_end_date nullable
+
+confirmation_date nullable
+
+status
+```
+
+---
+
+# 37. Probation Result
+
+```text
+Confirmed
+Extended
+Not Confirmed
+Terminated
+Pending Decision
+```
+
+---
+
+# 38. G07 — Social Insurance
+
+لا نخزن Social Insurance Number فقط.
+
+## employee_social_insurance
+
+```text
+employee_social_insurance_id PK
+
+employee_id FK
+
+country_id FK
+
+social_insurance_number
+
+insurance_authority
+
+registration_status
+
+registration_effective_date
+
+registration_submission_date
+
+insurance_office_id FK nullable
+
+insured_salary_reference nullable
+
+last_update_date
+
+current_flag
+
+created_at
+```
+
+---
+
+# 39. Social Insurance Registration
+
+## social_insurance_transaction
+
+```text
+social_insurance_transaction_id PK
+
+employee_social_insurance_id FK
+
+transaction_type
+
+government_form_type_id FK nullable
+
+transaction_date
+effective_date
+
+submission_date
+
+reference_number
+
+submission_channel
+
+status
+
+document_id FK
+
+processed_by_user_id FK
+```
+
+---
+
+# 40. Social Insurance Transaction Types
+
+```text
+Registration
+Salary Update
+Employer Transfer
+Correction
+Suspension
+Reactivation
+Termination
+Exit
+```
+
+---
+
+# 41. Forms
+
+الـManual يذكر:
+
+* Form (1) عند Joining، effective from joining date، مع submission خلال أسبوع.
+* Form (6) ضمن legal closure/offboarding.
+* Form (111) Medical Examination ضمن onboarding. 
+
+لذلك لا ينبغي أن تكون Forms مجرد attachments.
+
+---
+
+# 42. Government Form Type
+
+## government_form_type
+
+```text
+government_form_type_id PK
+
+country_id FK
+
+form_code
+
+form_name
+
+authority_name
+
+form_purpose
+
+process_type
+
+validity_rule
+
+active_flag
+```
+
+---
+
+# 43. Employee Government Form
+
+## employee_government_form
+
+```text
+employee_government_form_id PK
+
+employee_id FK
+government_form_type_id FK
+
+related_contract_id FK nullable
+
+form_number nullable
+
+effective_date
+
+submission_date
+approval_date nullable
+
+status
+
+document_id FK
+
+authority_reference nullable
+```
+
+---
+
+# 44. G08 — Medical Insurance
+
+Medical insurance هنا Employee Benefit + regulatory/administrative record.
+
+## medical_insurance_provider
+
+```text
+provider_id PK
+
+provider_code
+provider_name
+
+provider_type
+
+contact_details
+
+active_flag
+```
+
+---
+
+# 45. Medical Insurance Plan
+
+## medical_insurance_plan
+
+```text
+medical_plan_id PK
+
+provider_id FK
+company_id FK
+
+plan_code
+plan_name
+
+coverage_class
+
+annual_limit nullable
+
+network_class nullable
+
+employee_cost
+employer_cost
+
+dependent_allowed_flag
+
+effective_from
+effective_to
+
+active_flag
+```
+
+---
+
+# 46. Employee Medical Insurance Enrollment
+
+## employee_medical_enrollment
+
+```text
+employee_medical_enrollment_id PK
+
+employee_id FK
+medical_plan_id FK
+
+membership_number
+
+enrollment_date
+coverage_start_date
+coverage_end_date nullable
+
+card_number nullable
+
+card_issue_date nullable
+
+enrollment_status
+
+termination_reason nullable
+
+provider_status
+
+created_at
+```
+
+---
+
+# 47. Enrollment Status
+
+```text
+Pending
+Submitted
+Active
+Card Pending
+Suspended
+Cancelled
+Expired
+Terminated
+Rejected
+```
+
+---
+
+# 48. Medical Card Tracking
+
+بما أن الـManual يذكر Medical Card ضمن clearance:
+
+## insurance_card
+
+```text
+insurance_card_id PK
+
+medical_enrollment_id FK
+
+card_number
+
+issue_date
+expiry_date nullable
+
+delivery_status
+
+delivered_to_employee_at nullable
+
+returned_at nullable
+
+lost_flag
+
+replacement_card_id FK nullable
+```
+
+---
+
+# 49. G09 — Dependents
+
+هذه ليست children fields داخل employee.
+
+## employee_dependent
+
+```text
+employee_dependent_id PK
+
+employee_id FK
+
+relationship_type
+
+full_name_ar
+full_name_en
+
+date_of_birth
+
+gender nullable
+
+national_id nullable
+
+nationality_id FK nullable
+
+dependent_status
+
+financial_dependency_flag
+
+created_at
+```
+
+---
+
+# 50. Dependent Relationships
+
+```text
+Spouse
+Son
+Daughter
+Parent
+Other Eligible Dependent
+```
+
+والـeligibility rules configurable.
+
+---
+
+# 51. Dependent Documents
+
+نستخدم نفس Document Engine.
+
+## dependent_document
+
+```text
+dependent_document_id PK
+
+employee_dependent_id FK
+document_type_id FK
+
+document_number nullable
+
+issue_date
+expiry_date nullable
+
+storage_object_id FK
+
+verification_status
+```
+
+---
+
+# 52. Dependent Benefit Enrollment
+
+## dependent_benefit_enrollment
+
+```text
+dependent_benefit_enrollment_id PK
+
+employee_dependent_id FK
+
+benefit_enrollment_id FK
+
+coverage_start_date
+coverage_end_date nullable
+
+status
+
+employee_contribution
+employer_contribution
+```
+
+---
+
+# 53. G10 — Benefits Administration
+
+Benefits يجب أن تكون أوسع من medical insurance.
+
+## benefit_type
+
+```text
+benefit_type_id PK
+
+benefit_code
+
+benefit_name_ar
+benefit_name_en
+benefit_name_fr
+
+benefit_category
+
+taxable_flag
+
+dependent_supported_flag
+
+active_flag
+```
+
+---
+
+# 54. Benefit Categories
+
+```text
+Medical
+Life Insurance
+Accident Insurance
+Mobile
+Transportation
+Housing
+Meal
+Education
+Wellness
+Retirement
+Company Car
+Fuel
+Communication
+Other
+```
+
+---
+
+# 55. Benefit Plan
+
+## benefit_plan
+
+```text
+benefit_plan_id PK
+
+benefit_type_id FK
+
+company_id FK
+
+provider_id FK nullable
+
+plan_code
+plan_name
+
+coverage_description
+
+employee_contribution_type
+employee_contribution_value
+
+employer_contribution_type
+employer_contribution_value
+
+effective_from
+effective_to
+
+active_flag
+```
+
+---
+
+# 56. Benefit Eligibility Rule
+
+هذه Table أساسية.
+
+## benefit_eligibility_rule
+
+```text
+benefit_eligibility_rule_id PK
+
+benefit_plan_id FK
+
+company_id FK nullable
+employment_type_id FK nullable
+employee_category_id FK nullable
+grade_id FK nullable
+job_id FK nullable
+location_id FK nullable
+project_id FK nullable
+
+minimum_service_months nullable
+
+eligibility_condition_json
+
+effective_from
+effective_to
+
+priority_order
+
+active_flag
+```
+
+---
+
+# 57. Benefit Eligibility ≠ Enrollment
+
+Employee قد يكون eligible لكنه لم يسجل بعد.
+
+نحتاج:
+
+## employee_benefit_eligibility
+
+```text
+employee_benefit_eligibility_id PK
+
+employee_id FK
+benefit_plan_id FK
+
+eligibility_date
+
+eligibility_status
+
+rule_id FK
+
+reason
+
+calculated_at
+```
+
+---
+
+# 58. Benefit Enrollment
+
+## employee_benefit_enrollment
+
+```text
+employee_benefit_enrollment_id PK
+
+employee_id FK
+benefit_plan_id FK
+
+eligibility_id FK nullable
+
+enrollment_date
+
+coverage_start_date
+coverage_end_date nullable
+
+selected_option nullable
+
+employee_contribution
+employer_contribution
+
+enrollment_status
+
+provider_reference nullable
+```
+
+---
+
+# 59. Payroll Integration
+
+Benefit may create payroll impact.
+
+لكن Cluster G لا يغير payslip مباشرة.
+
+```text
+Benefit Enrollment
+↓
+Approved Payroll Instruction
+↓
+Payroll Input
+```
+
+مثلاً:
+
+```text
+Medical dependent contribution
+Life insurance contribution
+Mobile allowance benefit
+```
+
+---
+
+# 60. Benefit Payroll Bridge
+
+## benefit_payroll_instruction
+
+```text
+benefit_payroll_instruction_id PK
+
+benefit_enrollment_id FK
+
+employee_id FK
+
+payroll_component_id FK
+
+instruction_type
+
+amount
+
+effective_from
+effective_to nullable
+
+instruction_status
+
+sent_to_payroll_at
+
+processed_payroll_run_id FK nullable
+```
+
+---
+
+# 61. G11 — Occupational Medical Fitness
+
+هذه **ليست Medical Insurance**.
+
+Medical Insurance:
+
+> coverage / provider / benefit.
+
+Occupational Fitness:
+
+> هل الموظف طبيًا مؤهل لأداء عمل معين؟
+
+نفصلهم تمامًا.
+
+---
+
+# 62. Medical Examination Type
+
+## occupational_exam_type
+
+```text
+occupational_exam_type_id PK
+
+exam_code
+exam_name
+
+exam_purpose
+
+validity_months
+
+job_risk_category_id FK nullable
+
+mandatory_flag
+
+active_flag
+```
+
+---
+
+# 63. Examples
+
+```text
+Pre-employment Medical
+Form 111
+Working at Height Fitness
+Rigger Medical
+Electrical Work Fitness
+Driver Medical
+Periodic Examination
+Return-to-Work Fitness
+Customer-Specific Medical
+```
+
+الـManual يشير صراحة إلى Medical Examination لبعض CM/PM Engineers وRiggers، وإلى ضرورة medical clearance قبل deployment في safety-sensitive positions. 
+
+---
+
+# 64. Employee Occupational Examination
+
+## employee_occupational_exam
+
+```text
+employee_occupational_exam_id PK
+
+employee_id FK
+occupational_exam_type_id FK
+
+exam_date
+
+provider_id FK nullable
+physician_reference nullable
+
+fitness_result
+
+restriction_flag
+
+valid_from
+valid_until nullable
+
+next_exam_due_date nullable
+
+document_id FK
+
+medical_confidentiality_level
+
+status
+```
+
+---
+
+# 65. Fitness Result
+
+وهنا يجب أن نتجنب تخزين diagnosis بلا داعٍ.
+
+الـHR operational layer يحتاج:
+
+```text
+Fit
+Fit with Restrictions
+Temporarily Unfit
+Unfit for Role
+Pending Assessment
+```
+
+وليس بالضرورة medical diagnosis.
+
+---
+
+# 66. Medical Restrictions
+
+## occupational_work_restriction
+
+```text
+work_restriction_id PK
+
+employee_occupational_exam_id FK
+
+restriction_type
+
+restriction_description_controlled
+
+effective_from
+effective_to nullable
+
+operational_visibility_level
+
+status
+```
+
+مثلاً:
+
+```text
+No Working at Height
+No Night Shift
+No Heavy Lifting
+Restricted Driving
+Temporary Site Restriction
+```
+
+---
+
+# 67. Privacy Rule
+
+Manager قد يرى:
+
+```text
+Employee not eligible for working at height
+Restriction valid until 30-Sep-2026
+```
+
+لكن لا يرى:
+
+```text
+Medical diagnosis
+Medical history
+Doctor's confidential notes
+```
+
+---
+
+# 68. Medical Data Security
+
+أقترح Classification:
+
+```text
+MED-C0 Operational Fitness
+MED-C1 Occupational Record
+MED-C2 Medical Confidential
+MED-C3 Highly Restricted
+```
+
+---
+
+# 69. G12 — HSE Readiness
+
+هنا يجب الفصل مع Cluster F.
+
+Cluster F يملك:
+
+```text
+Certification Master
+Learning
+Training
+Skill Certification
+```
+
+Cluster G لا يكرر هذه البيانات.
+
+بل يملك:
+
+> **Employment / deployment compliance status**
+
+---
+
+# 70. HSE Requirement Profile
+
+## work_readiness_requirement
+
+```text
+work_readiness_requirement_id PK
+
+requirement_scope
+
+job_id FK nullable
+position_id FK nullable
+project_id FK nullable
+customer_id FK nullable
+location_id FK nullable
+
+requirement_type
+
+certification_type_id FK nullable
+occupational_exam_type_id FK nullable
+document_type_id FK nullable
+learning_item_id FK nullable
+
+mandatory_flag
+
+blocking_flag
+
+minimum_validity_days nullable
+
+effective_from
+effective_to
+```
+
+---
+
+# 71. Requirement Types
+
+```text
+Medical Fitness
+HSE Training
+Certification
+License
+Customer Induction
+PPE Requirement
+Document
+Site Access
+Other
+```
+
+---
+
+# 72. Employee Work Readiness
+
+Calculated:
+
+## employee_work_readiness
+
+```text
+employee_work_readiness_id PK
+
+employee_id FK
+
+job_id FK
+position_id FK nullable
+project_id FK nullable
+location_id FK nullable
+
+assessment_date
+
+document_ready
+medical_ready
+hse_training_ready
+certification_ready
+customer_ready
+
+overall_readiness
+
+blocking_reason_count
+
+valid_until nullable
+
+calculated_at
+```
+
+---
+
+# 73. Readiness Status
+
+```text
+Ready
+Ready with Conditions
+Not Ready
+Expired Requirement
+Pending Verification
+Temporarily Restricted
+```
+
+---
+
+# 74. Deployment Gate
+
+وهذه من أهم قواعد النظام:
+
+```text
+Assignment Request
+      ↓
+Work Readiness Engine
+      ↓
+Ready?
+ ┌────┴────┐
+ Yes       No
+ │          │
+Deploy    Block
+```
+
+الـManual يضع نفس المبدأ: safety-sensitive employee لا يتم نشره قبل إكمال medical exams وHSE training وcertifications وcustomer-specific requirements. 
+
+---
+
+# 75. PPE Readiness
+
+حتى لو Asset Module منفصل، يمكن لـG أن يحتفظ compliance link.
+
+## employee_ppe_requirement_status
+
+```text
+employee_ppe_requirement_status_id PK
+
+employee_id FK
+
+ppe_type_id FK
+
+project_id FK nullable
+
+required_flag
+
+issued_asset_id FK nullable
+
+issue_date nullable
+expiry_or_replacement_due nullable
+
+status
+```
+
+لكن Asset ownership يبقى لدى Asset/Operations module.
+
+---
+
+# 76. G13 — Legal & Employment Compliance
+
+نحتاج Compliance Requirement Engine عام.
+
+## employment_compliance_requirement
+
+```text
+employment_compliance_requirement_id PK
+
+requirement_code
+requirement_name
+
+requirement_category
+
+country_id FK nullable
+company_id FK nullable
+
+applies_to_scope
+
+legal_reference nullable
+
+requirement_description
+
+blocking_level
+
+review_frequency
+
+effective_from
+effective_to
+
+active_flag
+```
+
+---
+
+# 77. Compliance Categories
+
+```text
+Contract
+Identity
+Social Insurance
+Medical Insurance
+Labor
+Tax
+Professional License
+Medical Fitness
+HSE
+Customer
+Data Privacy
+Government Registration
+Personnel File
+```
+
+---
+
+# 78. Employee Compliance Item
+
+## employee_compliance_item
+
+```text
+employee_compliance_item_id PK
+
+employee_id FK
+employment_compliance_requirement_id FK
+
+compliance_status
+
+source_entity_type
+source_entity_id nullable
+
+valid_from
+valid_until nullable
+
+last_checked_at
+
+next_check_date nullable
+
+blocking_flag
+
+exception_id FK nullable
+```
+
+---
+
+# 79. Compliance Status
+
+```text
+Compliant
+Pending
+Missing
+Expired
+Non-Compliant
+Exception Approved
+Not Applicable
+Under Review
+```
+
+---
+
+# 80. Compliance Exception
+
+الـManual يسمح بالـdeviation فقط مع prior written approval من authorized management. 
+
+لذلك نحتاج:
+
+## compliance_exception
+
+```text
+compliance_exception_id PK
+
+employee_id FK
+
+requirement_id FK
+
+exception_reason
+
+risk_description
+
+requested_by
+
+requested_at
+
+valid_from
+valid_until
+
+approval_workflow_id FK
+
+approval_status
+
+approved_by nullable
+approved_at nullable
+
+mitigation_action
+
+status
+```
+
+---
+
+# 81. Exception ≠ Delete Requirement
+
+إذا تمت الموافقة:
+
+```text
+Requirement = Mandatory
+Status = Exception Approved
+```
+
+وليس:
+
+```text
+Requirement = Not Required
+```
+
+حتى يبقى الـAudit صحيحًا.
+
+---
+
+# 82. Compliance Hold
+
+## employee_compliance_hold
+
+```text
+employee_compliance_hold_id PK
+
+employee_id FK
+
+hold_type
+
+reason
+
+source_compliance_item_id FK
+
+blocks_activation
+blocks_payroll
+blocks_deployment
+blocks_transfer
+
+start_at
+end_at nullable
+
+released_by nullable
+release_reason nullable
+
+status
+```
+
+---
+
+# 83. مثال
+
+```text
+National ID expired
+
+blocks_activation = false
+blocks_payroll = false
+blocks_deployment = false
+
+status = compliance warning
+```
+
+بينما:
+
+```text
+Working at Height Medical expired
+
+blocks_deployment = true
+```
+
+---
+
+# 84. G14 — Expiry Engine
+
+لا نعمل Notification logic داخل كل Table.
+
+نعمل shared expiry object.
+
+## expiry_item
+
+```text
+expiry_item_id PK
+
+tenant_id FK
+
+employee_id FK nullable
+
+entity_type
+entity_id
+
+expiry_type
+
+expiry_date
+
+warning_policy_id FK
+
+owner_team_id FK
+
+severity
+
+status
+
+renewal_entity_type nullable
+renewal_entity_id nullable
+```
+
+---
+
+# 85. Expiry Sources
+
+```text
+Contract
+National ID
+Passport
+Police Clearance
+Medical Fitness
+Professional License
+Medical Card
+Insurance Coverage
+Certification
+Customer Access
+Government Form
+Benefit Enrollment
+```
+
+---
+
+# 86. Expiry Policy
+
+## expiry_warning_policy
+
+```text
+expiry_warning_policy_id PK
+
+policy_name
+
+warning_days_1
+warning_days_2
+warning_days_3
+
+critical_days
+
+escalation_rule_id FK
+
+auto_create_task_flag
+auto_create_request_flag
+```
+
+مثلاً:
+
+```text
+90d → Personnel
+60d → Employee + Manager
+30d → HR Operations
+15d → Escalation
+0   → Block if required
+```
+
+---
+
+# 87. Expiry Event
+
+## expiry_event
+
+```text
+expiry_event_id PK
+
+expiry_item_id FK
+
+event_type
+
+triggered_at
+
+notification_sent_flag
+
+task_created_id FK nullable
+
+recipient_scope
+
+resolved_at nullable
+```
+
+---
+
+# 88. Renewal Task
+
+يمكن إنشاء:
+
+```text
+Contract Renewal Task
+Medical Renewal Task
+License Renewal Task
+ID Renewal Request
+```
+
+في HR Service Desk/Workflow Engine.
+
+---
+
+# 89. G15 — Personnel Transactions
+
+هناك Personnel events كثيرة لا ينبغي أن تعدل Tables يدويًا.
+
+نعمل:
+
+## personnel_transaction
+
+```text
+personnel_transaction_id PK
+
+employee_id FK
+
+transaction_number
+
+transaction_type
+
+effective_date
+
+request_date
+
+source_module
+
+source_entity_id nullable
+
+workflow_instance_id FK
+
+transaction_status
+
+processed_at
+
+processed_by
+```
+
+---
+
+# 90. Personnel Transaction Types
+
+```text
+New Hire Activation
+Contract Signing
+Contract Renewal
+Contract Amendment
+Probation Confirmation
+Employee Transfer
+Promotion Record Update
+Legal Entity Transfer
+Social Insurance Registration
+Medical Insurance Registration
+Data Correction
+Document Update
+Status Change
+Separation
+Archive
+```
+
+---
+
+# 91. Effective Dating
+
+أي تغيير legal/personnel يجب أن يدعم:
+
+```text
+transaction_date
+effective_date
+```
+
+لأن:
+
+> تم إدخال التغيير اليوم لا يعني أنه أصبح effective اليوم.
+
+---
+
+# 92. Personnel History
+
+## employee_personnel_history
+
+```text
+personnel_history_id PK
+
+employee_id FK
+
+history_type
+
+effective_from
+effective_to
+
+source_transaction_id FK
+
+snapshot_json
+
+recorded_at
+```
+
+---
+
+# 93. G16 — File Archiving & Retention
+
+عند Offboarding لا نحذف Personnel File.
+
+## personnel_archive_record
+
+```text
+personnel_archive_record_id PK
+
+employee_id FK
+
+archive_date
+
+archive_reason
+
+retention_policy_id FK
+
+retention_until
+
+legal_hold_flag
+
+physical_archive_location nullable
+digital_archive_location nullable
+
+destruction_eligible_date nullable
+
+archive_status
+```
+
+---
+
+# 94. Retention Policy
+
+## record_retention_policy
+
+```text
+retention_policy_id PK
+
+country_id FK nullable
+
+record_category
+
+retention_period_months
+
+retention_trigger
+
+legal_reference nullable
+
+destruction_method
+
+legal_hold_override
+
+effective_from
+effective_to
+```
+
+---
+
+# 95. Legal Hold
+
+إذا كان الموظف لديه:
+
+```text
+Legal Case
+Audit
+Investigation
+Court Matter
+```
+
+فلا يتم destruction حتى لو انتهت retention period.
+
+نعمل:
+
+## record_legal_hold
+
+```text
+record_legal_hold_id PK
+
+employee_id FK
+
+hold_reason
+
+source_module
+source_entity_id
+
+start_date
+release_date nullable
+
+applies_to_record_types
+
+status
+```
+
+---
+
+# 96. Important Boundary with Cluster E
+
+Cluster E يملك:
+
+```text
+complaints
+investigations
+statements
+witnesses
+evidence
+disciplinary case documents
+legal opinions
+```
+
+Cluster G **لا ينسخها** إلى Personnel Vault.
+
+---
+
+# 97. ماذا يصل إلى Personnel File من Cluster E؟
+
+فقط approved record، حسب policy، مثل:
+
+```text
+Final Written Warning
+Termination Decision
+Approved Disciplinary Notice
+```
+
+عبر:
+
+```text
+employee_case_record_link
+```
+
+ولا تنتقل:
+
+```text
+Witness statements
+Complaint details
+Investigation notes
+Evidence
+Reporter identity
+```
+
+---
+
+# 98. Boundary with Cluster F
+
+Cluster F يملك:
+
+```text
+Skill Certificates
+Professional Certifications
+Training Certificates
+Competency Assessments
+```
+
+لكن Cluster G قد يحتاجها للـcompliance.
+
+الصحيح:
+
+```text
+Cluster G
+     ↓ reference
+Cluster F Certification
+```
+
+وليس duplicate.
+
+---
+
+# 99. Example
+
+```text
+Employee Certification:
+Working at Height
+Owner = Cluster F
+
+↓
+
+Work Readiness Requirement:
+Working at Height must be valid
+Owner = Cluster G
+
+↓
+
+Deployment Decision:
+Ready / Not Ready
+```
+
+---
+
+# 100. Professional License Exception
+
+بعض documents مثل:
+
+```text
+Professional Practice License
+Engineers Syndicate Card
+```
+
+قد يتم اعتبارها:
+
+* Document في G
+* Certification في F
+
+يجب اختيار **one master ownership**.
+
+أقترح:
+
+### Legal/government license
+
+Owner:
+
+```text
+Cluster G
+```
+
+### Competency/training certification
+
+Owner:
+
+```text
+Cluster F
+```
+
+---
+
+# 101. Boundary with Payroll
+
+Payroll يحتاج:
+
+```text
+employee active?
+contract active?
+social insurance status?
+benefit deduction?
+legal payroll eligibility?
+```
+
+لكن لا ينبغي Payroll أن يعدل Personnel records.
+
+---
+
+# 102. Payroll Eligibility View
+
+نعمل View:
+
+```text
+employee_payroll_eligibility
+----------------------------
+employee_id
+
+active_contract_flag
+personnel_compliant_flag
+payroll_registration_flag
+social_insurance_status
+
+payroll_hold_flag
+
+eligible_for_payroll
+
+blocking_reason
+```
+
+---
+
+# 103. Boundary with Onboarding
+
+Cluster G يستقبل:
+
+```text
+Accepted Candidate
+Hiring File
+Job Offer
+Approved Compensation Reference
+Joining Date
+```
+
+ثم ينشئ:
+
+```text
+Personnel Record
+Document Checklist
+Contract
+Insurance Tasks
+Medical/HSE Compliance
+```
+
+---
+
+# 104. Activation Gate
+
+الـManual ينص بوضوح على أن employee لا يتم activated أو assigned أو included in payroll قبل استكمال mandatory onboarding requirements. 
+
+لذلك:
+
+## employee_activation_compliance
+
+```text
+employee_activation_compliance_id PK
+
+employee_id FK
+
+document_complete_flag
+contract_signed_flag
+social_insurance_ready_flag
+medical_insurance_ready_flag
+medical_clearance_flag
+hse_ready_flag
+system_setup_flag
+
+mandatory_requirements_complete
+
+activation_status
+
+blocking_reason_json
+
+evaluated_at
+```
+
+---
+
+# 105. لكن ليس كل شيء Mandatory
+
+مثلاً:
+
+Medical insurance card قد تصل بعد joining.
+
+لذلك rule engine يحدد:
+
+```text
+Required before:
+Joining
+Activation
+Deployment
+Payroll
+```
+
+بدل شرط واحد جامد.
+
+---
+
+# 106. Boundary with Offboarding
+
+Cluster G مسؤول أثناء offboarding عن:
+
+```text
+Contract closure
+Social insurance exit
+Medical insurance termination
+Benefit termination
+Original document return
+Personnel archive
+Legal employment record closure
+```
+
+بينما Offboarding Cluster هو workflow orchestrator.
+
+---
+
+# 107. Offboarding Personnel Checklist
+
+## personnel_exit_checklist
+
+```text
+personnel_exit_checklist_id PK
+
+employee_id FK
+
+offboarding_case_id FK
+
+contract_closed
+social_insurance_exit_completed
+medical_insurance_terminated
+benefits_terminated
+original_documents_returned
+government_forms_completed
+
+personnel_file_closed
+
+completed_at
+```
+
+---
+
+# 108. Employee Legal Record Timeline
+
+مهم جدًا أن يكون هناك Timeline:
+
+```text
+01-Jan-2024  Contract signed
+01-Jan-2024  Social insurance registered
+03-Jan-2024  Medical insurance submitted
+07-Jan-2024  Medical insurance active
+01-Apr-2024  Probation confirmed
+01-Jan-2025  Contract renewed
+01-Jul-2025  Promotion amendment
+01-Jan-2026  Contract renewed
+```
+
+---
+
+# 109. Timeline Table
+
+لا نحتاج duplicate transaction.
+
+يمكن build view من:
+
+```text
+contracts
+insurance transactions
+documents
+government forms
+benefit enrollments
+personnel transactions
+```
+
+---
+
+# 110. Employee Personnel 360 Page
+
+أقترح الشاشة الرئيسية:
+
+```text
+Employee
+HR Code
+Status
+
+────────────────────────────
+
+Personnel Compliance       96%
+
+Contract
+Active until 31-Dec-2026
+
+Documents
+12/13 Verified
+1 Expiring
+
+Social Insurance
+Active
+
+Medical Insurance
+Active
+
+Dependents
+3
+
+Benefits
+5 Active
+
+Medical Fitness
+Fit until 15-Jan-2027
+
+HSE Readiness
+Ready
+
+Deployment Compliance
+Ready
+
+Alerts
+2
+
+────────────────────────────
+```
+
+---
+
+# 111. Personnel Dashboard
+
+للـPersonnel Section:
+
+```text
+Active Employees
+Incomplete Personnel Files
+Missing Documents
+Documents Expiring 30/60/90 Days
+
+Contracts Expiring
+Renewals Pending
+Unsigned Contracts
+
+Social Insurance Pending
+Medical Insurance Pending
+
+Medical Fitness Expiring
+
+Government Forms Pending
+
+Compliance Holds
+
+Employees Not Ready for Activation
+Employees Not Ready for Deployment
+```
+
+---
+
+# 112. Compliance Heatmap
+
+مثلاً:
+
+```text
+                        Compliant  Pending  Expired
+---------------------------------------------------
+Contracts                  4,820      150      30
+National IDs               4,750      180      70
+Social Insurance           4,910       80      10
+Medical Insurance          4,700      290      10
+Medical Fitness            1,870       90      40
+```
+
+---
+
+# 113. Benefit Dashboard
+
+```text
+Benefit Eligible Employees
+Active Enrollments
+Medical Coverage
+Dependents Covered
+Provider Distribution
+Enrollment Pending
+Benefit Cost
+Employee Contributions
+Employer Contributions
+Coverage Expiry
+```
+
+---
+
+# 114. Occupational Readiness Dashboard
+
+خصوصًا للـfield workforce:
+
+```text
+Ready for Deployment
+Not Ready
+Medical Expired
+HSE Expired
+Certification Missing
+Customer Approval Missing
+Medical Restriction
+Upcoming Expiry
+```
+
+---
+
+# 115. Security Model
+
+Personnel data ليست كلها بنفس الحساسية.
+
+أقترح:
+
+```text
+P0 Public Employee
+P1 HR Internal
+P2 Personnel Confidential
+P3 Legal Employment Restricted
+P4 Medical Confidential
+```
+
+---
+
+# 116. Example Access
+
+### Employee
+
+يرى:
+
+```text
+My Contract
+My Documents
+Missing Requirements
+Medical Insurance
+Benefits
+Dependents
+Expiry Alerts
+```
+
+---
+
+### Manager
+
+يرى:
+
+```text
+Employee compliance status
+Contract expiry warning
+Deployment eligibility
+Required renewal actions
+```
+
+لكن لا يرى:
+
+```text
+National ID scans
+Medical examination details
+Social insurance documents
+dependent sensitive data
+```
+
+---
+
+# 117. Personnel Specialist
+
+يرى:
+
+```text
+Personnel Records
+Documents
+Contracts
+Insurance
+Government Forms
+Benefits administration
+Compliance
+```
+
+---
+
+# 118. HSE
+
+يرى:
+
+```text
+Occupational Fitness Status
+HSE Readiness
+Relevant Certification Status
+Restrictions needed operationally
+```
+
+ولا يرى full personnel file.
+
+---
+
+# 119. Payroll
+
+يرى:
+
+```text
+Payroll eligibility
+Social insurance reference
+Approved benefit payroll inputs
+Contract status
+```
+
+ولا يرى document scans.
+
+---
+
+# 120. Medical Access
+
+حتى Personnel قد لا يحتاج رؤية كامل medical document.
+
+نفصل:
+
+```text
+Fitness Result
+```
+
+عن:
+
+```text
+Confidential Medical File
+```
+
+---
+
+# 121. Data Minimization
+
+مثلاً Manager يحتاج:
+
+```text
+Fit with restrictions
+```
+
+وليس:
+
+```text
+Diagnosis
+Blood tests
+Detailed medical report
+```
+
+هذه نقطة مهمة جدًا في التصميم.
+
+---
+
+# 122. Document Access Control
+
+## document_access_policy
+
+```text
+document_access_policy_id PK
+
+document_type_id FK
+
+role_id FK nullable
+
+access_action
+
+scope
+
+masking_rule_id FK nullable
+
+allowed_flag
+```
+
+Actions:
+
+```text
+View Metadata
+View File
+Download
+Print
+Upload
+Replace
+Verify
+Return Original
+Archive
+```
+
+---
+
+# 123. Masking
+
+مثلاً National ID:
+
+Manager:
+
+```text
+***********1234
+```
+
+Personnel:
+
+```text
+Full number
+```
+
+حسب permission.
+
+---
+
+# 124. Audit
+
+كل access حساس:
+
+## personnel_access_audit
+
+```text
+personnel_access_audit_id PK
+
+user_id FK
+employee_id FK
+
+entity_type
+entity_id
+
+action
+
+timestamp
+
+ip_address
+device_id
+
+reason_code nullable
+```
+
+---
+
+# 125. AI Layer — Useful
+
+AI يمكن أن يساعد في:
+
+```text
+Document classification
+Metadata extraction
+Expiry date extraction
+Contract clause comparison
+Missing document detection
+Duplicate document detection
+Renewal summary
+Compliance gap summary
+Insurance reconciliation
+Personnel file completeness checks
+```
+
+---
+
+# 126. AI Document Processing
+
+مثلاً المستخدم يرفع National ID.
+
+AI/OCR layer يمكن أن يقترح:
+
+```text
+Document Type = National ID
+Number = xxxx
+Expiry Date = xxxx
+Name = xxxx
+```
+
+لكن status:
+
+```text
+Extracted – Awaiting Verification
+```
+
+وليس Verified تلقائيًا.
+
+---
+
+# 127. AI Contract Review
+
+يمكن مقارنة:
+
+```text
+Contract v3
+vs
+Approved Template v3
+```
+
+ويقول:
+
+```text
+Clause 7 differs
+Notice period differs
+Salary reference changed
+Missing employee signature
+```
+
+لكن لا يعطي legal approval.
+
+---
+
+# 128. AI Restrictions
+
+AI لا يقوم تلقائيًا بـ:
+
+```text
+Declare employee medically fit
+Approve legal exception
+Approve contract
+Reject insurance eligibility
+Change employee legal status
+```
+
+هذه human/authority decisions.
+
+---
+
+# 129. Main ERD
+
+```text
+                         EMPLOYEE
+                            │
+           ┌────────────────┼──────────────────┐
+           ▼                ▼                  ▼
+   PERSONNEL_RECORD     DOCUMENTS          CONTRACTS
+           │                │                  │
+           │                │                  ├── Amendment
+           │                │                  ├── Renewal
+           │                │                  └── Probation
+           │                │
+           │                ├── Verification
+           │                └── Custody
+           │
+           ├──────── SOCIAL_INSURANCE
+           │
+           ├──────── MEDICAL_INSURANCE
+           │               │
+           │               └──── DEPENDENTS
+           │
+           ├──────── BENEFITS
+           │
+           ├──────── OCCUPATIONAL_FITNESS
+           │
+           ├──────── HSE_READINESS
+           │
+           └──────── COMPLIANCE
+                           │
+                           ▼
+                     EXPIRY ENGINE
+                           │
+                           ▼
+                    ACTIVATION GATE
+                           │
+                ┌──────────┴─────────┐
+                ▼                    ▼
+             PAYROLL             DEPLOYMENT
+```
+
+---
+
+# 130. Physical Table Set
+
+تقريبًا:
+
+```text
+employee_personnel_record
+
+personnel_document_type
+document_requirement_rule
+employee_document_requirement
+
+employee_document
+document_storage_object
+employee_document_verification
+document_custody_event
+
+employee_compliance_snapshot
+
+contract_type
+contract_template
+employment_contract
+contract_clause
+contract_amendment
+contract_renewal
+employee_probation
+
+employee_social_insurance
+social_insurance_transaction
+
+government_form_type
+employee_government_form
+
+medical_insurance_provider
+medical_insurance_plan
+employee_medical_enrollment
+insurance_card
+
+employee_dependent
+dependent_document
+
+benefit_type
+benefit_plan
+benefit_eligibility_rule
+employee_benefit_eligibility
+employee_benefit_enrollment
+dependent_benefit_enrollment
+benefit_payroll_instruction
+
+occupational_exam_type
+employee_occupational_exam
+occupational_work_restriction
+
+work_readiness_requirement
+employee_work_readiness
+employee_ppe_requirement_status
+
+employment_compliance_requirement
+employee_compliance_item
+compliance_exception
+employee_compliance_hold
+
+expiry_item
+expiry_warning_policy
+expiry_event
+
+personnel_transaction
+employee_personnel_history
+
+personnel_exit_checklist
+
+record_retention_policy
+personnel_archive_record
+record_legal_hold
+
+document_access_policy
+personnel_access_audit
+```
+
+نحن تقريبًا أمام **50–55 Core Tables**.
+
+---
+
+# 131. أهم Business Rules
+
+أثبت هذه القواعد من البداية:
+
+1. `Employee Master` ليس Personnel File.
+2. المستند لا يتم overwrite؛ يتم versioning.
+3. Contract لا يتم overwrite؛ amendment/new version.
+4. العقد الساري واحد لكل legal employment relationship في نفس الوقت إلا إذا كان business model يسمح بغير ذلك.
+5. Contract expiry لا يعني automatic renewal.
+6. Document requirement configurable حسب employee/job/project/company.
+7. Mandatory document له lifecycle وليس checkbox.
+8. Original document custody يجب أن تكون traceable.
+9. Social insurance ليس field واحد.
+10. Medical insurance ≠ Occupational Medical Fitness.
+11. Benefit Eligibility ≠ Benefit Enrollment.
+12. Dependent record منفصل عن benefit enrollment.
+13. HSE readiness لا يكرر certification records.
+14. Cluster F يملك competency/training certifications.
+15. Cluster E يملك confidential case evidence.
+16. Cluster G لا يخزن investigation files.
+17. Medical diagnosis لا يعرض للManager.
+18. Work restrictions تعرض فقط على أساس need-to-know.
+19. Employee activation يعتمد على configurable compliance gate.
+20. Payroll eligibility يعتمد على approved legal/personnel state.
+21. Expiry engine centralized وليس duplicated.
+22. Compliance exception لا يحذف requirement.
+23. كل exception له expiry وموافقة.
+24. Expired mandatory item يمكن أن يطلق automatic hold.
+25. Offboarding لا يحذف Personnel File.
+26. Records تخضع retention rules.
+27. Legal hold يتجاوز destruction schedule.
+28. Payroll لا يعدل Personnel data.
+29. HSE لا يعدل medical result.
+30. AI extraction لا يساوي verification.
+
+---
+
+# 132. State Machines
+
+### Employee Document
+
+```text
+Required
+↓
+Requested
+↓
+Submitted
+↓
+Under Verification
+├── Rejected
+│     ↓
+│   Resubmitted
+│
+└── Verified
+      ↓
+ Expiring Soon
+      ↓
+   Expired
+      ↓
+   Renewed
+```
+
+### Contract
+
+```text
+Draft
+↓
+Approval
+↓
+Prepared
+↓
+Pending Signature
+↓
+Signed
+↓
+Active
+↓
+Expiring Soon
+↓
+Renewal Decision
+├── Renew
+│     ↓
+│ New Contract / Version
+│
+├── Do Not Renew
+│
+└── Pending
+```
+
+### Social Insurance
+
+```text
+Not Registered
+↓
+Registration Prepared
+↓
+Submitted
+↓
+Active
+↓
+Updated
+↓
+Exit Prepared
+↓
+Terminated
+```
+
+### Medical Insurance
+
+```text
+Eligible
+↓
+Enrollment Prepared
+↓
+Submitted
+↓
+Active
+↓
+Card Issued
+↓
+Coverage Change
+↓
+Termination
+```
+
+### Occupational Fitness
+
+```text
+Required
+↓
+Scheduled
+↓
+Exam Completed
+↓
+Result
+├── Fit
+├── Fit with Restrictions
+├── Temporarily Unfit
+└── Unfit
+```
+
+---
+
+# 133. أهم State Machine: Personnel Compliance
+
+```text
+Employee Created
+      ↓
+Personnel File Opened
+      ↓
+Requirements Generated
+      ↓
+Documents + Contract + Insurance + Medical/HSE
+      ↓
+Compliance Evaluation
+      │
+   ┌──┴───────────────┐
+   ▼                  ▼
+Compliant         Incomplete
+   │                  │
+   ▼                  ▼
+Activate          Compliance Hold
+                      │
+                      ▼
+                 Requirement Fixed
+                      │
+                      ▼
+                  Re-Evaluate
+```
+
+---
+
+# 134. الفرق الحاسم بين ثلاثة أنواع "صلاحية"
+
+داخل النظام يجب ألا نستخدم كلمة `Valid` وحدها.
+
+لدينا:
+
+```text
+DOCUMENT VALIDITY
+هل المستند نفسه ساري؟
+
+LEGAL COMPLIANCE
+هل المتطلبات القانونية مكتملة؟
+
+OPERATIONAL READINESS
+هل الموظف مؤهل للعمل الآن؟
+```
+
+مثال:
+
+```text
+National ID       Valid
+Contract          Valid
+Social Insurance  Active
+
+Working at Height Medical
+Expired
+
+Result:
+
+Personnel Compliance = Mostly Compliant
+Payroll Eligibility   = Eligible
+Deployment Readiness  = Not Ready for Height Work
+```
+
+وهذا الفصل مهم جدًا.
+
+---
+
+# 135. النتيجة المعمارية
+
+بعد Cluster G أصبح لدينا لأول مرة:
+
+```text
+Employee
+   ↓
+Official Personnel Record
+   ↓
+Contractual Relationship
+   ↓
+Legal Documents
+   ↓
+Insurance
+   ↓
+Benefits
+   ↓
+Medical Fitness
+   ↓
+HSE/Customer Requirements
+   ↓
+Compliance Rules
+   ↓
+Activation / Payroll / Deployment Eligibility
+```
+
+بدون أن نحول Employee Table إلى ملف Excel ضخم يحتوي كل شيء.
+
+---
+
+# 136. نقطة أريد تثبيتها قبل الانتقال
+
+في النظام النهائي سيكون لدينا **ثلاثة Vaults مختلفة تمامًا**:
+
+```text
+1. Personnel Document Vault
+   → Cluster G
+
+2. Learning / Certification Evidence
+   → Cluster F
+
+3. Confidential Investigation Evidence
+   → Cluster E
+```
+
+ولا ينبغي دمج الثلاثة في `employee_attachments`.
+
+هذه من أهم قرارات التصميم الأمني في النظام كله.
+
+---
+
+## الخطوة التالية
+
+**Cluster H — Offboarding, Resignation, Termination, Clearance, Asset Recovery, Knowledge Handover, Final Settlement, Exit Interview & Post-Employment Obligations ERD**.
+
+وهنا لن نكرر Cluster G أو Payroll؛ بل سنبني **Separation Orchestration Engine** الذي يبدأ من `Separation Event` ويمر عبر `Notice Period → Approvals → Handover → IT Access Revocation → Asset/Custody Clearance → Financial Clearance → Personnel Legal Closure → Final Settlement → Exit Interview → Alumni/Rehire Eligibility → Archive`، مع حالات مختلفة تمامًا لـ`Resignation / Termination / Contract Expiry / End of Project / Retirement / Absence-Abandonment / Death` وربط مضبوط بـCluster E في حالة disciplinary termination.

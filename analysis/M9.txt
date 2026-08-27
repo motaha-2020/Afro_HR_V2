@@ -1,0 +1,1749 @@
+بالضبط. **Module 09** هنا يصبح من أهم Modules في النظام، لأنه سيجمع كل المخرجات التشغيلية من Modules السابقة ويحّولها إلى **Payroll قابل للحساب والمراجعة والاعتماد والدفع والتوزيع على المشروعات**.
+
+والـPeople & Culture Operations Manual نفسه يحدد أن Payroll الحالي يشمل: التحقق من بيانات الموظف، تحديث Payroll Register، مراجعة Project Allocation، جمع deductions والتعديلات، احتساب الضرائب والتأمينات، إرسال Payroll إلى Finance، ثم إصدار تقارير تكلفة الرواتب حسب المشروع. كما يحدد أن Payroll يجب أن يعتمد فقط على بيانات موظف معتمدة، project allocations معتمدة، attendance records، allowances، KPI evaluations والتعديلات المصرح بها. 
+
+# Module 09 — Payroll, Compensation, Earnings, Deductions & Payroll Processing Engine
+
+## 09.1 الهدف الرئيسي
+
+يجب ألا يكون Payroll مجرد Excel يحسب:
+
+`Basic + Allowances - Deductions = Net`
+
+بل يكون **Rules Engine + Payroll Workflow + Audit System + Project Cost Engine**.
+
+ويجيب عن:
+
+**من يستحق ماذا؟ ولماذا؟ وعلى أي أساس؟ ومن اعتمد؟ وعلى أي مشروع تحمّلت التكلفة؟**
+
+---
+
+# 09.2 Payroll Architecture
+
+التدفق الرئيسي:
+
+```text
+Employee Master Data
+        ↓
+Compensation Package
+        ↓
+Attendance & Time
+        ↓
+Leave & Absence
+        ↓
+Overtime
+        ↓
+Allowances
+        ↓
+KPI / Bonus / Incentives
+        ↓
+Loans / Advances / Deductions
+        ↓
+Tax & Social Insurance
+        ↓
+Payroll Calculation
+        ↓
+Validation
+        ↓
+Approval
+        ↓
+Finance / Bank
+        ↓
+Payslip
+        ↓
+Cost Allocation
+```
+
+---
+
+# 09.3 Compensation Package
+
+لكل Employee يكون لدينا:
+
+## Compensation Profile
+
+وليس مجرد Salary واحد.
+
+مثلاً:
+
+```text
+Employee: Ahmed Hassan
+Basic Salary: 18,000
+Fixed Allowance: 4,000
+Transportation: 2,000
+Mobile: 500
+Housing: 3,000
+Variable Allowance: Rule Based
+KPI: Quarterly
+OT Eligible: Yes
+Payroll Group: Monthly Egypt
+```
+
+---
+
+# 09.4 Salary Components
+
+نقسمها إلى:
+
+### Earnings
+
+* Basic Salary
+* Fixed Allowance
+* Transportation
+* Housing
+* Mobile
+* Site Allowance
+* Outside Cairo Allowance
+* Remote Site Allowance
+* Per Diem
+* Night Shift
+* Overtime
+* Production Incentive
+* KPI Bonus
+* Commission
+* Bonus
+* Retroactive Payment
+* Adjustment
+
+### Deductions
+
+* Absence
+* Unpaid Leave
+* Late Deduction
+* Early Leave
+* Loan
+* Advance
+* Medical Deduction
+* Insurance Deduction
+* Disciplinary Deduction
+* Tax
+* Social Insurance
+* Other Deduction
+
+---
+
+# 09.5 Salary Component Configuration
+
+كل Component يحتوي على:
+
+```text
+Code
+Name
+Type
+Earning / Deduction
+Fixed / Variable
+Taxable
+Insurable
+Payroll Group
+Calculation Method
+Currency
+Effective Date
+Cost Center
+GL Account
+Project Allocation Rule
+Approval Required
+```
+
+---
+
+# 09.6 Payroll Rule Engine
+
+هذه أهم نقطة.
+
+لا نكتب القواعد Hardcoded.
+
+مثلاً:
+
+```text
+IF
+Employee Type = Permanent
+AND
+Attendance Status = Approved
+THEN
+Pay Monthly Salary
+```
+
+أو:
+
+```text
+IF
+Approved OT Hours > 0
+THEN
+Calculate OT
+```
+
+أو:
+
+```text
+IF
+Unpaid Leave Days > 0
+THEN
+Apply Unpaid Leave Deduction
+```
+
+---
+
+# 09.7 Calculation Methods
+
+يدعم:
+
+* Fixed Amount
+* Percentage
+* Per Day
+* Per Hour
+* Per Shift
+* Per Unit
+* Per KM
+* Formula
+* Tiered Rule
+* Lookup Table
+* Project-Specific
+* Grade-Based
+
+---
+
+# 09.8 Salary Formula Engine
+
+مثلاً:
+
+```text
+Daily Rate
+=
+Monthly Salary / Payroll Divisor
+```
+
+لكن Divisor يكون Configurable:
+
+30
+
+26
+
+22
+
+Calendar Days
+
+Working Days
+
+أو Formula مختلفة.
+
+---
+
+# 09.9 Payroll Groups
+
+كل شركة تستطيع إنشاء:
+
+* Monthly Payroll
+* Daily Workers
+* Weekly Payroll
+* Project-Based Payroll
+* Outsourced Payroll
+* Commission Payroll
+
+مثلاً:
+
+White Collar:
+
+Monthly
+
+Blue Collar:
+
+Monthly + Production
+
+Daily Workers:
+
+Daily Rate.
+
+---
+
+# 09.10 Payroll Calendar
+
+لكل Payroll Group:
+
+```text
+Period Start
+Period End
+Attendance Cut-Off
+Allowance Cut-Off
+OT Cut-Off
+Approval Date
+Finance Submission
+Salary Date
+```
+
+والـManual الحالي بالفعل يستخدم Timeline شهري واضح يبدأ ببيانات الموظفين في منتصف الشهر ثم مراجعة التوزيع والتعديلات ويصل لإرسال Payroll للمالية ثم الدفع نهاية الشهر. 
+
+---
+
+# 09.11 Payroll Period
+
+مثلاً:
+
+**August 2026 Payroll**
+
+Status:
+
+```text
+Open
+Collecting Inputs
+Processing
+Validation
+Pending Approval
+Approved
+Sent to Finance
+Paid
+Closed
+```
+
+---
+
+# 09.12 Payroll Input Validation
+
+قبل الحساب، النظام يفحص:
+
+* Employee Active?
+* Employee in Payroll?
+* Salary Package Valid?
+* Bank Account?
+* Attendance Closed?
+* Leave Approved?
+* OT Approved?
+* Allowances Approved?
+* Project Allocation?
+* Loans Updated?
+* Tax Information?
+* Social Insurance?
+
+---
+
+# 09.13 Payroll Readiness Score
+
+مثلاً:
+
+```text
+August Payroll
+Employees: 4,850
+Ready: 4,713
+Blocked: 137
+Readiness: 97.2%
+```
+
+Blocked Reasons:
+
+* Missing Attendance
+* Missing Bank
+* Missing Project Allocation
+* Pending Allowance
+* Invalid Salary Package
+
+---
+
+# 09.14 Attendance Integration
+
+Module 07 يرسل:
+
+```text
+Regular Hours
+Working Days
+Late Minutes
+Early Leave
+Absent Days
+Approved OT
+Night Hours
+Holiday Hours
+Weekend Hours
+```
+
+Payroll لا يعيد حساب Attendance.
+
+---
+
+# 09.15 Leave Integration
+
+Module 08 يرسل:
+
+```text
+Paid Leave
+Unpaid Leave
+Sick Leave
+Comp-Off
+Authorized Absence
+Unexcused Absence
+```
+
+Payroll يطبق فقط الـFinancial Rule.
+
+---
+
+# 09.16 Allowance Integration
+
+من Module 07:
+
+```text
+Outside Cairo
+Field
+Travel
+Meal
+Transport
+Accommodation
+Night Shift
+Remote Site
+Hardship
+```
+
+كلها تصل:
+
+`Approved Payroll Inputs`
+
+وليس Raw Requests.
+
+---
+
+# 09.17 Overtime Engine
+
+OT Rule يمكن أن يعتمد على:
+
+* Employee Category
+* Grade
+* Day Type
+* Shift
+* Project
+* Hours
+* Approval
+
+مثلاً:
+
+```text
+Weekday OT
+Weekend OT
+Holiday OT
+Night OT
+```
+
+لكن الحساب Configurable.
+
+---
+
+# 09.18 OT Caps
+
+مثلاً:
+
+Maximum:
+
+`60 hours/month`
+
+لو زاد:
+
+Exception
+
+ولا يتم دفعه تلقائيًا.
+
+---
+
+# 09.19 Production-Based Payroll
+
+مهم جدًا للعمالة الفنية.
+
+مثلاً:
+
+Technician:
+
+Basic:
+
+5,000
+
+Production:
+
+Fiber Splicing:
+
+48 Units × Rate
+
+Cable Pulling:
+
+2,000m × Rate
+
+Home Installation:
+
+20 Units × Rate
+
+ثم:
+
+Total Earnings.
+
+---
+
+# 09.20 Piece-Rate Engine
+
+يدعم:
+
+```text
+Activity
+Unit
+Rate
+Quantity
+Multiplier
+Project
+Employee
+Team
+```
+
+مثلاً:
+
+Splice:
+
+`10 EGP`
+
+Quantity:
+
+`120`
+
+Amount:
+
+`1,200 EGP`
+
+---
+
+# 09.21 Team Production Incentive
+
+ممكن Bonus يكون Team-Based.
+
+مثلاً:
+
+Team Target:
+
+100 installations
+
+Actual:
+
+120
+
+Bonus Pool:
+
+10,000
+
+ثم Distribution Rule:
+
+Equal
+
+By Role
+
+By Attendance
+
+By Contribution.
+
+---
+
+# 09.22 KPI Bonus
+
+الـManual الحالي لديه بالفعل Quarterly KPI Bonus Workflow يبدأ من PMO ويذهب إلى Payroll للحساب ثم Finance للدفع. 
+
+لذلك النظام يحتاج:
+
+**KPI Payroll Input**
+
+مثلاً:
+
+```text
+Employee
+Quarter
+KPI Score
+Bonus %
+Eligible Salary
+Calculated Bonus
+Approval
+```
+
+---
+
+# 09.23 Bonus Types
+
+* Annual Bonus
+* Quarterly KPI
+* Project Completion Bonus
+* Performance Bonus
+* Retention Bonus
+* Spot Bonus
+* Sales Commission
+* Referral Bonus
+
+---
+
+# 09.24 Loans
+
+نحتاج:
+
+## Employee Loan
+
+```text
+Loan Amount
+Start Date
+Installments
+Monthly Installment
+Outstanding Balance
+Interest
+Payroll Deduction
+```
+
+---
+
+# 09.25 Advances
+
+مثل:
+
+Salary Advance
+
+Travel Advance
+
+Project Advance
+
+وتتحول إلى:
+
+Payroll Deduction
+
+بعد Approval.
+
+---
+
+# 09.26 Loan Suspension
+
+ممكن:
+
+Skip Installment
+
+أو:
+
+Defer
+
+مع Approval.
+
+---
+
+# 09.27 Recurring Deductions
+
+مثل:
+
+* Loan
+* Medical
+* Insurance
+* Union
+* Phone
+* Transportation
+* Equipment
+* Other
+
+مع:
+
+Effective From / To.
+
+---
+
+# 09.28 One-Time Adjustments
+
+مثلاً:
+
+```text
++1,000 Adjustment
+-500 Deduction
+```
+
+لكن يجب أن يحتوي:
+
+Reason
+
+Supporting Document
+
+Approval.
+
+---
+
+# 09.29 Retroactive Payroll
+
+لو Salary تغير بأثر رجعي.
+
+مثلاً:
+
+Old:
+
+20,000
+
+New:
+
+23,000
+
+Effective:
+
+1-Jul
+
+Approval:
+
+10-Aug
+
+النظام يحسب:
+
+July Difference
+
+ويضيفه August:
+
+`Retroactive Adjustment`.
+
+---
+
+# 09.30 Salary Revision History
+
+لا نغير Salary Record القديم.
+
+بل:
+
+```text
+Compensation Version 1
+01-Jan → 30-Jun
+
+Compensation Version 2
+01-Jul →
+```
+
+---
+
+# 09.31 Promotion Impact
+
+عند Promotion في Module Organization/Career:
+
+New Grade
+
+New Salary
+
+New Allowance Eligibility
+
+Effective Date
+
+Payroll يقرأ النسخة الجديدة.
+
+---
+
+# 09.32 Transfer Impact
+
+لو الموظف انتقل:
+
+Project A → Project B
+
+من:
+
+15-Aug
+
+Payroll Cost Allocation يجب أن يعرف:
+
+1–14:
+
+Project A
+
+15–31:
+
+Project B.
+
+---
+
+# 09.33 Multi-Project Cost Allocation
+
+لو الموظف يعمل:
+
+40% Project A
+
+35% Project B
+
+25% Shared Services
+
+Payroll Cost يتوزع بنفس النسب أو بناءً على Timesheets.
+
+---
+
+# 09.34 Actual-Time Allocation
+
+الأقوى:
+
+Timesheet:
+
+Project A:
+
+80h
+
+Project B:
+
+60h
+
+Internal:
+
+20h
+
+إجمالي:
+
+160h
+
+إذن Salary Cost:
+
+50%
+
+37.5%
+
+12.5%.
+
+---
+
+# 09.35 Cost Allocation Rule
+
+نسمح بـ:
+
+* Fixed %
+* Timesheet %
+* Attendance %
+* Project Assignment %
+* Primary Project
+* Manual Approved Allocation
+
+---
+
+# 09.36 Allowance Cost Attribution
+
+مثلاً:
+
+Outside Cairo Allowance بسبب Project A.
+
+حتى لو الموظف Split بين مشروعين:
+
+هذا البدل يتحمل Project A فقط.
+
+---
+
+# 09.37 Payroll Cost Categories
+
+```text
+Basic Payroll Cost
+Overtime Cost
+Allowances
+Bonus
+KPI
+Employer Insurance
+Benefits
+Production Incentive
+Other Employer Cost
+```
+
+---
+
+# 09.38 Employer Cost
+
+النظام لا يعرض Net Salary فقط.
+
+نحتاج:
+
+## Total Employment Cost
+
+مثلاً:
+
+```text
+Gross Salary
++ Employer Social Insurance
++ Benefits
++ Medical
++ Allowances
++ Bonus
++ OT
+= Employee Total Cost
+```
+
+مهم جدًا للProject P&L.
+
+---
+
+# 09.39 Tax Engine
+
+يجب فصل:
+
+**Tax Rules**
+
+عن Payroll Calculation.
+
+Configuration حسب:
+
+Country
+
+Effective Date
+
+Tax Bracket
+
+Exemption
+
+Taxable Components.
+
+ولا نحط القانون داخل Salary Formula بشكل ثابت.
+
+---
+
+# 09.40 Social Insurance Engine
+
+نفس الفكرة:
+
+* Employee contribution
+* Employer contribution
+* Minimum/Maximum Insurable
+* Effective Dates
+* Applicable Components
+
+ويكون Versioned.
+
+---
+
+# 09.41 Country Payroll Configuration
+
+بما أن النظام Multi-Company وقابل للتوسع:
+
+```text
+Payroll Country
+Egypt
+Saudi Arabia
+Madagascar
+etc.
+```
+
+وكل Country Package لها:
+
+Tax
+
+Social Insurance
+
+Currency
+
+Calendar
+
+Rules.
+
+---
+
+# 09.42 Payroll Simulation
+
+ميزة مهمة جدًا.
+
+قبل اعتماد Salary Change:
+
+HR يعمل:
+
+**Payroll Simulation**
+
+مثلاً:
+
+Current Monthly Cost:
+
+8.4M
+
+Proposed Increase:
+
++10%
+
+New Cost:
+
+9.1M
+
+Variance:
+
++700K.
+
+---
+
+# 09.43 What-If Analysis
+
+مثلاً:
+
+> ماذا لو OT زاد 20%؟
+
+> ماذا لو تم نقل 50 Technician إلى مشروع جديد؟
+
+> ماذا لو Outside Cairo Allowance أصبح 500 EGP؟
+
+النظام يعطي Estimated Payroll Impact.
+
+---
+
+# 09.44 Payroll Calculation Run
+
+Payroll User يضغط:
+
+**Run Payroll**
+
+لكن العملية تكون Versioned:
+
+```text
+Run #1
+Run #2
+Run #3
+Final Run
+```
+
+لمقارنة التغيرات.
+
+---
+
+# 09.45 Payroll Variance Analysis
+
+يقارن:
+
+Current Month
+
+vs
+
+Previous Month.
+
+مثلاً:
+
+```text
+July Payroll: 12.4M
+August: 13.2M
+Variance: +800K
+```
+
+وتفسير:
+
+New Hires:
+
++250K
+
+OT:
+
++180K
+
+Allowances:
+
++120K
+
+Salary Adjustments:
+
++150K
+
+Others:
+
++100K.
+
+---
+
+# 09.46 Employee-Level Variance
+
+مثلاً:
+
+Ahmed:
+
+July:
+
+25,000
+
+August:
+
+31,500
+
+Difference:
+
++6,500
+
+Reason:
+
+Outside Cairo:
+
++3,500
+
+OT:
+
++2,000
+
+KPI:
+
++1,000.
+
+---
+
+# 09.47 Exception Engine
+
+Payroll Exceptions مثل:
+
+* Negative Net Salary
+* Unusually High OT
+* Salary Change Without Approval
+* Allowance Above Cap
+* Duplicate Bonus
+* Employee Offboarded But Paid
+* Employee Missing Attendance
+* Duplicate Bank Account
+* Missing Cost Center
+* Project Allocation >100%
+* Project Allocation <100%
+
+---
+
+# 09.48 Duplicate Payroll Detection
+
+أي Employee:
+
+`One Payroll Record per Payroll Group / Period`
+
+إلا Adjustment Run.
+
+---
+
+# 09.49 Ghost Employee Controls
+
+مهم جدًا.
+
+النظام يراجع:
+
+Active HR Employee
+
+vs
+
+Payroll Employee
+
+vs
+
+Attendance Employee
+
+vs
+
+Project Assignment.
+
+مثلاً:
+
+Payroll Active
+
+لكن:
+
+No Attendance
+
+No Project
+
+No Manager
+
+Alert:
+
+`Potential Ghost Employee`.
+
+---
+
+# 09.50 Payroll Approval Workflow
+
+مثلاً:
+
+Payroll Specialist
+
+↓
+
+Payroll Section Head
+
+↓
+
+People & Culture Manager
+
+↓
+
+Finance
+
+↓
+
+Final Approval.
+
+قابل للتعديل حسب Company.
+
+---
+
+# 09.51 Maker-Checker Control
+
+منشئ Payroll لا يستطيع اعتماد نفس Payroll.
+
+Rule:
+
+```text
+Prepared By ≠ Approved By
+```
+
+---
+
+# 09.52 Payroll Lock
+
+بعد Final Approval:
+
+Payroll:
+
+`Locked`
+
+أي تغيير يحتاج:
+
+**Payroll Adjustment Case**.
+
+---
+
+# 09.53 Adjustment After Closing
+
+مثلاً خطأ في OT.
+
+لا نفتح August.
+
+نعمل:
+
+September Payroll Adjustment
+
+Reference:
+
+August.
+
+---
+
+# 09.54 Finance Submission
+
+بعد Approval:
+
+يتم إنشاء:
+
+**Payroll Finance Package**
+
+يشمل:
+
+* Payroll Summary
+* Bank Transfer File
+* Cost Allocation
+* Accounting Entries
+* Deduction Reports
+* Variance Report.
+
+الـManual الحالي يجعل Payroll يعد التقارير ويرسل package للمالية ثم تقوم Finance بتنفيذ التحويلات. 
+
+---
+
+# 09.55 Bank Files
+
+يدعم:
+
+* Single Bank
+* Multiple Banks
+* Cash Payroll
+* Wallet
+* Bank Transfer
+
+ويولد File Format حسب البنك عند الحاجة.
+
+---
+
+# 09.56 Bank Validation
+
+قبل الدفع:
+
+* IBAN / Account
+* Bank Code
+* Account Holder
+* Employee Mapping
+* Duplicate Account
+* Invalid Account
+
+---
+
+# 09.57 Payslip
+
+Employee Self Service يرى:
+
+## Payslip
+
+```text
+Basic Salary
+Fixed Allowances
+OT
+Field Allowance
+KPI
+Gross Earnings
+
+Tax
+Insurance
+Loan
+Absence
+Other Deductions
+
+Net Salary
+```
+
+---
+
+# 09.58 Payslip Explanation
+
+ميزة مفيدة:
+
+الموظف يضغط على:
+
+**Outside Cairo Allowance — 2,800 EGP**
+
+ويرى:
+
+8 Eligible Days × 350 EGP
+
+ويستطيع معرفة Source.
+
+نفس الشيء OT.
+
+هذا يقلل استفسارات Payroll بشكل كبير.
+
+---
+
+# 09.59 Payroll Inquiry
+
+بدلاً من WhatsApp:
+
+Employee:
+
+`Raise Payroll Inquiry`
+
+اختيار:
+
+Salary
+
+OT
+
+Allowance
+
+Deduction
+
+Loan
+
+Bank.
+
+---
+
+# 09.60 Payroll Inquiry Workflow
+
+Employee
+
+↓
+
+HR Operations
+
+↓
+
+Payroll
+
+↓
+
+Resolved.
+
+مع SLA.
+
+---
+
+# 09.61 Confidentiality
+
+Payroll Access يجب أن يكون منفصلًا جدًا.
+
+مثلاً:
+
+Project Manager:
+
+يرى Total Labor Cost حسب Project.
+
+**لا يرى Salary الموظف الفردي** إلا إذا كانت صلاحياته تسمح.
+
+---
+
+# 09.62 Masking
+
+مثلاً HR Operations قد يرى:
+
+`Salary Band`
+
+بدلاً من:
+
+Exact Salary.
+
+حسب RBAC.
+
+---
+
+# 09.63 Payroll Analytics
+
+Dashboard:
+
+```text
+Total Payroll
+Gross Payroll
+Net Payroll
+OT Cost
+Allowances
+KPI
+Deductions
+Employer Cost
+Headcount
+Average Cost/Employee
+```
+
+---
+
+# 09.64 Payroll by Project
+
+مثلاً:
+
+| Project  |  HC | Salary |   OT | Allowance | Total |
+| -------- | --: | -----: | ---: | --------: | ----: |
+| Huawei   | 320 |   4.2M | 480K |      620K |  5.3M |
+| Ericsson | 270 |   3.7M | 310K |      420K | 4.43M |
+
+---
+
+# 09.65 Payroll by Customer
+
+يساعد Afro تعرف تكلفة القوى العاملة لكل:
+
+Huawei
+
+Nokia
+
+Ericsson
+
+Vodafone
+
+إلخ.
+
+---
+
+# 09.66 Payroll by Job
+
+مثلاً:
+
+Technicians
+
+Engineers
+
+Drivers
+
+Riggers
+
+Supervisors.
+
+---
+
+# 09.67 OT Analytics
+
+مثلاً:
+
+Top Projects by OT
+
+Employees with Excessive OT
+
+OT/Salary Ratio
+
+OT Trend
+
+OT vs Production.
+
+---
+
+# 09.68 Allowance Analytics
+
+مرتبط بالجزء الذي أضفناه في Module 07:
+
+* Inside Cairo
+* Outside Cairo
+* Remote
+* Travel
+* Meal
+* Transport
+* Accommodation
+* Hardship
+
+مع:
+
+Cost by Project / Location / Employee / Customer.
+
+---
+
+# 09.69 Payroll Cost Forecast
+
+اعتمادًا على:
+
+Roster
+
+Planned OT
+
+Future Leave
+
+Project Assignments
+
+Planned Hiring
+
+Expected Allowances.
+
+مثلاً:
+
+> September estimated payroll = 14.1M EGP.
+
+---
+
+# 09.70 Budget vs Actual
+
+Project Payroll Budget:
+
+5M
+
+Actual:
+
+5.7M
+
+Variance:
+
++700K
+
+Drivers:
+
+OT +300K
+
+Outside Cairo +250K
+
+Additional Manpower +150K.
+
+---
+
+# 09.71 Daily Worker Payroll
+
+مسار منفصل داخل نفس Engine:
+
+```text
+Approved Working Days
+×
+Daily Rate
++
+Production
++
+Approved Allowances
+-
+Deductions
+```
+
+---
+
+# 09.72 Hourly Worker Payroll
+
+```text
+Approved Hours
+×
+Hourly Rate
+```
+
+مع:
+
+OT / Night / Holiday.
+
+---
+
+# 09.73 Outsourced Employees
+
+يمكن Payroll يكون:
+
+`Non-Payroll Employee`
+
+لكن النظام يحتفظ:
+
+Vendor Cost
+
+Daily Cost
+
+Monthly Charge
+
+Project Allocation.
+
+فلا نخلط Employee Payroll مع Supplier Invoice.
+
+---
+
+# 09.74 Final Settlement Interface
+
+عند Offboarding:
+
+Module Payroll يحسب:
+
+* Final Salary
+* Approved OT
+* Pending Allowances
+* Unused Leave Input
+* Loans
+* Advances
+* Deductions
+* Bonus Eligibility
+
+ثم ينتقل إلى Final Settlement.
+
+والـManual الحالي يضع Final Salary وUnused Leave Balance وDeductions وOther Entitlements ضمن Legal & Financial Closure. 
+
+---
+
+# 09.75 Core Database Objects
+
+```text
+PayrollGroup
+PayrollCalendar
+PayrollPeriod
+PayrollRun
+
+CompensationProfile
+CompensationVersion
+SalaryComponent
+EmployeeSalaryComponent
+
+PayrollRule
+PayrollFormula
+PayrollInput
+
+OvertimePayrollInput
+AllowancePayrollInput
+LeavePayrollInput
+KPIInput
+ProductionInput
+
+Loan
+LoanInstallment
+Advance
+RecurringDeduction
+PayrollAdjustment
+
+PayrollEmployeeResult
+PayrollComponentResult
+PayrollException
+PayrollApproval
+
+BankAccount
+BankPaymentBatch
+
+Payslip
+
+CostAllocation
+PayrollCostEntry
+
+TaxRule
+TaxBracket
+SocialInsuranceRule
+```
+
+---
+
+# 09.76 أهم قاعدة تصميم
+
+لا نجعل Payroll يعتمد مباشرة على Screens مختلفة.
+
+نحتاج:
+
+## Payroll Input Layer
+
+```text
+Module 07
+Attendance / OT / Allowance
+        ↓
+
+Module 08
+Leave / Absence
+        ↓
+
+KPI
+        ↓
+
+Employee Master
+        ↓
+
+Approved Payroll Inputs
+        ↓
+
+PAYROLL ENGINE
+```
+
+وبذلك يمكن معرفة مصدر كل جنيه.
+
+---
+
+# 09.77 Source Traceability
+
+مثلاً:
+
+Payslip:
+
+Outside Cairo:
+
+`3,500 EGP`
+
+User يضغط:
+
+```text
+Source:
+Attendance 1–10 Aug
+Location: Alexandria
+Policy: OUT-CAIRO-V2
+Eligible Days: 10
+Rate: 350
+Approved By: PM
+```
+
+هذه من أقوى خصائص النظام.
+
+---
+
+# 09.78 Payroll Audit Trail
+
+كل Calculation يحتفظ بـ:
+
+```text
+Rule Used
+Formula Version
+Input Value
+Output Value
+Created By
+Approved By
+Timestamp
+```
+
+فلا يصبح Payroll:
+
+> رقم لا نعرف كيف تم الوصول إليه.
+
+---
+
+# 09.79 Payroll Control Room
+
+الشاشة الرئيسية مثلاً:
+
+```text
+August 2026 Payroll
+
+Employees                  4,850
+Payroll Ready              4,713
+Blocked                      137
+
+Gross Payroll              58.4M
+Allowances                  6.2M
+Overtime                    3.7M
+KPI                          1.1M
+Deductions                   5.8M
+Estimated Net              52.3M
+
+Pending Exceptions           47
+Pending Approvals             6
+```
+
+---
+
+# 09.80 أهم الفرق عن Payroll Systems التقليدية
+
+أريد النظام هنا يعمل على هذا المبدأ:
+
+> **Payroll is the financial result of validated workforce events.**
+
+وليس:
+
+> HR يدخل رقم الراتب ثم Excel يعمل الحساب.
+
+كل قيمة يجب أن يكون لها:
+
+**Source → Rule → Calculation → Approval → Payment → Cost Allocation**
+
+وهذا يتفق مع توجه الـPeople & Culture Manual الحالي في اشتراط traceable, approved payroll inputs والـproject allocation والتقارير المالية حسب المشروع. 
+
+والتسلسل عندنا أصبح قويًا:
+
+**Module 06 — Employee Activation**
+→ **Module 07 — Attendance, Time, Rosters, Field Workforce & Allowances**
+→ **Module 08 — Leave, Absence & Availability**
+→ **Module 09 — Payroll & Compensation**
+
+والـModule المنطقي التالي بعد ذلك هو **Module 10 — Performance Management, KPI, Objectives, Appraisals & Incentives**؛ لأن جزء الـKPI موجود بالفعل في الـManual الحالي كمدخل مالي ربع سنوي للـPayroll، لكننا نحتاج أولًا Module مستقل يدير من أين جاءت الـKPI نفسها، أهداف الموظف، تقييمه، calibration والنتيجة التي تصل إلى Payroll. 

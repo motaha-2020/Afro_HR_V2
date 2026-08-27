@@ -1,0 +1,4565 @@
+تمام. **Cluster K** من أهم الـClusters تقنيًا لأنه هو الذي يمنع النظام كله من التحول بعد فترة إلى مجموعة جداول متناقضة بين HR وERP وFinance وAttendance وCustomer systems.
+
+هنا لا نبني مجرد “Integrations Module”، بل نبني **Data & Integration Governance Layer** كاملة تحدد لكل معلومة: من هو الـSystem of Record، من يملك حق التعديل، من يقرأ فقط، كيف نكتشف التعارض، وكيف نعيد المزامنة بدون فقد Audit Trail.
+
+# Cluster K
+
+## HR Master Data Migration, External Integrations, Interface Management, Data Quality, Reconciliation, Import/Export, Integration Monitoring & System-of-Record Governance ERD
+
+القاعدة الأساسية:
+
+> **Integration ≠ Data Ownership ≠ Synchronization ≠ Migration ≠ Import ≠ Reconciliation ≠ Data Quality**
+
+كل واحدة لها Lifecycle مختلف.
+
+---
+
+# 1. الهدف المعماري
+
+Cluster K يجب أن يجيب عن أسئلة مثل:
+
+```text
+من هو الـmaster للـEmployee Code؟
+من يملك Salary؟
+من يملك Attendance Punches؟
+من يملك Bank Account؟
+من يملك Project Code؟
+ماذا يحدث إذا ERP يقول أن الموظف Active وHR يقول Separated؟
+هل آخر sync نجح؟
+ما الـrecords التي فشلت؟
+هل تمت إعادة المحاولة؟
+هل يوجد duplicate employee؟
+هل يوجد employee في Payroll وليس في HR؟
+هل هناك Project Code غير معروف؟
+هل تم استيراد Excel مرتين؟
+من عدّل mapping؟
+ما الفرق بين source value وtarget value؟
+كيف نعمل initial migration لـ5,000 موظف لكل شركة؟
+```
+
+---
+
+# 2. Cluster K Domains
+
+أقسمه إلى 17 Sub-Domains:
+
+```text
+K01 System Registry
+K02 System-of-Record Governance
+K03 Interface Catalog
+K04 Integration Endpoint & Connection
+K05 Data Contract & Schema Mapping
+K06 Reference / Code Mapping
+K07 Integration Execution
+K08 Message / Event Processing
+K09 Error Handling & Retry
+K10 Reconciliation
+K11 Data Quality Management
+K12 Master Data Migration
+K13 Bulk Import / Export
+K14 Data Validation & Staging
+K15 Conflict Resolution
+K16 Integration Monitoring & SLA
+K17 Lineage, Audit & Governance
+```
+
+---
+
+# 3. High-Level Architecture
+
+```text
+                   ┌────────────────┐
+                   │     HR SaaS    │
+                   └───────┬────────┘
+                           │
+                  Integration Layer
+                           │
+       ┌───────────────────┼───────────────────┐
+       ▼                   ▼                   ▼
+      ERP                Finance           Attendance
+       │                   │                   │
+       ├───────────────┬────┴───────┬──────────┤
+       ▼               ▼            ▼          ▼
+     Banks        Insurance      Customer     HSE
+                                 Platforms
+       │
+       ▼
+ Identity / AD / Email / Project Systems
+
+                           │
+                           ▼
+                ┌───────────────────────┐
+                │  Cluster K Governance │
+                │                       │
+                │ Ownership             │
+                │ Mapping               │
+                │ Validation            │
+                │ Reconciliation        │
+                │ Monitoring            │
+                │ Audit                 │
+                └───────────────────────┘
+```
+
+---
+
+# 4. أهم مبدأ — System of Record
+
+أول Entity في Cluster K يجب أن تحدد ownership.
+
+مثلاً:
+
+```text
+Employee Core Identity
+Owner = AfroHR
+
+Payroll Journal
+Owner = Payroll
+
+GL Posting
+Owner = ERP / Finance
+
+Raw Attendance Punch
+Owner = Attendance Device / Attendance Engine
+
+Bank Transaction
+Owner = Bank / Finance
+
+Project Financial Master
+Owner = ERP / Project System
+
+HR Job / Position
+Owner = HR
+
+Customer Access Status
+Owner = Customer Platform
+
+Medical Insurance Membership Number
+Owner = Insurance Provider / Cluster G validated record
+```
+
+---
+
+# 5. K01 — External System Registry
+
+## external_system
+
+```text
+external_system
+---------------
+external_system_id PK
+
+tenant_id FK
+
+system_code
+system_name
+
+system_type
+
+vendor_name nullable
+
+environment_type
+
+system_owner_department_id FK
+business_owner_user_id FK
+technical_owner_user_id FK
+
+base_url nullable
+
+integration_enabled_flag
+
+criticality_level
+
+data_classification_level
+
+status
+
+created_at
+created_by
+```
+
+---
+
+# 6. System Types
+
+```text
+ERP
+Finance
+Payroll
+Attendance Device
+Attendance Platform
+Bank
+Insurance Provider
+Customer Portal
+Project Management
+HSE
+Identity Provider
+Active Directory
+Email
+Document Management
+Government Platform
+Recruitment Platform
+Learning Platform
+Other
+```
+
+---
+
+# 7. Environments
+
+```text
+Development
+Test
+UAT
+Staging
+Production
+Disaster Recovery
+```
+
+مهم جدًا ألا نخلط endpoints.
+
+---
+
+# 8. System Criticality
+
+```text
+Low
+Medium
+High
+Business Critical
+Mission Critical
+```
+
+مثلاً:
+
+```text
+Payroll Bank File = Business Critical
+Attendance API = High
+Training Provider = Medium
+```
+
+---
+
+# 9. K02 — Data Domain
+
+نحتاج Catalog رسمي للـbusiness domains.
+
+## data_domain
+
+```text
+data_domain_id PK
+
+domain_code
+domain_name
+
+domain_description
+
+business_owner_department_id FK
+
+data_steward_user_id FK
+
+classification_level
+
+active_flag
+```
+
+مثلاً:
+
+```text
+Employee Master
+Organization
+Attendance
+Payroll
+Compensation
+Leave
+Personnel
+Benefits
+Recruitment
+Projects
+Finance
+Assets
+Training
+```
+
+---
+
+# 10. Data Entity Registry
+
+## data_entity_registry
+
+```text
+data_entity_registry_id PK
+
+data_domain_id FK
+
+entity_code
+entity_name
+
+logical_entity_name
+
+primary_system_id FK
+
+data_owner_department_id FK
+
+data_steward_user_id FK
+
+classification_level
+
+pii_flag
+sensitive_flag
+
+active_flag
+```
+
+مثلاً:
+
+```text
+EMPLOYEE
+POSITION
+PROJECT
+ATTENDANCE_EVENT
+PAYROLL_RUN
+BANK_ACCOUNT
+CONTRACT
+CERTIFICATION
+```
+
+---
+
+# 11. System of Record Rule
+
+## system_of_record_rule
+
+```text
+system_of_record_rule_id PK
+
+data_entity_registry_id FK
+
+attribute_code nullable
+
+system_id FK
+
+ownership_type
+
+write_authority_flag
+
+effective_from
+effective_to
+
+precedence_order
+
+conflict_policy_id FK nullable
+
+approved_by
+
+active_flag
+```
+
+---
+
+# 12. لماذا Attribute-Level Ownership مهم؟
+
+لأن Employee كEntity قد يكون موزع ownership.
+
+مثلاً:
+
+```text
+Employee Name
+Owner = HR
+
+Employee Payroll Bank Account
+Owner = HR / Payroll validated
+
+Employee GL Cost Center
+Owner = ERP
+
+Employee Customer User ID
+Owner = Customer Platform
+```
+
+إذًا ownership ليس دائمًا Entity-level فقط.
+
+---
+
+# 13. Ownership Types
+
+```text
+Master
+Authoritative
+Transactional Owner
+Reference Owner
+Consumer
+Replica
+Derived
+```
+
+---
+
+# 14. مثال Governance Matrix
+
+```text
+Data                       Master          Consumers
+-----------------------------------------------------
+Employee Core              AfroHR          ERP, Payroll
+Position                   AfroHR          ERP
+Project Code               ERP/PM          AfroHR
+Attendance Punch           Attendance      AfroHR
+Payroll Result             Payroll         ERP/Finance
+Bank Payment Status        Bank/Finance    Payroll
+Medical Membership         Provider/G      HR
+Customer Access            Customer        HR
+```
+
+---
+
+# 15. ممنوع Two Masters
+
+قاعدة:
+
+> لنفس attribute وفي نفس الفترة لا يجب أن يكون لدينا أكثر من Master active إلا لو الـownership model يصرح بذلك.
+
+---
+
+# 16. K03 — Interface Catalog
+
+## integration_interface
+
+```text
+integration_interface_id PK
+
+tenant_id FK
+
+interface_code
+interface_name
+
+source_system_id FK
+target_system_id FK
+
+data_domain_id FK
+
+interface_type
+
+direction
+
+sync_mode
+
+business_purpose
+
+criticality
+
+data_classification_level
+
+interface_owner_user_id FK
+
+active_flag
+
+effective_from
+effective_to
+```
+
+---
+
+# 17. Interface Types
+
+```text
+API
+Webhook
+File Transfer
+Database
+Message Queue
+Event Bus
+SFTP
+Email File
+Manual Import
+Bank File
+Government File
+Device Connector
+```
+
+---
+
+# 18. Sync Modes
+
+```text
+Real-Time
+Near Real-Time
+Scheduled
+Daily Batch
+Monthly Batch
+On Demand
+Manual
+Event Driven
+```
+
+---
+
+# 19. Direction
+
+```text
+Inbound
+Outbound
+Bidirectional
+```
+
+لكن Bidirectional نستخدمها بحذر شديد.
+
+الأفضل غالبًا:
+
+```text
+Interface A HR → ERP
+Interface B ERP → HR
+```
+
+بـownership واضح.
+
+---
+
+# 20. K04 — Integration Connection
+
+## integration_connection
+
+```text
+integration_connection_id PK
+
+integration_interface_id FK
+
+environment_type
+
+connection_type
+
+endpoint_url nullable
+
+authentication_type
+
+credential_secret_reference
+
+timeout_seconds
+
+max_retry_count
+
+rate_limit nullable
+
+connection_status
+
+last_tested_at
+
+certificate_expiry_date nullable
+```
+
+---
+
+# 21. Authentication Types
+
+```text
+OAuth2
+API Key
+Basic Auth
+Mutual TLS
+JWT
+SFTP Key
+Service Account
+Database Credential
+None
+```
+
+الـcredential نفسه لا يُخزن plaintext.
+
+---
+
+# 22. Secret Management
+
+داخل DB:
+
+```text
+credential_secret_reference
+```
+
+وليس:
+
+```text
+api_password
+```
+
+والـsecret actual value في Vault.
+
+---
+
+# 23. K05 — Data Contract
+
+هذه نقطة شديدة الأهمية.
+
+كل Interface يجب أن يكون له Data Contract.
+
+## integration_data_contract
+
+```text
+integration_data_contract_id PK
+
+integration_interface_id FK
+
+contract_version
+
+schema_format
+
+schema_definition_reference
+
+effective_from
+effective_to
+
+backward_compatible_flag
+
+status
+
+approved_by
+```
+
+---
+
+# 24. Schema Formats
+
+```text
+JSON Schema
+XML XSD
+CSV Layout
+Excel Template
+Fixed Width
+Database View
+ISO Message
+Custom
+```
+
+---
+
+# 25. Field Mapping
+
+## integration_field_mapping
+
+```text
+integration_field_mapping_id PK
+
+integration_data_contract_id FK
+
+source_field
+
+target_entity
+
+target_field
+
+transformation_rule_id FK nullable
+
+mandatory_flag
+
+default_value nullable
+
+validation_rule_id FK nullable
+
+mapping_status
+```
+
+---
+
+# 26. مثال
+
+```text
+Source:
+Nama7 EMP_CODE
+
+Target:
+employee.hr_code
+
+Source:
+PROJECT_NO
+
+Target:
+project.external_project_code
+```
+
+---
+
+# 27. Transformation Rule
+
+## data_transformation_rule
+
+```text
+data_transformation_rule_id PK
+
+rule_code
+
+rule_type
+
+rule_expression
+
+input_data_type
+
+output_data_type
+
+version
+
+active_flag
+```
+
+مثلاً:
+
+```text
+Trim
+Uppercase
+Date conversion
+Boolean map
+Currency normalization
+Phone normalization
+Code translation
+```
+
+---
+
+# 28. مثال Mapping
+
+```text
+Source Gender:
+M / F
+
+Target:
+MALE / FEMALE
+```
+
+Mapping Rule:
+
+```text
+M → MALE
+F → FEMALE
+```
+
+لا نضعها في code.
+
+---
+
+# 29. K06 — Reference Mapping
+
+هذه ضرورية جدًا.
+
+## reference_code_mapping
+
+```text
+reference_code_mapping_id PK
+
+mapping_group_id FK
+
+source_system_id FK
+target_system_id FK
+
+source_code
+source_label nullable
+
+target_code
+target_label nullable
+
+effective_from
+effective_to
+
+mapping_status
+
+verified_by
+```
+
+---
+
+# 30. أمثلة
+
+```text
+ERP Department Code
+HR Department ID
+
+Bank Code
+Payroll Bank Code
+
+Customer Project Code
+Internal Project ID
+
+Attendance Device Employee ID
+HR Employee ID
+```
+
+---
+
+# 31. Mapping Group
+
+## mapping_group
+
+```text
+mapping_group_id PK
+
+group_code
+
+entity_type
+
+source_system_id FK
+target_system_id FK
+
+mapping_type
+
+auto_create_allowed
+
+active_flag
+```
+
+---
+
+# 32. Auto-Create Policy
+
+مثلاً:
+
+Project Code غير معروف يأتي من ERP.
+
+هل HR:
+
+```text
+Auto-create project?
+```
+
+أم:
+
+```text
+Reject message?
+```
+
+أم:
+
+```text
+Send to mapping queue?
+```
+
+يجب أن تكون policy.
+
+---
+
+# 33. Unknown Reference Queue
+
+## unmapped_reference
+
+```text
+unmapped_reference_id PK
+
+integration_run_id FK
+
+entity_type
+
+source_system_id FK
+
+source_code
+
+source_value
+
+first_seen_at
+
+occurrence_count
+
+resolution_status
+
+resolved_mapping_id FK nullable
+```
+
+---
+
+# 34. K07 — Integration Execution
+
+## integration_run
+
+```text
+integration_run_id PK
+
+integration_interface_id FK
+
+run_number
+
+run_type
+
+scheduled_at nullable
+started_at
+ended_at nullable
+
+run_status
+
+records_received
+records_processed
+records_succeeded
+records_failed
+records_skipped
+
+retry_of_run_id FK nullable
+
+correlation_id
+
+created_at
+```
+
+---
+
+# 35. Run Types
+
+```text
+Scheduled
+Manual
+Retry
+Replay
+Backfill
+Migration
+Recovery
+Test
+```
+
+---
+
+# 36. Run Status
+
+```text
+Queued
+Running
+Completed
+Completed with Errors
+Failed
+Cancelled
+Timed Out
+Partially Processed
+```
+
+---
+
+# 37. Individual Record Processing
+
+## integration_record_log
+
+```text
+integration_record_log_id PK
+
+integration_run_id FK
+
+source_record_key
+
+target_entity_type
+target_entity_id nullable
+
+operation_type
+
+processing_status
+
+received_at
+processed_at nullable
+
+error_id FK nullable
+
+payload_hash
+
+correlation_id
+```
+
+---
+
+# 38. Operations
+
+```text
+Create
+Update
+Delete Request
+Deactivate
+Upsert
+Ignore
+Reject
+```
+
+---
+
+# 39. Hard Delete from Integration
+
+يفضل منع:
+
+```text
+DELETE Employee
+```
+
+من external system.
+
+بدل ذلك:
+
+```text
+Deactivate
+End Date
+Status Change
+```
+
+---
+
+# 40. Idempotency
+
+هذه قاعدة integration أساسية.
+
+لو نفس message وصل مرتين:
+
+```text
+PAYROLL-EMP-1001-20260810
+```
+
+يجب ألا ينشئ record مرتين.
+
+## idempotency_key
+
+يمكن تخزينه في:
+
+```text
+integration_record_log
+```
+
+مع:
+
+```text
+unique source_system + message_key
+```
+
+---
+
+# 41. Message Envelope
+
+## integration_message
+
+```text
+integration_message_id PK
+
+integration_interface_id FK
+
+message_id
+
+correlation_id
+
+event_type
+
+message_version
+
+received_at
+
+processing_status
+
+payload_storage_reference
+
+payload_hash
+
+idempotency_key
+```
+
+---
+
+# 42. Event Example
+
+```text
+employee.created
+employee.updated
+employee.separated
+
+project.created
+
+attendance.validated
+
+payroll.run.completed
+
+contract.expiring
+```
+
+---
+
+# 43. K08 — Event Subscription
+
+## integration_event_subscription
+
+```text
+integration_event_subscription_id PK
+
+subscriber_system_id FK
+
+event_type
+
+event_version
+
+endpoint_id FK
+
+filter_rule_id FK nullable
+
+active_flag
+```
+
+مثال:
+
+```text
+employee.separated
+→ Active Directory
+→ Payroll
+→ ERP
+→ Customer Access
+```
+
+---
+
+# 44. Event Outbox
+
+أنصح باستخدام Outbox Pattern.
+
+## integration_outbox
+
+```text
+integration_outbox_id PK
+
+event_id
+
+aggregate_type
+aggregate_id
+
+event_type
+event_version
+
+payload_reference
+
+created_at
+
+published_at nullable
+
+publish_status
+
+retry_count
+```
+
+حتى لا يحدث:
+
+```text
+DB updated
+but
+event lost
+```
+
+---
+
+# 45. Inbox Pattern
+
+## integration_inbox
+
+```text
+integration_inbox_id PK
+
+source_system_id FK
+
+message_id
+
+received_at
+
+processed_at nullable
+
+processing_status
+
+duplicate_flag
+```
+
+---
+
+# 46. K09 — Errors
+
+## integration_error
+
+```text
+integration_error_id PK
+
+integration_run_id FK nullable
+integration_record_log_id FK nullable
+
+error_code
+
+error_category
+
+severity
+
+error_message
+
+technical_details_reference nullable
+
+retryable_flag
+
+first_occurred_at
+last_occurred_at
+
+occurrence_count
+
+resolution_status
+```
+
+---
+
+# 47. Error Categories
+
+```text
+Connection
+Authentication
+Timeout
+Schema
+Validation
+Mapping
+Reference
+Business Rule
+Duplicate
+Conflict
+External System
+Internal System
+Security
+Rate Limit
+```
+
+---
+
+# 48. Error Severity
+
+```text
+Info
+Warning
+Error
+Critical
+```
+
+---
+
+# 49. Retry Policy
+
+## integration_retry_policy
+
+```text
+integration_retry_policy_id PK
+
+integration_interface_id FK
+
+error_category
+
+max_attempts
+
+initial_delay_seconds
+
+backoff_strategy
+
+max_delay_seconds
+
+dead_letter_after_failure
+
+active_flag
+```
+
+---
+
+# 50. Backoff
+
+مثلاً:
+
+```text
+1 min
+5 min
+15 min
+1 hr
+```
+
+وليس retry بلا نهاية.
+
+---
+
+# 51. Dead Letter Queue
+
+## integration_dead_letter
+
+```text
+integration_dead_letter_id PK
+
+integration_message_id FK
+
+failure_reason
+
+last_error_id FK
+
+moved_at
+
+resolution_status
+
+replayed_at nullable
+```
+
+---
+
+# 52. Replay
+
+لا نحذف الخطأ ثم نعيد التشغيل يدويًا بطريقة غير traceable.
+
+نعمل:
+
+```text
+Original Message
+↓
+Dead Letter
+↓
+Issue Fixed
+↓
+Replay
+↓
+New Run
+```
+
+مع link للأصل.
+
+---
+
+# 53. K10 — Reconciliation
+
+هذه من أهم الـdomains.
+
+Sync success لا يعني data correct.
+
+مثلاً:
+
+```text
+API calls all succeeded
+```
+
+لكن:
+
+```text
+ERP has 5,010 employees
+HR has 5,000
+```
+
+نحتاج reconciliation.
+
+---
+
+# 54. Reconciliation Definition
+
+## reconciliation_rule
+
+```text
+reconciliation_rule_id PK
+
+rule_code
+rule_name
+
+source_system_id FK
+target_system_id FK
+
+entity_type
+
+reconciliation_type
+
+key_definition
+
+comparison_field_list
+
+tolerance_rule nullable
+
+frequency
+
+severity
+
+active_flag
+```
+
+---
+
+# 55. Reconciliation Types
+
+```text
+Record Count
+Key Match
+Field Match
+Amount Match
+Status Match
+Aggregate Match
+Sequence Check
+Completeness Check
+Cross-System Balance
+```
+
+---
+
+# 56. Reconciliation Run
+
+## reconciliation_run
+
+```text
+reconciliation_run_id PK
+
+reconciliation_rule_id FK
+
+period_start
+period_end
+
+started_at
+completed_at
+
+source_record_count
+target_record_count
+
+matched_count
+mismatch_count
+missing_source_count
+missing_target_count
+
+status
+```
+
+---
+
+# 57. Reconciliation Difference
+
+## reconciliation_difference
+
+```text
+reconciliation_difference_id PK
+
+reconciliation_run_id FK
+
+entity_key
+
+difference_type
+
+source_value nullable
+target_value nullable
+
+field_name nullable
+
+severity
+
+resolution_status
+
+assigned_to_user_id FK nullable
+```
+
+---
+
+# 58. Difference Types
+
+```text
+Missing in HR
+Missing in ERP
+Value Mismatch
+Duplicate
+Invalid Status
+Amount Difference
+Unmapped
+Unexpected Record
+```
+
+---
+
+# 59. مثال Payroll Reconciliation
+
+```text
+HR Active Employees = 4,980
+Payroll Employees    = 4,975
+
+Difference:
+5 employees
+```
+
+ثم:
+
+```text
+3 missing bank details
+1 payroll hold
+1 integration failure
+```
+
+---
+
+# 60. Bank Reconciliation
+
+Payroll Run:
+
+```text
+100 payments submitted
+```
+
+Bank responds:
+
+```text
+98 successful
+2 rejected
+```
+
+Cluster K يسجل الفرق، بينما Finance/Payroll يعالجان business consequence.
+
+---
+
+# 61. Attendance Reconciliation
+
+مثلاً:
+
+```text
+Device punches received = 15,000
+Processed = 14,970
+
+Missing = 30
+```
+
+نرفع issue.
+
+---
+
+# 62. K11 — Data Quality
+
+## data_quality_rule
+
+```text
+data_quality_rule_id PK
+
+data_entity_registry_id FK
+
+rule_code
+rule_name
+
+quality_dimension
+
+rule_expression
+
+severity
+
+blocking_flag
+
+threshold_percentage nullable
+
+active_flag
+```
+
+---
+
+# 63. Data Quality Dimensions
+
+```text
+Completeness
+Accuracy
+Validity
+Uniqueness
+Consistency
+Timeliness
+Integrity
+Conformity
+```
+
+---
+
+# 64. Examples
+
+Employee:
+
+```text
+National ID missing
+Manager invalid
+Department missing
+Duplicate mobile
+Invalid email
+Salary without grade
+Project assignment without project
+```
+
+---
+
+# 65. Data Quality Run
+
+## data_quality_run
+
+```text
+data_quality_run_id PK
+
+data_entity_registry_id FK
+
+run_date
+
+records_checked
+
+violations_found
+
+quality_score
+
+status
+```
+
+---
+
+# 66. Data Quality Issue
+
+## data_quality_issue
+
+```text
+data_quality_issue_id PK
+
+data_quality_run_id FK
+
+rule_id FK
+
+entity_id
+
+issue_type
+
+issue_description
+
+severity
+
+owner_user_id FK nullable
+
+status
+
+detected_at
+resolved_at nullable
+
+resolution_note nullable
+```
+
+---
+
+# 67. Quality Score
+
+مثلاً:
+
+```text
+Employee Master Quality = 96.4%
+```
+
+لكن لا يكون arbitrary.
+
+يحسب من:
+
+```text
+weighted rules
+```
+
+---
+
+# 68. Quality Threshold
+
+مثلاً:
+
+```text
+Critical Employee Master
+Target ≥ 99%
+```
+
+بينما:
+
+```text
+Training History
+Target ≥ 95%
+```
+
+---
+
+# 69. Data Stewardship
+
+## data_stewardship_assignment
+
+```text
+data_stewardship_assignment_id PK
+
+data_domain_id FK
+
+scope_type
+scope_id
+
+steward_user_id FK
+
+responsibility_type
+
+effective_from
+effective_to
+```
+
+---
+
+# 70. Steward Responsibilities
+
+```text
+Approve mapping
+Resolve quality issues
+Approve conflicts
+Review reconciliation
+Own definitions
+Approve migration
+```
+
+---
+
+# 71. K12 — Data Migration
+
+Initial implementation غالبًا سيكون أخطر من integrations نفسها.
+
+لدينا:
+
+```text
+Excel
+Google Sheets
+Nama ERP
+Attendance systems
+Personnel files
+Payroll files
+Old HR databases
+```
+
+---
+
+# 72. Migration Project
+
+## migration_project
+
+```text
+migration_project_id PK
+
+tenant_id FK
+company_id FK
+
+project_code
+project_name
+
+source_system_id FK
+
+migration_scope
+
+planned_start_date
+planned_go_live_date
+
+migration_status
+
+migration_owner_user_id FK
+```
+
+---
+
+# 73. Migration Wave
+
+## migration_wave
+
+```text
+migration_wave_id PK
+
+migration_project_id FK
+
+wave_number
+wave_name
+
+data_domain_id FK
+
+source_period nullable
+
+planned_load_date
+
+status
+```
+
+مثلاً:
+
+```text
+Wave 1 Master Data
+Wave 2 Contracts
+Wave 3 Payroll
+Wave 4 Attendance History
+Wave 5 Training
+```
+
+---
+
+# 74. Migration Dataset
+
+## migration_dataset
+
+```text
+migration_dataset_id PK
+
+migration_wave_id FK
+
+dataset_name
+
+source_file_reference nullable
+source_table_name nullable
+
+target_entity
+
+record_count_expected
+
+migration_template_version
+
+status
+```
+
+---
+
+# 75. Migration Staging
+
+لا نكتب data مباشرة في production tables.
+
+## migration_staging_record
+
+```text
+migration_staging_record_id PK
+
+migration_dataset_id FK
+
+source_row_number
+
+source_record_key
+
+raw_payload_json
+
+normalized_payload_json nullable
+
+validation_status
+
+mapping_status
+
+load_status
+
+target_entity_id nullable
+```
+
+---
+
+# 76. Migration Pipeline
+
+```text
+Source
+↓
+Extract
+↓
+Staging
+↓
+Normalize
+↓
+Validate
+↓
+Map
+↓
+Deduplicate
+↓
+Business Validation
+↓
+Mock Load
+↓
+Reconcile
+↓
+Approve
+↓
+Production Load
+```
+
+---
+
+# 77. لا يوجد Direct Excel → Employee
+
+ممنوع تصميميًا:
+
+```text
+Upload Excel
+↓
+Insert Employee
+```
+
+الصحيح:
+
+```text
+Upload
+↓
+Staging
+↓
+Validation
+↓
+Preview
+↓
+Approval
+↓
+Commit
+```
+
+---
+
+# 78. Migration Validation Result
+
+## migration_validation_result
+
+```text
+migration_validation_result_id PK
+
+migration_staging_record_id FK
+
+validation_rule_id FK
+
+validation_result
+
+error_code nullable
+
+error_message nullable
+
+severity
+```
+
+---
+
+# 79. Migration Mapping
+
+## migration_value_mapping
+
+```text
+migration_value_mapping_id PK
+
+migration_project_id FK
+
+entity_type
+
+source_field
+source_value
+
+target_field
+target_value
+
+mapping_status
+
+approved_by nullable
+```
+
+---
+
+# 80. Duplicate Detection
+
+## migration_duplicate_candidate
+
+```text
+migration_duplicate_candidate_id PK
+
+migration_dataset_id FK
+
+source_record_id_a
+source_record_id_b
+
+match_score
+
+matching_fields
+
+duplicate_status
+
+reviewed_by nullable
+```
+
+---
+
+# 81. Example Duplicate Logic
+
+```text
+National ID exact
+OR
+Passport exact
+OR
+Name + Mobile + Date of Birth
+```
+
+لكن لا ندمج records تلقائيًا لو confidence غير كافٍ.
+
+---
+
+# 82. Migration Load Batch
+
+## migration_load_batch
+
+```text
+migration_load_batch_id PK
+
+migration_dataset_id FK
+
+batch_number
+
+started_at
+completed_at
+
+records_attempted
+records_loaded
+records_failed
+
+load_status
+
+approved_by
+```
+
+---
+
+# 83. Rollback
+
+## migration_rollback_batch
+
+```text
+migration_rollback_batch_id PK
+
+migration_load_batch_id FK
+
+rollback_reason
+
+requested_by
+
+approved_by
+
+rollback_started_at
+rollback_completed_at
+
+status
+```
+
+---
+
+# 84. Important Rule
+
+Migration should be:
+
+```text
+repeatable
+auditable
+reconcilable
+rollback-capable
+```
+
+خصوصًا قبل Go-Live.
+
+---
+
+# 85. K13 — Bulk Import
+
+Migration ≠ ongoing import.
+
+بعد Go-Live، HR قد يحتاج:
+
+```text
+Import monthly project assignments
+Import allowances
+Import certificates
+Import bank accounts
+```
+
+---
+
+# 86. Import Template
+
+## import_template
+
+```text
+import_template_id PK
+
+template_code
+
+target_entity
+
+template_version
+
+allowed_file_types
+
+header_definition
+
+validation_profile_id FK
+
+max_rows
+
+active_flag
+```
+
+---
+
+# 87. Import Job
+
+## import_job
+
+```text
+import_job_id PK
+
+tenant_id FK
+
+import_template_id FK
+
+uploaded_file_reference
+
+uploaded_by
+
+uploaded_at
+
+job_status
+
+total_rows
+valid_rows
+invalid_rows
+
+commit_status
+committed_at nullable
+```
+
+---
+
+# 88. Import Row
+
+## import_row
+
+```text
+import_row_id PK
+
+import_job_id FK
+
+row_number
+
+raw_payload
+
+normalized_payload
+
+validation_status
+
+target_entity_id nullable
+```
+
+---
+
+# 89. Preview Before Commit
+
+يجب أن يرى user:
+
+```text
+1,000 Rows
+
+Valid       960
+Warnings     25
+Errors       15
+
+Changes:
+New         300
+Update      650
+No Change    10
+```
+
+قبل commit.
+
+---
+
+# 90. Import Change Preview
+
+## import_change_preview
+
+```text
+import_change_preview_id PK
+
+import_row_id FK
+
+target_entity_id nullable
+
+change_type
+
+field_name
+
+old_value nullable
+new_value nullable
+```
+
+---
+
+# 91. Bulk Update Approval
+
+بعض imports الحساسة:
+
+```text
+Salary
+Bank Account
+Employment Status
+```
+
+يجب approval قبل commit.
+
+---
+
+# 92. Export
+
+## export_definition
+
+```text
+export_definition_id PK
+
+export_code
+
+source_entity
+
+allowed_fields
+
+security_classification
+
+format
+
+masking_policy_id FK
+
+active_flag
+```
+
+---
+
+# 93. Export Job
+
+## export_job
+
+```text
+export_job_id PK
+
+export_definition_id FK
+
+requested_by
+
+requested_at
+
+filter_payload
+
+record_count
+
+file_reference
+
+expiry_at
+
+status
+```
+
+---
+
+# 94. Export Security
+
+Payroll data export لا يكون:
+
+```text
+permanent download link
+```
+
+بل:
+
+```text
+time-limited
+audited
+encrypted
+```
+
+---
+
+# 95. K14 — Validation Engine
+
+يمكن shared بين:
+
+```text
+API
+Migration
+Import
+Integration
+```
+
+## validation_rule
+
+```text
+validation_rule_id PK
+
+rule_code
+
+target_entity
+
+field_name nullable
+
+validation_type
+
+rule_expression
+
+severity
+
+blocking_flag
+
+error_message_template
+
+active_flag
+```
+
+---
+
+# 96. Validation Types
+
+```text
+Required
+Format
+Range
+Reference
+Cross-Field
+Cross-Entity
+Duplicate
+Business Rule
+Temporal
+Security
+```
+
+---
+
+# 97. Temporal Validation
+
+مثال:
+
+```text
+contract_end_date >= contract_start_date
+```
+
+أو:
+
+```text
+termination_date >= joining_date
+```
+
+---
+
+# 98. Cross-Entity Validation
+
+مثال:
+
+```text
+employee.project_id
+must exist in project master
+```
+
+---
+
+# 99. K15 — Conflict Management
+
+مثلاً:
+
+```text
+HR:
+Employee Location = Cairo
+
+ERP:
+Employee Location = Alexandria
+```
+
+نحتاج conflict.
+
+## data_conflict
+
+```text
+data_conflict_id PK
+
+entity_type
+entity_key
+
+attribute_name
+
+system_a_id FK
+system_a_value
+
+system_b_id FK
+system_b_value
+
+master_system_id FK
+
+conflict_type
+
+detected_at
+
+resolution_status
+
+resolved_value nullable
+
+resolved_by nullable
+```
+
+---
+
+# 100. Conflict Types
+
+```text
+Ownership Violation
+Value Mismatch
+Concurrent Update
+Stale Update
+Duplicate Master
+Invalid Override
+```
+
+---
+
+# 101. Conflict Resolution Policy
+
+## conflict_resolution_policy
+
+```text
+conflict_resolution_policy_id PK
+
+entity_type
+attribute_name
+
+resolution_strategy
+
+master_system_id FK nullable
+
+manual_review_required
+
+effective_from
+effective_to
+```
+
+---
+
+# 102. Resolution Strategies
+
+```text
+Master Wins
+Newest Wins
+Oldest Wins
+Manual Review
+Reject Source
+Merge
+Calculated Rule
+```
+
+لكن:
+
+> `Newest Wins` خطير جدًا في HR master data ويجب ألا يكون default.
+
+---
+
+# 103. Optimistic Concurrency
+
+لو HR user عدل employee وERP update وصل في نفس الوقت:
+
+نحتاج:
+
+```text
+record_version
+last_modified_at
+source
+```
+
+حتى لا يحدث overwrite silently.
+
+---
+
+# 104. Source Attribution
+
+كل field حساس يمكن أن يحمل metadata:
+
+```text
+value_source_system
+value_source_timestamp
+last_sync_at
+```
+
+ليس بالضرورة في كل business table؛ يمكن عبر metadata/history model.
+
+---
+
+# 105. Data Provenance
+
+## data_lineage_record
+
+```text
+data_lineage_record_id PK
+
+entity_type
+entity_id
+
+attribute_name nullable
+
+source_system_id FK
+source_entity_key
+
+source_timestamp
+
+transformation_rule_id FK nullable
+
+target_timestamp
+
+integration_run_id FK nullable
+```
+
+---
+
+# 106. لماذا Lineage مهم؟
+
+عند سؤال:
+
+> لماذا Project Code الموظف تغير؟
+
+يمكننا القول:
+
+```text
+ERP
+PROJECT_ALLOCATIONS
+08-Aug-2026 14:20
+Interface ERP-HR-04
+Mapping Rule V3
+```
+
+بدل التخمين.
+
+---
+
+# 107. K16 — Integration SLA
+
+## integration_sla_policy
+
+```text
+integration_sla_policy_id PK
+
+integration_interface_id FK
+
+availability_target
+
+max_latency_minutes
+
+max_failure_rate
+
+recovery_time_target_minutes
+
+data_freshness_target_minutes
+
+active_flag
+```
+
+---
+
+# 108. Monitoring Metric
+
+## integration_metric
+
+```text
+integration_metric_id PK
+
+integration_interface_id FK
+
+metric_timestamp
+
+metric_type
+
+metric_value
+
+threshold_status
+```
+
+---
+
+# 109. Metrics
+
+```text
+Success Rate
+Failure Rate
+Latency
+Throughput
+Records/min
+Queue Depth
+Retry Count
+Dead Letters
+Data Freshness
+Reconciliation Difference
+```
+
+---
+
+# 110. Interface Health
+
+Calculated:
+
+```text
+Healthy
+Warning
+Degraded
+Critical
+Offline
+```
+
+---
+
+# 111. Integration Alert
+
+## integration_alert
+
+```text
+integration_alert_id PK
+
+integration_interface_id FK
+
+alert_type
+
+severity
+
+detected_at
+
+alert_message
+
+acknowledged_at nullable
+acknowledged_by nullable
+
+resolved_at nullable
+
+incident_reference nullable
+```
+
+---
+
+# 112. Alerts
+
+مثلاً:
+
+```text
+Payroll export failed
+Bank interface offline
+Attendance sync delayed 2 hours
+Data freshness > SLA
+Certificate about to expire
+Dead letter > threshold
+Reconciliation mismatch > 1%
+```
+
+---
+
+# 113. Monitoring Dashboard
+
+```text
+Interfaces Total          34
+Healthy                   28
+Warning                    3
+Critical                   2
+Offline                    1
+
+Today:
+Messages           124,000
+Failed                 312
+Retry Success          280
+Dead Letter             32
+```
+
+---
+
+# 114. Data Quality Dashboard
+
+```text
+Employee Master       99.1%
+Organization          98.6%
+Project Mapping       97.8%
+Payroll Inputs        99.7%
+Attendance            98.9%
+Personnel             96.4%
+```
+
+---
+
+# 115. Reconciliation Dashboard
+
+```text
+HR ↔ ERP
+Matched                 4,980
+Mismatch                   12
+Missing HR                  2
+Missing ERP                 6
+
+Payroll ↔ Bank
+Payments                  5,000
+Success                   4,995
+Rejected                      5
+```
+
+---
+
+# 116. Migration Dashboard
+
+```text
+Migration Progress
+
+Employee Master
+Validated  100%
+Loaded     100%
+
+Contracts
+Validated   96%
+Loaded      80%
+
+Attendance History
+Validated   90%
+Loaded      40%
+```
+
+---
+
+# 117. Interface Dependency
+
+Interface يمكن يعتمد على آخر.
+
+مثلاً:
+
+```text
+Employee Master Sync
+↓
+Project Assignment Sync
+↓
+Payroll Allocation Sync
+```
+
+نعمل:
+
+## integration_dependency
+
+```text
+integration_dependency_id PK
+
+parent_interface_id FK
+child_interface_id FK
+
+dependency_type
+
+blocking_flag
+```
+
+---
+
+# 118. Dependency Types
+
+```text
+Must Complete Before
+Reference Dependency
+Optional Dependency
+Trigger Dependency
+```
+
+---
+
+# 119. Data Freshness
+
+مثلاً:
+
+```text
+Attendance
+Last Sync = 08:12
+Expected Freshness ≤ 15 min
+
+Current = 08:45
+```
+
+Status:
+
+```text
+Stale
+```
+
+حتى لو integration technically online.
+
+---
+
+# 120. Historical Backfill
+
+إذا interface كان down يومين:
+
+```text
+Real-time resumes
+```
+
+هذا لا يكفي.
+
+نحتاج:
+
+```text
+Backfill 08-Aug → 10-Aug
+```
+
+مع reconciliation.
+
+---
+
+# 121. Integration Checkpoint
+
+## integration_checkpoint
+
+```text
+integration_checkpoint_id PK
+
+integration_interface_id FK
+
+checkpoint_type
+
+checkpoint_value
+
+updated_at
+```
+
+مثل:
+
+```text
+Last Employee UpdatedAt
+Last Event Offset
+Last Attendance ID
+Last File Sequence
+```
+
+---
+
+# 122. File-Based Interface
+
+ما زالت مهمة مع Banks/ERP.
+
+## integration_file_batch
+
+```text
+integration_file_batch_id PK
+
+integration_interface_id FK
+
+file_name
+
+file_sequence
+
+file_date
+
+file_hash
+
+record_count
+
+received_at
+
+processing_status
+
+duplicate_file_flag
+```
+
+---
+
+# 123. Duplicate File Prevention
+
+نستخدم:
+
+```text
+file_hash
++
+sequence
+```
+
+حتى لا يتم تحميل salary file مرتين.
+
+---
+
+# 124. Bank File
+
+مثلاً:
+
+```text
+Payroll
+↓
+Bank Batch File
+↓
+Finance Approval
+↓
+Bank
+↓
+Bank Response
+↓
+Reconciliation
+```
+
+Cluster K يدير interface، وليس salary calculation.
+
+---
+
+# 125. Attendance Device Mapping
+
+مهم جدًا بسبب تعدد طرق attendance.
+
+## device_employee_mapping
+
+```text
+device_employee_mapping_id PK
+
+attendance_device_id FK
+
+device_employee_identifier
+
+employee_id FK
+
+valid_from
+valid_to
+
+mapping_status
+```
+
+---
+
+# 126. Device Registry
+
+## integration_device
+
+```text
+integration_device_id PK
+
+external_system_id FK
+
+device_code
+
+device_type
+
+location_id FK
+
+project_id FK nullable
+
+connection_status
+
+last_heartbeat_at
+
+active_flag
+```
+
+---
+
+# 127. Devices
+
+```text
+Fingerprint
+Face Recognition
+Access Control
+GPS Gateway
+Turnstile
+```
+
+---
+
+# 128. Device Heartbeat
+
+لو device لم يرسل:
+
+```text
+last heartbeat > threshold
+```
+
+Alert.
+
+حتى لا نكتشف آخر الشهر أن الحضور ناقص.
+
+---
+
+# 129. Customer Platform Integration
+
+مثلاً Huawei/Nokia/Ericsson.
+
+نحتاج mapping:
+
+```text
+Employee
+Internal Project
+Customer Project
+Customer Employee ID
+Access Status
+Certification Status
+```
+
+---
+
+# 130. Customer Identity Mapping
+
+## external_identity_mapping
+
+```text
+external_identity_mapping_id PK
+
+employee_id FK
+
+external_system_id FK
+
+external_user_id
+
+external_employee_code
+
+valid_from
+valid_to
+
+status
+```
+
+---
+
+# 131. Identity Integration
+
+Cluster Identity owns:
+
+```text
+User
+Role
+Permission
+```
+
+لكن K manages:
+
+```text
+HR Employee
+↔ AD Account
+↔ Email
+↔ Customer Account
+```
+
+---
+
+# 132. Deactivation Event
+
+مثلاً Cluster H يرسل:
+
+```text
+employee.separation.effective
+```
+
+Cluster K routes to:
+
+```text
+AD
+Email
+ERP
+Customer Platform
+Attendance
+```
+
+ويتابع acknowledgments.
+
+---
+
+# 133. Multi-System Transaction Tracking
+
+## business_integration_transaction
+
+```text
+business_integration_transaction_id PK
+
+transaction_type
+
+business_entity_type
+business_entity_id
+
+initiated_at
+
+overall_status
+
+expected_system_count
+completed_system_count
+failed_system_count
+```
+
+مثلاً:
+
+```text
+Employee Separation
+```
+
+Expected:
+
+```text
+ERP
+Payroll
+AD
+Email
+Customer Platform
+```
+
+---
+
+# 134. Transaction System Step
+
+## business_integration_step
+
+```text
+business_integration_step_id PK
+
+business_integration_transaction_id FK
+
+external_system_id FK
+
+interface_id FK
+
+step_status
+
+requested_at
+completed_at nullable
+
+error_id FK nullable
+```
+
+---
+
+# 135. لماذا هذا مهم؟
+
+حتى يمكن أن تقول:
+
+```text
+Employee Separated
+
+HR       ✓
+Payroll  ✓
+ERP      ✓
+AD       ✓
+Email    ✓
+Huawei   ✗
+```
+
+بدل `Employee inactive` وخلاص.
+
+---
+
+# 136. K17 — Data Governance Approval
+
+## data_governance_change_request
+
+```text
+data_governance_change_request_id PK
+
+change_type
+
+data_domain_id FK
+
+entity_type
+
+change_description
+
+impact_assessment
+
+requested_by
+requested_at
+
+approval_status
+
+approved_by nullable
+approved_at nullable
+```
+
+---
+
+# 137. Governance Change Types
+
+```text
+New System of Record
+Ownership Change
+New Integration
+Mapping Change
+Schema Change
+Data Definition Change
+New Sensitive Field
+Retention Change
+Data Sharing Change
+```
+
+---
+
+# 138. Schema Change
+
+Integration contract v1 → v2.
+
+يجب:
+
+```text
+Impact Analysis
+↓
+Test
+↓
+Version
+↓
+Deployment
+```
+
+ولا نعدل mapping production مباشرة.
+
+---
+
+# 139. Interface Version
+
+## integration_interface_version
+
+```text
+integration_interface_version_id PK
+
+integration_interface_id FK
+
+version
+
+change_summary
+
+effective_from
+
+rollback_version_id FK nullable
+
+status
+```
+
+---
+
+# 140. Data Definition Catalog
+
+## business_data_definition
+
+```text
+business_data_definition_id PK
+
+term_code
+
+term_name
+
+business_definition
+
+data_domain_id FK
+
+calculation_definition nullable
+
+owner_user_id FK
+
+effective_from
+effective_to
+```
+
+مثلاً:
+
+```text
+Active Employee
+
+Employee with effective employment status Active
+and separation date > current date
+```
+
+حتى لا يستخدم ERP تعريف وHR تعريف آخر.
+
+---
+
+# 141. Master Data Change Audit
+
+## master_data_change_audit
+
+```text
+master_data_change_audit_id PK
+
+entity_type
+entity_id
+
+attribute_name
+
+old_value
+new_value
+
+change_source
+
+source_system_id FK nullable
+
+changed_by_user_id FK nullable
+
+changed_at
+
+integration_run_id FK nullable
+
+approval_reference nullable
+```
+
+---
+
+# 142. Security
+
+Integration Layer لديه access واسع جدًا.
+
+نحتاج:
+
+```text
+least privilege
+service accounts
+secret rotation
+payload encryption
+field masking
+audit logging
+network restrictions
+```
+
+---
+
+# 143. Sensitive Payload Storage
+
+لا نخزن كل API payload forever.
+
+## integration_payload_policy
+
+```text
+integration_payload_policy_id PK
+
+data_classification
+
+store_payload_flag
+
+retention_days
+
+masking_rule_id FK nullable
+
+encryption_required
+
+active_flag
+```
+
+---
+
+# 144. مثال
+
+Payroll payload:
+
+```text
+Store = Yes
+Encrypted
+Retention = 90 days
+Bank account masked in logs
+```
+
+---
+
+# 145. Log Masking
+
+Logs لا تعرض:
+
+```text
+National ID
+Bank Account
+Salary
+Medical Data
+```
+
+plain text.
+
+---
+
+# 146. Integration Role Model
+
+### Integration Admin
+
+يرى:
+
+```text
+Interfaces
+Connections
+Runs
+Errors
+Retry
+```
+
+---
+
+### Data Steward
+
+يرى:
+
+```text
+Mapping
+Quality
+Reconciliation
+Conflicts
+```
+
+---
+
+### Business Owner
+
+يرى:
+
+```text
+Business health
+Data differences
+Approvals
+```
+
+---
+
+### Developer
+
+يرى:
+
+```text
+Technical logs
+Schema
+Endpoints
+```
+
+لكن ليس production sensitive payload بالضرورة.
+
+---
+
+# 147. Support User
+
+يمكن أن:
+
+```text
+Retry failed transaction
+```
+
+لكن لا:
+
+```text
+change SoR
+change salary mapping
+```
+
+---
+
+# 148. Integration Observability
+
+كل request مهم يحمل:
+
+```text
+trace_id
+correlation_id
+message_id
+run_id
+```
+
+حتى يمكن تتبع:
+
+```text
+Employee E1005
+HR
+→ ERP
+→ Payroll
+→ Bank
+```
+
+---
+
+# 149. Example Trace
+
+```text
+Correlation ID:
+EMP-E1005-20260810
+
+08:01 Employee activated
+08:01 HR event published
+08:02 ERP acknowledged
+08:02 AD created
+08:03 Email created
+08:04 Payroll accepted
+08:04 Customer system pending
+```
+
+---
+
+# 150. Migration Cutover
+
+Go-Live يجب أن يدعم:
+
+```text
+Freeze Date
+Delta Extraction
+Final Migration
+Reconciliation
+Business Sign-Off
+Go-Live
+Post-Go-Live Verification
+```
+
+---
+
+# 151. Cutover Plan
+
+## migration_cutover
+
+```text
+migration_cutover_id PK
+
+migration_project_id FK
+
+freeze_datetime
+
+delta_start_datetime
+
+final_load_datetime
+
+go_live_datetime
+
+rollback_deadline
+
+cutover_status
+```
+
+---
+
+# 152. Delta Migration
+
+بعد mock migration قد تتغير data.
+
+لذلك:
+
+```text
+Initial Load
++
+Delta Load
+```
+
+قبل Go-Live.
+
+---
+
+# 153. Business Sign-Off
+
+## migration_signoff
+
+```text
+migration_signoff_id PK
+
+migration_project_id FK
+
+data_domain_id FK
+
+business_owner_user_id FK
+
+record_count_expected
+record_count_loaded
+
+reconciliation_status
+
+quality_score
+
+signoff_status
+
+signed_at
+```
+
+---
+
+# 154. لا Go-Live بدون Sign-Off
+
+خصوصًا:
+
+```text
+Employee
+Payroll
+Contracts
+Leave Balance
+```
+
+---
+
+# 155. Integration Certification / Testing
+
+## interface_test_case
+
+```text
+interface_test_case_id PK
+
+integration_interface_id FK
+
+test_case_code
+
+test_type
+
+input_scenario
+
+expected_result
+
+critical_flag
+```
+
+---
+
+# 156. Test Types
+
+```text
+Positive
+Negative
+Boundary
+Duplicate
+Retry
+Timeout
+Security
+Volume
+Recovery
+Schema Compatibility
+```
+
+---
+
+# 157. Test Execution
+
+## interface_test_execution
+
+```text
+interface_test_execution_id PK
+
+interface_test_case_id FK
+
+environment_type
+
+executed_at
+
+actual_result
+
+test_status
+
+evidence_reference
+```
+
+---
+
+# 158. Volume Testing
+
+لأن كل شركة حتى 5,000 موظف، لكن transaction volume أكبر بكثير.
+
+مثلاً attendance:
+
+```text
+5,000 employees
+× 4 punches
+= 20,000 events/day/company
+```
+
+ومع multi-company يصبح الحجم مهم.
+
+---
+
+# 159. Performance Metrics
+
+نحتاج:
+
+```text
+messages/sec
+records/min
+batch duration
+processing latency
+queue backlog
+```
+
+---
+
+# 160. Multi-Tenant Isolation
+
+كل integration entity يجب أن يحمل:
+
+```text
+tenant_id
+```
+
+أو يكون system-scoped بطريقة تمنع:
+
+```text
+Company A data
+→ Company B interface
+```
+
+---
+
+# 161. Cross-Tenant Integration
+
+لو Group-level ERP:
+
+يمكن:
+
+```text
+one external system
+```
+
+لكن:
+
+```text
+separate tenant mappings
+```
+
+لكل شركة.
+
+---
+
+# 162. Canonical Data Model
+
+أنصح بشدة بوجود internal canonical model.
+
+مثلاً:
+
+```text
+External ERP Employee
+Attendance Employee
+Bank Beneficiary
+Customer Resource
+```
+
+كلها تتحول إلى:
+
+```text
+Canonical Employee
+```
+
+ثم إلى HR model.
+
+هذا يقلل:
+
+```text
+N × N integrations
+```
+
+---
+
+# 163. Canonical Entity Registry
+
+## canonical_entity
+
+```text
+canonical_entity_id PK
+
+entity_code
+entity_name
+
+schema_version
+
+definition
+
+active_flag
+```
+
+---
+
+# 164. Canonical Mapping
+
+```text
+ERP
+   \
+AD  \
+     → Canonical Employee → HR
+Bank/
+```
+
+بدل كتابة mapping مختلف بين كل system وآخر قدر الإمكان.
+
+---
+
+# 165. لكن لا نبالغ
+
+ليس كل data يحتاج Canonical Layer.
+
+Bank payment response مثلاً يمكن أن يبقى domain-specific.
+
+---
+
+# 166. API Management
+
+لكل API:
+
+## api_operation_registry
+
+```text
+api_operation_registry_id PK
+
+integration_interface_id FK
+
+http_method
+
+resource_path
+
+operation_code
+
+required_scope
+
+rate_limit
+
+version
+
+status
+```
+
+---
+
+# 167. External API Access
+
+لو future SaaS clients يحتاجون APIs:
+
+نحتاج:
+
+```text
+API Client
+Scopes
+Rate Limit
+Tenant
+Audit
+```
+
+---
+
+# 168. API Client
+
+## api_client
+
+```text
+api_client_id PK
+
+tenant_id FK nullable
+
+client_name
+
+client_type
+
+external_system_id FK nullable
+
+authentication_method
+
+status
+
+created_at
+```
+
+---
+
+# 169. API Scope
+
+مثلاً:
+
+```text
+employee.read
+employee.write
+attendance.read
+payroll.input.write
+project.read
+```
+
+---
+
+# 170. Webhooks
+
+## outbound_webhook_subscription
+
+```text
+outbound_webhook_subscription_id PK
+
+tenant_id FK
+
+subscriber_name
+
+event_type
+
+endpoint_url
+
+secret_reference
+
+retry_policy_id FK
+
+active_flag
+```
+
+---
+
+# 171. Webhook Delivery
+
+## webhook_delivery_log
+
+```text
+webhook_delivery_log_id PK
+
+subscription_id FK
+
+event_id
+
+attempt_number
+
+sent_at
+
+response_code
+
+delivery_status
+
+next_retry_at nullable
+```
+
+---
+
+# 172. GDPR / Privacy-like Concerns
+
+حتى لو النظام يعمل في مصر، architecturally نحتاج:
+
+```text
+data minimization
+purpose limitation
+retention
+consent where relevant
+access control
+audit
+```
+
+خصوصًا عند مشاركة employee data مع external systems.
+
+---
+
+# 173. Data Sharing Rule
+
+## data_sharing_policy
+
+```text
+data_sharing_policy_id PK
+
+source_domain_id FK
+
+target_system_id FK
+
+purpose
+
+allowed_fields
+
+masking_policy_id FK
+
+legal_basis_reference nullable
+
+retention_limit_days nullable
+
+active_flag
+```
+
+---
+
+# 174. لا ترسل Full Employee Object
+
+مثلاً customer system يحتاج:
+
+```text
+Employee Name
+HR Code
+Mobile
+Position
+Certification Status
+```
+
+لا يحتاج:
+
+```text
+Salary
+National ID
+Medical Insurance
+Dependents
+```
+
+---
+
+# 175. Main ERD
+
+```text
+                   EXTERNAL_SYSTEM
+                         │
+                         ▼
+               INTEGRATION_INTERFACE
+                         │
+        ┌────────────────┼────────────────┐
+        ▼                ▼                ▼
+   CONNECTION       DATA CONTRACT      SLA
+        │                │
+        │                ▼
+        │          FIELD MAPPING
+        │                │
+        │                ▼
+        │          TRANSFORMATION
+        │
+        ▼
+   INTEGRATION RUN
+        │
+        ▼
+   MESSAGE / RECORD
+        │
+   ┌────┼───────────┐
+   ▼    ▼           ▼
+ERROR  CONFLICT   QUALITY
+   │                │
+   ▼                ▼
+RETRY         RECONCILIATION
+                   │
+                   ▼
+               RESOLUTION
+
+
+      SYSTEM OF RECORD GOVERNANCE
+                   │
+                   ▼
+          DATA ENTITY REGISTRY
+                   │
+                   ▼
+              DATA LINEAGE
+
+
+MIGRATION PROJECT
+      │
+      ▼
+ MIGRATION WAVE
+      │
+      ▼
+    DATASET
+      │
+      ▼
+    STAGING
+      │
+      ▼
+ VALIDATION
+      │
+      ▼
+   MAPPING
+      │
+      ▼
+    LOAD
+      │
+      ▼
+RECONCILIATION
+      │
+      ▼
+   SIGN-OFF
+```
+
+---
+
+# 176. Core Tables
+
+تقريبًا:
+
+```text
+external_system
+data_domain
+data_entity_registry
+system_of_record_rule
+
+integration_interface
+integration_interface_version
+integration_connection
+integration_dependency
+
+integration_data_contract
+integration_field_mapping
+data_transformation_rule
+
+mapping_group
+reference_code_mapping
+unmapped_reference
+
+integration_run
+integration_record_log
+integration_message
+
+integration_event_subscription
+integration_outbox
+integration_inbox
+
+integration_error
+integration_retry_policy
+integration_dead_letter
+
+reconciliation_rule
+reconciliation_run
+reconciliation_difference
+
+data_quality_rule
+data_quality_run
+data_quality_issue
+data_stewardship_assignment
+
+migration_project
+migration_wave
+migration_dataset
+migration_staging_record
+migration_validation_result
+migration_value_mapping
+migration_duplicate_candidate
+migration_load_batch
+migration_rollback_batch
+migration_cutover
+migration_signoff
+
+import_template
+import_job
+import_row
+import_change_preview
+
+export_definition
+export_job
+
+validation_rule
+
+data_conflict
+conflict_resolution_policy
+
+data_lineage_record
+master_data_change_audit
+
+integration_sla_policy
+integration_metric
+integration_alert
+integration_checkpoint
+
+integration_file_batch
+
+integration_device
+device_employee_mapping
+external_identity_mapping
+
+business_integration_transaction
+business_integration_step
+
+data_governance_change_request
+business_data_definition
+
+integration_payload_policy
+data_sharing_policy
+
+interface_test_case
+interface_test_execution
+
+canonical_entity
+api_operation_registry
+api_client
+
+outbound_webhook_subscription
+webhook_delivery_log
+```
+
+حوالي **65–70 Table**، لأن هذه ليست feature صغيرة؛ هي technical backbone للنظام كله.
+
+---
+
+# 177. أهم Business Rules
+
+أثبت هذه القواعد:
+
+1. كل business attribute مهم له owner واضح.
+2. لا يوجد أكثر من Master لنفس attribute في نفس الفترة بدون rule صريح.
+3. Integration لا يمنح ownership تلقائيًا.
+4. External system لا يعدّل HR master data إلا إذا لديه write authority.
+5. كل Interface له versioned data contract.
+6. Mapping لا يكون hard-coded قدر الإمكان.
+7. Reference mismatches تذهب إلى mapping queue.
+8. كل message يدعم idempotency.
+9. Duplicate message لا ينتج duplicate transaction.
+10. Integration failure لا يعني حذف البيانات.
+11. Retry bounded وليس infinite.
+12. Dead letters لها lifecycle.
+13. Sync success لا يساوي reconciliation success.
+14. Reconciliation مستقل عن integration execution.
+15. Data quality مستقل عن data transfer.
+16. Migration لا تكتب مباشرة إلى production.
+17. كل migration تمر staging + validation + sign-off.
+18. Bulk import يمر preview قبل commit.
+19. Sensitive imports تحتاج approval.
+20. Export يخضع masking وaudit.
+21. Conflict لا يتم حله بـlatest wins افتراضيًا.
+22. Master system wins حسب governance rule.
+23. كل تغييرات mapping audit-able.
+24. Data lineage يجب أن تكون قابلة للتتبع.
+25. Credentials لا تخزن plaintext.
+26. Logs لا تعرض PII/sensitive data.
+27. Payload retention configurable.
+28. System access يستخدم least privilege.
+29. Interface schema changes versioned.
+30. Production mapping changes تحتاج governance approval.
+31. Business integration transaction يمكن أن تشمل عدة systems.
+32. Employee lifecycle لا يعتبر fully propagated حتى تكتمل required downstream systems.
+33. Backfill مطلوب بعد integration outage.
+34. File integrations تمنع duplicate file processing.
+35. Device mapping effective-dated.
+36. External identity mapping لا يكرر employee master.
+37. Data sharing only minimum necessary fields.
+38. Multi-tenant isolation mandatory.
+39. Reconciliation issues لها owner وresolution.
+40. Go-live migration يحتاج business sign-off.
+
+---
+
+# 178. State Machine — Integration Run
+
+```text
+Scheduled
+↓
+Queued
+↓
+Running
+├── Completed
+├── Completed with Errors
+├── Failed
+└── Timed Out
+        ↓
+      Retry
+        ↓
+     Recovered
+or
+   Dead Letter
+```
+
+---
+
+# 179. State Machine — Reconciliation
+
+```text
+Scheduled
+↓
+Extract Both Sides
+↓
+Compare
+↓
+Differences Found?
+├── No
+│    ↓
+│ Matched
+│
+└── Yes
+     ↓
+ Assign Issues
+     ↓
+ Investigate
+     ↓
+ Correct Source / Mapping
+     ↓
+ Re-run
+     ↓
+ Reconciled
+```
+
+---
+
+# 180. State Machine — Migration
+
+```text
+Source Identified
+↓
+Extract
+↓
+Staging
+↓
+Normalize
+↓
+Validate
+├── Failed
+│    ↓
+│ Correct
+│    ↓
+│ Validate Again
+│
+└── Passed
+     ↓
+ Mapping
+     ↓
+ Duplicate Review
+     ↓
+ Mock Load
+     ↓
+ Reconciliation
+     ↓
+ Business Sign-Off
+     ↓
+ Production Load
+     ↓
+ Final Reconciliation
+     ↓
+ Completed
+```
+
+---
+
+# 181. State Machine — Conflict
+
+```text
+Mismatch Detected
+↓
+Ownership Rule Check
+├── Auto-Resolvable
+│      ↓
+│   Resolve
+│
+└── Manual Review
+       ↓
+   Data Steward
+       ↓
+   Approved Value
+       ↓
+   Sync Correction
+       ↓
+      Closed
+```
+
+---
+
+# 182. State Machine — Import
+
+```text
+File Uploaded
+↓
+Virus / Format Check
+↓
+Parse
+↓
+Validate
+↓
+Preview
+↓
+User Review
+↓
+Approval if Required
+↓
+Commit
+↓
+Reconciliation
+↓
+Complete
+```
+
+---
+
+# 183. Example — Employee Creation End to End
+
+```text
+HR creates employee
+↓
+employee.created Event
+↓
+Outbox
+↓
+Cluster K
+↓
+ERP
+AD
+Email
+Payroll
+Customer Platform
+```
+
+Tracking:
+
+```text
+HR        ✓
+ERP       ✓
+AD        ✓
+Email     ✓
+Payroll   ✓
+Customer  Pending
+```
+
+بعد ذلك:
+
+```text
+Customer API
+fails
+↓
+Retry
+↓
+success
+```
+
+ثم overall propagation:
+
+```text
+Completed
+```
+
+---
+
+# 184. Example — ERP Project Mapping Problem
+
+ERP يرسل:
+
+```text
+Employee: E1005
+Project: PRJ-X779
+```
+
+HR لا يعرف المشروع.
+
+بدل أن:
+
+```text
+reject employee update بالكامل
+```
+
+يمكن حسب policy:
+
+```text
+Project assignment = pending
+Unmapped reference queue
+Notification to Data Steward
+```
+
+ثم:
+
+```text
+PRJ-X779
+→ Project 284
+```
+
+وتتم replay.
+
+---
+
+# 185. Example — Conflicting Employee Status
+
+HR:
+
+```text
+Separated
+```
+
+ERP:
+
+```text
+Active
+```
+
+SoR:
+
+```text
+Employment Status Master = HR
+```
+
+النتيجة:
+
+```text
+Conflict detected
+ERP value rejected
+Correction message generated
+```
+
+وليس HR يرجع Active لأن ERP أرسل update أحدث.
+
+---
+
+# 186. Example — Bank Account
+
+HR employee updates bank account.
+
+Workflow:
+
+```text
+Employee Request
+↓
+Verification
+↓
+Approved Personnel/Payroll Update
+↓
+HR Master Record
+↓
+Payroll Sync
+```
+
+لو ERP يعيد account قديم:
+
+```text
+SoR rule blocks overwrite
+```
+
+---
+
+# 187. Example — Attendance Device
+
+Fingerprint Device:
+
+```text
+Device Employee ID 88731
+```
+
+يربط بـ:
+
+```text
+HR Employee E004211
+```
+
+إذا device sends ID غير mapped:
+
+```text
+Unmapped Attendance Record
+```
+
+ولا ينسب الحضور لموظف تخمينيًا.
+
+---
+
+# 188. أهم Architectural Principle
+
+أريد تثبيت هذه السلسلة:
+
+> **Source System ≠ System of Record ≠ Integration Channel ≠ Replica ≠ Reconciliation Authority**
+
+قد يكون النظام مصدر البيانات اللحظي لكنه ليس master.
+
+مثال:
+
+```text
+Fingerprint Device
+```
+
+هو Source للـraw punch.
+
+لكن:
+
+```text
+Attendance Engine
+```
+
+هو owner للـvalidated attendance day.
+
+وهذا فرق جوهري.
+
+---
+
+# 189. نقطة ثانية مهمة جدًا
+
+كل Integration يجب أن يجيب على 9 أسئلة قبل اعتماده:
+
+```text
+1. What data?
+2. Who owns it?
+3. Who may update it?
+4. Which direction?
+5. How often?
+6. How validated?
+7. How reconciled?
+8. What happens on failure?
+9. Who resolves conflicts?
+```
+
+لو سؤال واحد منهم غير واضح، integration design ناقص.
+
+---
+
+# 190. النتيجة بعد Cluster K
+
+بعد هذا الـCluster أصبح النظام قادرًا على العمل داخل شركة فعلية بدل بيئة demo.
+
+لأننا أصبح لدينا:
+
+```text
+Business Modules
+        │
+        ▼
+Clear Data Ownership
+        │
+        ▼
+Controlled Integrations
+        │
+        ▼
+Versioned Data Contracts
+        │
+        ▼
+Validation & Mapping
+        │
+        ▼
+Monitoring
+        │
+        ▼
+Reconciliation
+        │
+        ▼
+Data Quality
+        │
+        ▼
+Governed Conflict Resolution
+```
+
+وبالتالي لو لدينا:
+
+```text
+AfroHR
+Nama ERP
+Finance
+Banks
+Fingerprint
+GPS
+Huawei
+Nokia
+Ericsson
+Insurance
+Active Directory
+Email
+HSE
+Project Systems
+```
+
+لا نربطها بشكل point-to-point عشوائي ونأمل أن البيانات تظل صحيحة.
+
+---
+
+# الخطوة التالية المنطقية
+
+أرى أن **Cluster L** يجب أن يكون مختلفًا قليلًا لأنه يمثل الطبقة الأخيرة الأساسية قبل أن نقول إن الـlogical architecture اكتمل:
+
+# **Cluster L — System Administration, SaaS Tenant Management, Configuration Center, Workflow/Rules Engine, Notification Templates, Numbering, Calendars, Localization, Feature Flags, Audit Configuration & Platform Operations ERD**
+
+وهذا Cluster بالغ الأهمية للنظام الذي نصممه لأنه **Multi-Company SaaS**؛ وسيحدد كيف يمكن لكل شركة أن يكون لها:
+
+`Super Admin + Companies + Branches + Arabic/English/French + RTL/LTR + Calendars + Working Days + Document Numbering + Workflow Configuration + Approval Matrix + Policies + Rules + Email/SMS/Push Templates + Feature Enablement + Module Configuration`
+
+بدون تعديل الـcode لكل عميل جديد.

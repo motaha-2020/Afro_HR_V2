@@ -1,0 +1,2100 @@
+تمام. **Module 18** عندي يجب أن يكون **طبقة الحوكمة والرقابة فوق كل Modules 01–17**، وليس مجرد مكان لحفظ Policies.
+
+الـManual الحالي نفسه يضع أساسًا واضحًا لهذا الاتجاه: كل عمليات People & Culture يجب أن تتبع السياسات والقوانين والإجراءات المعتمدة، وكل تغيير في الرواتب والبدلات والترقيات والتنقلات والحالة الوظيفية يحتاج موافقات موثقة، كما أن السجلات يجب أن تكون دقيقة وقابلة للتتبع، وأي استثناء يحتاج موافقة كتابية مسبقة. 
+
+# Module 18 — HR Governance, Policies, Delegation of Authority, Internal Controls, Audit, Compliance, Data Privacy & HR Risk Management
+
+## 18.1 الهدف الرئيسي
+
+تحويل الحوكمة من مستندات وإيميلات منفصلة إلى **Control System** داخل الـHR Platform.
+
+يعني النظام يحدد:
+
+```text
+What is allowed?
+Who can approve?
+Under which policy?
+Under which threshold?
+What evidence is required?
+What controls must pass?
+What is the risk?
+Who changed what?
+Who approved it?
+Was there an exception?
+Was it compliant?
+```
+
+وبالتالي يصبح Module 18 مسؤولًا عن:
+
+```text
+Policy
++
+Authority
++
+Control
++
+Compliance
++
+Audit
++
+Privacy
++
+Risk
++
+Exception Governance
+```
+
+---
+
+# 18.2 مكان Module 18 داخل النظام
+
+الـArchitecture الأنسب:
+
+```text
+Modules 01–17
+      │
+      ├── Transactions
+      ├── Employee Data
+      ├── Payroll
+      ├── Attendance
+      ├── Recruitment
+      ├── Performance
+      └── Analytics
+             ↓
+        Module 18
+             ↓
+ Governance & Control Layer
+```
+
+لكن الأهم:
+
+**Module 18 ليس Module منفصلًا فقط.**
+
+هو أيضًا **Cross-Cutting Layer** يعمل داخل كل Module.
+
+مثال:
+
+```text
+Payroll Increase
+↓
+Policy Check
+↓
+Authority Check
+↓
+Budget Check
+↓
+Required Evidence
+↓
+Approval Workflow
+↓
+Audit Trail
+```
+
+---
+
+# 18.3 الوحدات الرئيسية داخل Module 18
+
+أقترح تقسيمه إلى 10 Engines:
+
+```text
+1. Policy Management
+2. Delegation of Authority
+3. Internal Controls
+4. Compliance Management
+5. HR Audit
+6. Data Privacy
+7. HR Risk Management
+8. Exception & Waiver Management
+9. Governance Evidence Repository
+10. Governance Reporting & Executive Oversight
+```
+
+---
+
+# 18.4 Policy Management
+
+ليس فقط Upload PDF.
+
+كل Policy يجب أن تصبح Record قابل للإدارة.
+
+مثال:
+
+```text
+Policy ID
+Policy Name
+Category
+Owner
+Version
+Effective Date
+Expiry / Review Date
+Applicability
+Countries
+Companies
+Employee Categories
+Related Modules
+Related Processes
+Approver
+Status
+```
+
+Status:
+
+* Draft
+* Under Review
+* Approved
+* Published
+* Superseded
+* Archived
+
+---
+
+# 18.5 Policy Categories
+
+مثل:
+
+* Recruitment Policy
+* Onboarding Policy
+* Attendance Policy
+* Leave Policy
+* Payroll Policy
+* Allowances Policy
+* Overtime Policy
+* Performance Policy
+* Promotion Policy
+* Disciplinary Policy
+* Grievance Policy
+* Travel Policy
+* Remote Work Policy
+* Data Privacy Policy
+* Information Security Policy
+* Offboarding Policy
+* Code of Conduct
+* Anti-Harassment Policy
+* Conflict of Interest
+* Whistleblowing Policy
+
+---
+
+# 18.6 Policy Versioning
+
+يجب عدم overwrite.
+
+مثال:
+
+```text
+Leave Policy V1.0
+Effective: Jan 2026
+
+Leave Policy V1.1
+Effective: Jul 2026
+```
+
+وأي Transaction يجب أن يحتفظ بـ:
+
+```text
+Applied Policy Version
+```
+
+حتى نعرف بعد سنة:
+
+> القرار ده اتطبق وفق أي Policy كانت سارية وقتها؟
+
+---
+
+# 18.7 Policy Effective Dating
+
+مثال:
+
+```text
+Old OT Policy
+Valid Until: 31-Dec-2026
+
+New OT Policy
+Effective From: 01-Jan-2027
+```
+
+النظام يطبق الصحيحة تلقائيًا حسب Transaction Date.
+
+---
+
+# 18.8 Policy Applicability Rules
+
+Policy قد تختلف حسب:
+
+* Company
+* Country
+* Legal Entity
+* Business Unit
+* Department
+* Project
+* Job Family
+* Grade
+* Employment Type
+* Contract Type
+* Work Location
+
+مثال:
+
+```text
+Site Allowance Policy
+
+Applies to:
+Field Employees
+Outside Cairo
+Certain Projects
+```
+
+---
+
+# 18.9 Policy Acknowledgment
+
+لبعض السياسات:
+
+```text
+Policy Published
+↓
+Employee Notification
+↓
+Read
+↓
+Acknowledged
+↓
+Recorded
+```
+
+مثال:
+
+```text
+Code of Conduct
+Data Privacy Policy
+Information Security Policy
+Employee Handbook
+```
+
+Dashboard:
+
+```text
+Acknowledgment Completion = 93%
+Pending = 7%
+```
+
+---
+
+# 18.10 Policy Review Calendar
+
+لكل Policy:
+
+```text
+Review Frequency
+Next Review Date
+Owner
+Reviewer
+Approver
+```
+
+Alerts:
+
+> Policy review due in 30 days.
+
+> Policy expired but still referenced in active workflow.
+
+---
+
+# 18.11 Delegation of Authority — DoA
+
+هذه من أهم أجزاء Module 18.
+
+يجب أن نوقف hard-coded approvals.
+
+نعمل:
+
+```text
+Delegation of Authority Matrix
+```
+
+مثال:
+
+| Transaction         | Threshold | Approver      |
+| ------------------- | --------: | ------------- |
+| Salary Increase     |       ≤5% | HR Manager    |
+| Salary Increase     |  >5% ≤10% | CEO           |
+| New Position        |       Any | CEO + Finance |
+| OT Approval         | ≤50 Hours | PM            |
+| OT Approval         | >50 Hours | Director      |
+| Allowance Exception |       Any | HR + Finance  |
+
+---
+
+# 18.12 Dynamic Approval Rules
+
+بدل Workflow ثابت:
+
+```text
+IF Salary Increase <= 5%
+→ HR Manager
+
+IF Salary Increase > 5%
+→ CEO
+```
+
+مثال آخر:
+
+```text
+IF Employee Grade <= G5
+→ Department Manager
+
+IF Grade >= G6
+→ Director
+
+IF Executive
+→ CEO
+```
+
+---
+
+# 18.13 Approval Dimensions
+
+الـDoA يجب أن يدعم:
+
+* Transaction Type
+* Amount
+* Percentage
+* Grade
+* Employee Type
+* Company
+* Project
+* Country
+* Department
+* Cost Center
+* Risk Level
+* Exception Status
+
+---
+
+# 18.14 Approval Chains
+
+مثلاً:
+
+```text
+Hiring Request
+↓
+Department Manager
+↓
+HR
+↓
+Finance
+↓
+CEO
+```
+
+لكن في حالة Replacement:
+
+```text
+Department Manager
+↓
+HR
+```
+
+لأن Position معتمد مسبقًا.
+
+---
+
+# 18.15 Parallel Approvals
+
+مثلاً:
+
+```text
+HR Approval
++
+Finance Approval
++
+HSE Approval
+```
+
+ثم:
+
+```text
+Final Approval
+```
+
+---
+
+# 18.16 Approval Substitution
+
+لو Approver في إجازة:
+
+```text
+Delegate Approver
+Effective From
+Effective To
+Transaction Scope
+```
+
+لكن بدون مشاركة Credentials.
+
+---
+
+# 18.17 Segregation of Duties — SoD
+
+قاعدة شديدة الأهمية:
+
+الشخص لا يجب أن:
+
+```text
+Create
++
+Approve
++
+Execute
+```
+
+نفس المعاملة في بعض العمليات الحساسة.
+
+مثلاً Payroll:
+
+```text
+Payroll prepares
+HR reviews
+Finance approves
+Bank transfer executes
+```
+
+والـManual الحالي أصلًا يفصل بعض هذه المسؤوليات بين Payroll وFinance. 
+
+---
+
+# 18.18 Internal Control Framework
+
+كل Process يجب أن يكون له Controls.
+
+مثال:
+
+## Recruitment Control
+
+```text
+No Hiring Request
+→ No Recruitment
+```
+
+## Onboarding Control
+
+```text
+Mandatory documents incomplete
+→ Employee cannot be fully activated
+```
+
+وهذا متوافق مع الـManual الذي يشترط عدم تفعيل الموظف قبل استكمال onboarding requirements الإلزامية. 
+
+---
+
+# 18.19 Preventive Controls
+
+تمنع الخطأ قبل حدوثه.
+
+مثلاً:
+
+```text
+Cannot hire above approved position.
+Cannot pay inactive employee.
+Cannot approve own salary increase.
+Cannot activate employee without contract.
+Cannot close offboarding before clearance.
+```
+
+---
+
+# 18.20 Detective Controls
+
+تكتشف المشكلة بعد حدوثها.
+
+مثلاً:
+
+```text
+Payroll Active
+but HR Inactive
+
+Employee Offboarded
+but System Access Active
+
+Salary Paid
+but Attendance Missing
+```
+
+---
+
+# 18.21 Corrective Controls
+
+بعد اكتشاف المشكلة:
+
+```text
+Issue Created
+↓
+Owner Assigned
+↓
+Root Cause
+↓
+Corrective Action
+↓
+Closure
+```
+
+---
+
+# 18.22 Control Library
+
+لكل Control:
+
+```text
+Control ID
+Control Name
+Process
+Risk
+Control Type
+Frequency
+Owner
+Evidence
+Automation Level
+Test Method
+Status
+```
+
+مثلاً:
+
+```text
+CTRL-PAY-001
+
+No payroll for inactive employee
+```
+
+---
+
+# 18.23 Control Types
+
+* Preventive
+* Detective
+* Corrective
+* Manual
+* Automated
+* Hybrid
+
+---
+
+# 18.24 Key Controls
+
+يمكن تمييز:
+
+```text
+Key Control
+Non-Key Control
+```
+
+Key Controls تكون مرتبطة بـHigh-Risk Processes.
+
+---
+
+# 18.25 Control Evidence
+
+كل Control يحتاج Evidence.
+
+مثلاً:
+
+```text
+Payroll Approval
+Evidence:
+Approved payroll file
+Approval log
+Finance confirmation
+Bank transfer reference
+```
+
+---
+
+# 18.26 Control Testing
+
+يجب دعم:
+
+```text
+Control Test
+```
+
+مثال:
+
+```text
+Population: 500 payroll transactions
+Sample: 25
+Exceptions: 2
+Effectiveness: Partially Effective
+```
+
+---
+
+# 18.27 Control Effectiveness Rating
+
+مثلاً:
+
+* Effective
+* Partially Effective
+* Ineffective
+* Not Tested
+
+---
+
+# 18.28 Compliance Management
+
+يجب التفريق بين:
+
+```text
+Policy Compliance
+Legal Compliance
+Regulatory Compliance
+Contractual Compliance
+Customer Compliance
+```
+
+---
+
+# 18.29 Compliance Obligations Register
+
+لكل Obligation:
+
+```text
+Requirement
+Source
+Jurisdiction
+Owner
+Frequency
+Evidence
+Due Date
+Status
+```
+
+مثلاً:
+
+```text
+Social Insurance Registration
+```
+
+أو:
+
+```text
+Employment Contract Requirement
+```
+
+أو:
+
+```text
+Customer Mandatory HSE Certification
+```
+
+---
+
+# 18.30 Compliance Calendar
+
+مثال:
+
+```text
+Contract Renewal
+Insurance Renewal
+Medical Insurance Renewal
+Mandatory Training
+Permit Expiry
+Certification Expiry
+Policy Review
+Audit
+```
+
+---
+
+# 18.31 Compliance Status
+
+لكل Requirement:
+
+* Compliant
+* Partially Compliant
+* Non-Compliant
+* Not Applicable
+* Pending Evidence
+* Overdue
+
+---
+
+# 18.32 Compliance Exceptions
+
+مثلاً:
+
+```text
+Employee deployed
+without mandatory certificate
+```
+
+يسجل:
+
+```text
+Exception
+Reason
+Risk
+Approval
+Temporary Measure
+Expiry
+Corrective Action
+```
+
+---
+
+# 18.33 HR Audit Management
+
+Module 18 يجب أن يدعم Audit كامل.
+
+Audit Types:
+
+* Internal HR Audit
+* Payroll Audit
+* Personnel File Audit
+* Compliance Audit
+* Recruitment Audit
+* Data Privacy Audit
+* Process Audit
+* Project HR Audit
+
+---
+
+# 18.34 Audit Plan
+
+مثلاً:
+
+```text
+Annual Audit Plan 2027
+```
+
+يحتوي:
+
+```text
+Audit Area
+Risk
+Scope
+Auditor
+Start Date
+End Date
+Status
+```
+
+---
+
+# 18.35 Audit Universe
+
+كل Process يكون داخل Audit Universe:
+
+```text
+Recruitment
+Payroll
+Personnel
+Attendance
+Employee Relations
+Offboarding
+Data Privacy
+```
+
+---
+
+# 18.36 Risk-Based Audit
+
+بدل Audit عشوائي.
+
+مثلاً:
+
+```text
+High Payroll Variance
+High Turnover
+High Exceptions
+High Manual Overrides
+Repeated Control Failures
+```
+
+→ Higher Audit Priority
+
+---
+
+# 18.37 Audit Findings
+
+كل Finding:
+
+```text
+Finding ID
+Audit
+Process
+Description
+Risk Rating
+Root Cause
+Owner
+Corrective Action
+Due Date
+Evidence
+Status
+```
+
+---
+
+# 18.38 Finding Severity
+
+مثلاً:
+
+* Critical
+* High
+* Medium
+* Low
+* Observation
+
+---
+
+# 18.39 Corrective Action Plan — CAPA
+
+لكل Finding:
+
+```text
+Corrective Action
+Preventive Action
+Owner
+Due Date
+Progress
+Evidence
+Closure Approval
+```
+
+---
+
+# 18.40 Repeat Findings
+
+النظام يجب أن يكتشف:
+
+> نفس المشكلة ظهرت في 3 audits متتالية.
+
+وهذا يرفع Risk.
+
+---
+
+# 18.41 HR Risk Management
+
+نحتاج:
+
+```text
+HR Risk Register
+```
+
+---
+
+# 18.42 HR Risk Categories
+
+مثل:
+
+### Workforce Risk
+
+* Critical skill shortage
+* High turnover
+* Low succession coverage
+
+### Payroll Risk
+
+* Incorrect payment
+* Fraud
+* Unauthorized adjustment
+
+### Compliance Risk
+
+* Missing contracts
+* Insurance issues
+* Expired documents
+
+### Employee Relations Risk
+
+* High grievance volume
+* Legal disputes
+
+### Data Risk
+
+* Unauthorized access
+* Data leakage
+
+### Operational Risk
+
+* System downtime
+* Manual process dependency
+
+---
+
+# 18.43 Risk Register Fields
+
+```text
+Risk ID
+Risk Title
+Category
+Description
+Cause
+Impact
+Likelihood
+Inherent Risk
+Controls
+Control Effectiveness
+Residual Risk
+Owner
+Mitigation
+Target Date
+Status
+```
+
+---
+
+# 18.44 Risk Scoring
+
+مثلاً:
+
+```text
+Likelihood: 1–5
+Impact: 1–5
+
+Risk Score =
+Likelihood × Impact
+```
+
+---
+
+# 18.45 Inherent vs Residual Risk
+
+مثال:
+
+```text
+Risk:
+Unauthorized salary changes
+
+Inherent Risk = 20
+
+Controls:
+DoA
+SoD
+Audit Trail
+Approval Workflow
+
+Residual Risk = 6
+```
+
+---
+
+# 18.46 Risk Appetite
+
+يمكن للشركة تحديد:
+
+```text
+Acceptable
+Monitor
+Mitigate
+Escalate
+```
+
+حسب Risk Score.
+
+---
+
+# 18.47 Key Risk Indicators — KRIs
+
+مثلاً:
+
+```text
+Payroll Adjustments >5%
+Overtime >20%
+Contract Expiry <30 Days
+Turnover >15%
+Inactive Employee Paid
+Open Critical Findings
+```
+
+---
+
+# 18.48 Risk Heatmap
+
+يعرض:
+
+```text
+Impact
+vs
+Likelihood
+```
+
+By:
+
+* Company
+* HR Process
+* Project
+* Risk Category
+
+---
+
+# 18.49 Exception & Waiver Management
+
+هذا يجب أن يكون مستقلًا.
+
+لأن الـManual نفسه يذكر أن أي deviation يحتاج prior written approval. 
+
+Workflow:
+
+```text
+Exception Request
+↓
+Reason
+↓
+Policy / Control Being Bypassed
+↓
+Risk Assessment
+↓
+Compensating Control
+↓
+Approval
+↓
+Validity Period
+↓
+Monitoring
+↓
+Expiry
+```
+
+---
+
+# 18.50 Exception Types
+
+* Policy Exception
+* Payroll Exception
+* Attendance Exception
+* Recruitment Exception
+* Salary Exception
+* Contract Exception
+* Onboarding Exception
+* Compliance Exception
+
+---
+
+# 18.51 Temporary Exception
+
+كل Exception يفضل أن يكون له:
+
+```text
+Valid From
+Valid To
+```
+
+وليس Permanent.
+
+---
+
+# 18.52 Compensating Controls
+
+مثلاً:
+
+موظف لم يستكمل مستندًا معينًا.
+
+بدل السماح بدون ضابط:
+
+```text
+Temporary approval
++
+Deadline
++
+Restricted activation
++
+Follow-up alert
+```
+
+---
+
+# 18.53 Data Privacy Management
+
+هذا الجزء يجب أن يكون قوي جدًا.
+
+الـManual يؤكد أن personal data والcompensation والpayroll والdisciplinary documentation confidential ولا يمكن الوصول إليها إلا للمصرح لهم. 
+
+---
+
+# 18.54 Data Classification
+
+مثلاً:
+
+### Internal
+
+Employee Name
+Department
+
+### Confidential
+
+Salary
+National ID
+Bank Account
+
+### Highly Confidential
+
+Disciplinary Cases
+Medical Data
+Investigation Evidence
+
+---
+
+# 18.55 Personal Data Inventory
+
+لكل Data Field:
+
+```text
+Field
+Purpose
+Module
+Owner
+Classification
+Retention Period
+Access Roles
+Sharing Rules
+```
+
+---
+
+# 18.56 Purpose Limitation
+
+مثلاً:
+
+National ID يستخدم لـ:
+
+```text
+Employment
+Insurance
+Compliance
+```
+
+وليس لأي استخدام آخر غير معتمد.
+
+---
+
+# 18.57 Data Access Governance
+
+لا يكفي Role Permission.
+
+نحتاج:
+
+```text
+Who accessed what?
+When?
+Why?
+```
+
+خصوصًا:
+
+* Salary
+* Bank Account
+* Medical
+* ER Case
+* Investigation
+
+---
+
+# 18.58 Sensitive Data Access Logs
+
+مثلاً:
+
+```text
+User: HR Specialist
+Employee: E1024
+Field: Salary
+Action: Viewed
+Date: ...
+```
+
+---
+
+# 18.59 Masking
+
+مثلاً:
+
+```text
+National ID:
+29***********45
+
+Bank:
+****8421
+```
+
+حسب Role.
+
+---
+
+# 18.60 Privacy by Role
+
+مثلاً Project Manager يرى:
+
+```text
+Employee Name
+Job
+Attendance
+Leave
+Performance Summary
+```
+
+لكن لا يرى:
+
+```text
+Bank Account
+Disciplinary Details
+Medical Records
+Full Salary History
+```
+
+---
+
+# 18.61 Data Retention
+
+كل Data Type له Retention Rule.
+
+مثلاً:
+
+```text
+Candidate CV
+Employee File
+Payroll
+Audit
+Disciplinary Case
+Exit Records
+```
+
+والمدد يجب أن تكون configurable حسب الدولة والسياسة.
+
+---
+
+# 18.62 Archival vs Deletion
+
+Status:
+
+```text
+Active
+Archived
+Retention Hold
+Eligible for Deletion
+Deleted
+```
+
+---
+
+# 18.63 Legal Hold
+
+في حالة:
+
+```text
+Legal Case
+Investigation
+Audit
+Dispute
+```
+
+يوقف deletion.
+
+---
+
+# 18.64 Data Subject Requests
+
+إذا كانت الشركة تحتاجها حسب jurisdiction:
+
+* Data Access Request
+* Correction Request
+* Deletion Request
+* Consent Withdrawal
+
+وتدار Workflow.
+
+---
+
+# 18.65 Consent Management
+
+لبعض الاستخدامات:
+
+```text
+Consent Type
+Granted
+Date
+Purpose
+Expiry
+Withdrawn
+```
+
+---
+
+# 18.66 Audit Trail
+
+كل Entity حساس يجب أن يسجل:
+
+```text
+Who
+What
+When
+Old Value
+New Value
+Reason
+Approval
+Source
+```
+
+مثلاً:
+
+```text
+Salary
+Old: 20,000
+New: 24,000
+Changed By: Payroll
+Approved By: HR Manager
+```
+
+---
+
+# 18.67 Immutable Audit Log
+
+يفضل تقنيًا:
+
+```text
+Append-only
+```
+
+ولا يستطيع Admin تعديل الـAudit History.
+
+---
+
+# 18.68 High-Risk Change Monitoring
+
+Alerts مثل:
+
+> Salary changed after payroll approval.
+
+> Employee status changed retroactively.
+
+> Bank account changed before payroll.
+
+> Manager approved own transaction.
+
+---
+
+# 18.69 Retroactive Changes
+
+أي تعديل Backdated:
+
+```text
+Effective Date < Today
+```
+
+يجب أن يطلب:
+
+```text
+Reason
+Impact Assessment
+Approval
+```
+
+---
+
+# 18.70 Maker-Checker
+
+في العمليات الحساسة:
+
+```text
+Maker
+↓
+Checker
+↓
+Approver
+```
+
+مثل:
+
+* Payroll
+* Bank account change
+* Salary change
+* Final settlement
+
+---
+
+# 18.71 Four-Eyes Principle
+
+لا يتم تنفيذ معاملة حساسة بموافقة شخص واحد.
+
+Configurable.
+
+---
+
+# 18.72 Conflict of Interest
+
+يمكن تسجيل:
+
+```text
+Employee / Approver Relationships
+```
+
+أو Declaration.
+
+وفي حالة Conflict:
+
+```text
+Approver Recused
+↓
+Alternate Approver
+```
+
+---
+
+# 18.73 Whistleblowing
+
+إذا أردنا إضافته:
+
+يمكن وضع Channel مستقل عالي السرية.
+
+```text
+Anonymous / Identified
+Case
+Evidence
+Restricted Team
+Investigation
+Outcome
+```
+
+لكن لا يختلط مع Employee Relations العادي.
+
+---
+
+# 18.74 Governance Dashboard
+
+يعرض:
+
+```text
+Policy Compliance
+Open Exceptions
+Open High Risks
+Failed Controls
+Audit Findings
+Overdue Actions
+Privacy Incidents
+DoA Violations
+```
+
+---
+
+# 18.75 CEO Governance Dashboard
+
+محدود:
+
+* High Risks
+* Critical Findings
+* Major Compliance Breaches
+* Policy Exceptions
+* Open High-Level Actions
+
+بدون تفاصيل شخصية غير ضرورية.
+
+---
+
+# 18.76 People & Culture Manager Dashboard
+
+يرى:
+
+* Policy Status
+* HR Risks
+* Compliance
+* Audit
+* Exceptions
+* Controls
+* Findings
+* Data Privacy Issues
+* Overdue Actions
+
+---
+
+# 18.77 Auditor Dashboard
+
+Read-only:
+
+```text
+Transactions
+Evidence
+Audit Trail
+Policies
+Approvals
+Controls
+Exceptions
+```
+
+لكن لا يستطيع تعديل records.
+
+---
+
+# 18.78 Compliance Officer Dashboard
+
+* Compliance Obligations
+* Due Dates
+* Violations
+* Corrective Actions
+* Evidence
+* Renewals
+* Exceptions
+
+---
+
+# 18.79 Policy Owner Dashboard
+
+لكل Policy Owner:
+
+```text
+Policies Owned
+Upcoming Reviews
+Open Exceptions
+Related Findings
+Acknowledgment Rate
+```
+
+---
+
+# 18.80 Control Owner Dashboard
+
+```text
+Assigned Controls
+Testing Due
+Failures
+Evidence Required
+Open Actions
+```
+
+---
+
+# 18.81 Governance Workflow Engine
+
+Module 18 يحتاج Generic Workflow Engine يدعم:
+
+```text
+Submit
+Review
+Approve
+Reject
+Return
+Escalate
+Delegate
+Expire
+Close
+```
+
+---
+
+# 18.82 SLA Management
+
+لكل Governance Activity:
+
+```text
+Approval SLA
+Audit Finding SLA
+Exception SLA
+Compliance SLA
+```
+
+---
+
+# 18.83 Escalation Matrix
+
+مثلاً:
+
+```text
+3 Days Overdue
+→ Manager
+
+7 Days
+→ Director
+
+14 Days
+→ CEO
+```
+
+---
+
+# 18.84 Evidence Repository
+
+كل:
+
+```text
+Policy
+Audit
+Control
+Exception
+Compliance
+Risk
+```
+
+له Attachments.
+
+مع:
+
+```text
+Version
+Uploaded By
+Date
+Hash / Integrity Reference
+```
+
+---
+
+# 18.85 Governance Linkage Model
+
+أحد أقوى أجزاء النظام.
+
+مثلاً:
+
+```text
+Risk
+↓
+Control
+↓
+Policy
+↓
+Process
+↓
+Transaction
+↓
+Evidence
+↓
+Audit Finding
+↓
+Corrective Action
+```
+
+يعني كل شيء مرتبط.
+
+---
+
+# 18.86 مثال كامل
+
+Risk:
+
+```text
+Incorrect Payroll Payment
+```
+
+Control:
+
+```text
+Payroll Validation
+```
+
+Policy:
+
+```text
+Payroll Policy
+```
+
+Owner:
+
+```text
+Payroll Section Head
+```
+
+Evidence:
+
+```text
+Payroll Review File
+```
+
+Audit:
+
+```text
+Payroll Audit Q2
+```
+
+Finding:
+
+```text
+3 inactive employees found
+```
+
+Action:
+
+```text
+System block added
+```
+
+ثم:
+
+```text
+Residual Risk reduced
+```
+
+---
+
+# 18.87 Governance Rules Engine
+
+يجب أن نضع Rules بدون تعديل Code.
+
+مثلاً:
+
+```text
+IF Transaction = Salary Change
+AND Percentage > 10%
+THEN CEO Approval Required
+```
+
+أو:
+
+```text
+IF Employee Status = Offboarded
+THEN Payroll = Block
+```
+
+---
+
+# 18.88 Hard Block vs Soft Warning
+
+Rule ممكن تكون:
+
+### Hard Block
+
+```text
+Cannot Proceed
+```
+
+### Soft Warning
+
+```text
+Proceed with justification
+```
+
+---
+
+# 18.89 Policy-to-System Rules
+
+هذا مهم جدًا:
+
+السياسة المكتوبة يجب ألا تبقى نص فقط.
+
+مثلاً Policy تقول:
+
+> OT يحتاج approval.
+
+النظام يربطها بـ:
+
+```text
+OT Approval Rule
+```
+
+---
+
+# 18.90 Governance Testing Sandbox
+
+قبل نشر Policy أو Rule جديدة:
+
+```text
+Simulate
+```
+
+على Historical Transactions.
+
+مثلاً:
+
+> لو فعلنا Rule الجديدة، كم Transaction كان سيتم رفضها خلال آخر 3 شهور؟
+
+ميزة قوية جدًا.
+
+---
+
+# 18.91 Change Management
+
+أي تغيير في:
+
+* Policy
+* DoA
+* Control
+* Approval Rule
+* Risk Threshold
+
+يمر بـ:
+
+```text
+Draft
+Impact Analysis
+Review
+Approval
+Effective Date
+Publish
+```
+
+---
+
+# 18.92 Impact Analysis
+
+مثلاً Policy جديدة تؤثر على:
+
+```text
+Payroll
+Attendance
+Projects
+Employees
+Cost
+```
+
+يظهر النظام impacted population.
+
+---
+
+# 18.93 Governance Data Model
+
+أهم الـEntities:
+
+```text
+policy
+policy_version
+policy_acknowledgment
+
+authority_matrix
+authority_rule
+approval_delegation
+
+control
+control_test
+control_evidence
+
+compliance_requirement
+compliance_status
+
+audit
+audit_plan
+audit_finding
+corrective_action
+
+risk
+risk_assessment
+risk_mitigation
+kri
+
+exception
+waiver
+compensating_control
+
+privacy_data_element
+privacy_access_log
+retention_rule
+
+governance_action
+governance_evidence
+```
+
+---
+
+# 18.94 أهم قاعدة تقنية
+
+لا تجعل Governance Data داخل كل Module بشكل منفصل.
+
+مثلاً:
+
+```text
+Recruitment approvals
+Payroll approvals
+Leave approvals
+```
+
+كل واحد له Logic مستقل.
+
+هذا سيخلق Chaos.
+
+الأفضل:
+
+```text
+Central Governance Engine
+```
+
+وكل Modules تستدعيه.
+
+---
+
+# 18.95 Permissions
+
+Module 18 يحتاج Permissions على مستويات:
+
+```text
+View
+Create
+Edit
+Approve
+Test
+Close
+Override
+Export
+```
+
+وكذلك:
+
+```text
+Company Scope
+Department Scope
+Employee Scope
+Data Classification
+```
+
+---
+
+# 18.96 Break-Glass Access
+
+للحالات الحرجة فقط.
+
+مثلاً:
+
+```text
+Emergency HR Admin Access
+```
+
+لكن:
+
+```text
+Reason Required
+Time Limited
+Fully Logged
+Alert Sent
+```
+
+---
+
+# 18.97 HR Governance Score
+
+يمكن تكوين Composite Score:
+
+```text
+Policy Compliance
+Control Effectiveness
+Audit Findings
+Risk Exposure
+Overdue Actions
+Data Quality
+```
+
+مثلاً:
+
+```text
+Governance Health = 82/100
+```
+
+لكن لا يعتمد عليه وحده في القرار.
+
+---
+
+# 18.98 Module 18 Navigation
+
+أقترح:
+
+```text
+Module 18
+│
+├── Governance Overview
+│
+├── Policies
+│   ├── Policy Library
+│   ├── Versions
+│   ├── Reviews
+│   └── Acknowledgments
+│
+├── Delegation of Authority
+│   ├── Authority Matrix
+│   ├── Approval Rules
+│   └── Delegations
+│
+├── Internal Controls
+│   ├── Control Library
+│   ├── Control Testing
+│   └── Control Evidence
+│
+├── Compliance
+│   ├── Obligations
+│   ├── Calendar
+│   └── Exceptions
+│
+├── Audit
+│   ├── Audit Plan
+│   ├── Audits
+│   ├── Findings
+│   └── CAPA
+│
+├── HR Risks
+│   ├── Risk Register
+│   ├── KRIs
+│   └── Heatmap
+│
+├── Data Privacy
+│   ├── Data Inventory
+│   ├── Access Logs
+│   ├── Retention
+│   └── Privacy Requests
+│
+├── Exceptions & Waivers
+│
+├── Governance Evidence
+│
+└── Governance Reports
+```
+
+---
+
+# 18.99 كيف يرتبط بالـOrg Structure الحالي
+
+الهيكل الحالي يوضح وجود وظائف منفصلة مثل:
+
+* People & Culture Manager
+* Organizational Development
+* Talent Acquisition
+* Employee Relations & Compliance
+* Payroll
+* Personnel
+* HR Operations
+
+لذلك Module 18 يجب أن يدعم **Process Owners مختلفين** وليس فريق Governance واحد يحتكر كل شيء. 
+
+مثلاً:
+
+```text
+Payroll Control Owner → Payroll
+Policy Owner → OD / P&C
+Employee Relations Control → ER & Compliance
+Personnel Compliance → Personnel
+Operational HR Controls → HR Operations
+```
+
+بينما People & Culture Manager يرى الصورة المجمعة.
+
+---
+
+# 18.100 النتيجة بعد Module 18
+
+حتى هذه النقطة أصبح لدينا:
+
+```text
+Modules 01–16
+= Employee & HR Operations
+
+Module 17
+= People Intelligence
+
+Module 18
+= Governance & Assurance
+```
+
+فتصبح دورة الإدارة:
+
+```text
+Execute
+↓
+Measure
+↓
+Analyze
+↓
+Control
+↓
+Audit
+↓
+Correct
+↓
+Improve
+```
+
+وأرى أن **Module 18 يجب أن يكون Mandatory Core Module** حتى لو تم تشغيل بعض Modules الأخرى اختياريًا؛ لأن الـDoA، Audit Trail، Policies، Privacy، Controls، Exceptions، وRisk يجب أن تحكم النظام كله من البداية.
+
+والـModule المنطقي التالي بعده عندي هو:
+
+**Module 19 — Employee Engagement, Experience, Surveys, Recognition, Internal Communication, Culture & Wellbeing Management**
+
+لأننا حتى الآن بنينا العمليات والرقابة والبيانات، لكن ما زال ينقصنا Layer تقيس **صوت الموظف وتجربة الموظف والثقافة والارتباط بالشركة** بشكل مستقل عن Performance وEmployee Relations.

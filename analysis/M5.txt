@@ -1,0 +1,3201 @@
+# Module 05 — Recruitment, Manpower Request & Applicant Tracking System (ATS)
+
+هذا الـModule يحول دورة التوظيف الموجودة حاليًا في الـPeople & Culture Operations Manual إلى **Workflow رقمي كامل** يبدأ من احتياج المشروع للموظفين، وينتهي بتسليم الموظف المقبول إلى Personnel لبدء الـOnboarding.
+
+الـManual يحدد دورة التوظيف الأساسية كالتالي:
+
+```text
+Hiring Request
+   ↓
+Sourcing & Screening
+   ↓
+Requester Review
+   ↓
+Assessment & Interviews
+   ↓
+Final Selection & Approval
+   ↓
+Job Offer
+   ↓
+Offer Acceptance
+   ↓
+Handover to Personnel
+```
+
+وهو نفس الـBackbone الذي سنبني عليه الـModule. 
+
+---
+
+# 5.1 Module Objective
+
+الهدف ليس فقط ATS لتسجيل CVs.
+
+بل النظام يدير ثلاث طبقات مترابطة:
+
+```text
+Workforce Demand
+      ↓
+Manpower Request
+      ↓
+Recruitment / ATS
+      ↓
+Hiring Decision
+      ↓
+Offer
+      ↓
+Pre-Hire Employee
+      ↓
+Onboarding
+```
+
+وبذلك نعرف في أي لحظة:
+
+```text
+كم شخص نحتاج؟
+لماذا نحتاجهم؟
+لأي مشروع؟
+من وافق؟
+كم Vacancy مفتوح؟
+كم Candidate موجود؟
+أين وصل كل Candidate؟
+كم استغرق التوظيف؟
+كم التكلفة؟
+هل التعيين داخل الميزانية؟
+```
+
+---
+
+# 5.2 Main Components
+
+Module 05 يتكون من:
+
+```text
+01 Workforce Demand
+02 Manpower Request
+03 Requisition Approval
+04 Job Requisition
+05 Candidate Database
+06 Sourcing
+07 Screening
+08 Shortlisting
+09 Interviews
+10 Assessments
+11 Selection
+12 Offer Management
+13 Offer Approval
+14 Offer Acceptance
+15 Pre-Onboarding Handover
+16 Recruitment Analytics
+17 Recruitment SLA Engine
+18 Recruitment Automation
+```
+
+---
+
+# 5.3 Workforce Demand
+
+قبل Manpower Request الأفضل أن يكون لدينا Demand Layer.
+
+مثلاً Project Manager يقول:
+
+```text
+Project:
+Ericsson Rollout
+
+Required:
+20 Technicians
+5 Engineers
+2 Supervisors
+```
+
+هذه ليست Recruitment Requests بعد.
+
+بل:
+
+```text
+Workforce Demand
+```
+
+ثم يتم تحويلها إلى Hiring Requests حسب الاحتياج الفعلي.
+
+---
+
+# 5.4 Workforce Demand Sources
+
+يمكن إنشاء Demand من:
+
+```text
+Project Mobilization
+Project Expansion
+Replacement
+Resignation
+New Department
+New Position
+Seasonal Demand
+Backfill
+Customer Requirement
+Contract Award
+Workload Increase
+Approved Manpower Plan
+```
+
+---
+
+# 5.5 Planned vs Unplanned Hiring
+
+نفرق بين:
+
+```text
+Planned Hiring
+```
+
+و:
+
+```text
+Unplanned Hiring
+```
+
+مثال:
+
+```text
+Annual Manpower Plan
+100 Technicians
+```
+
+تم استخدام:
+
+```text
+74 / 100
+```
+
+فيظهر عند Hiring Request:
+
+```text
+Remaining Planned Capacity: 26
+```
+
+أما لو الطلب خارج الخطة:
+
+```text
+Unplanned Request
+```
+
+فيحتاج Approval أعلى.
+
+---
+
+# 5.6 Manpower Request
+
+هذه نقطة البداية الرسمية.
+
+الـManual يحدد أن Requester يكون عادة Project Manager أو Department Manager، وهو المسؤول عن تحديد الاحتياج ورفع Hiring Request. 
+
+النظام يوفر:
+
+```text
+Create Manpower Request
+```
+
+---
+
+# 5.7 Manpower Request Form
+
+الـManual يحدد بيانات يجب أن تكون موجودة قبل تقديم الطلب، ومنها:
+
+* Position Title
+* Number of Vacancies
+* Project Code
+* Project Name
+* Direct Manager / Reporting Manager
+* Office or Site Location
+* Approved Salary Range
+* Qualifications / Skills / Experience
+* Priority
+* Hiring Type: New Position or Replacement
+
+ولو Replacement، يجب إدخال HR Code واسم الموظف المستقيل. 
+
+نحول ذلك إلى Form منظم:
+
+```text
+Request Number
+Request Date
+
+Company
+Business Unit
+Department
+Project
+Project Code
+
+Position
+Job Profile
+Job Grade
+
+Number of Vacancies
+
+Hiring Type
+Priority
+
+Direct Manager
+Project Manager
+
+Work Location
+Employment Type
+Worker Category
+
+Requested Joining Date
+
+Salary Range
+Budget Source
+
+Reason / Justification
+
+Replacement Employee
+Replacement HR Code
+
+Required Skills
+Required Experience
+Qualifications
+
+Customer Requirements
+HSE Requirements
+Certifications
+
+Attachments
+```
+
+---
+
+# 5.8 Hiring Request Number
+
+Auto-generated:
+
+```text
+MR-2026-000182
+```
+
+أو:
+
+```text
+AFR-EG-MR-2026-0182
+```
+
+Configurable per Tenant.
+
+---
+
+# 5.9 Hiring Request Status
+
+```text
+Draft
+Submitted
+Pending Approval
+Approved
+Rejected
+Returned for Correction
+Converted to Requisition
+Recruitment Started
+Partially Filled
+Filled
+Cancelled
+On Hold
+Closed
+```
+
+---
+
+# 5.10 Hiring Priority
+
+حسب الـManual:
+
+```text
+P0 — Critical / Immediate
+P1 — Standard
+```
+
+
+
+لكن نجعلها Configurable.
+
+مثلاً:
+
+```text
+P0 Critical
+P1 High
+P2 Normal
+P3 Low
+```
+
+مع الاحتفاظ بالـP0/P1 كDefault لـAFRO.
+
+---
+
+# 5.11 SLA Engine
+
+الـManual يحتوي SLAs لكل مرحلة، لذلك النظام لا يجب أن يسجل المراحل فقط، بل يحسب الوقت تلقائيًا.
+
+مثلاً Hiring Request:
+
+```text
+P0 → Same Day
+P1 → Same Day
+```
+
+Sourcing & Screening في الـManual محدد له:
+
+```text
+P0 → 72 Working Hours
+P1 → 5 Working Hours
+```
+
+كما هو مكتوب حاليًا في الوثيقة. 
+
+أنا هنا لا أصحح الرقم أو أغيره، لكن من الناحية النظامية نجعله Configurable لأن الوثيقة نفسها هي المرجع الحالي.
+
+---
+
+# 5.12 SLA Configuration
+
+لكل Stage:
+
+```text
+Priority
+Target Duration
+Business Hours?
+Calendar Hours?
+Working Days?
+Escalation Threshold
+Escalation Recipients
+```
+
+مثال:
+
+```text
+Stage:
+Requester Review
+
+P0:
+1 Working Day
+
+P1:
+72 Working Hours
+```
+
+وهو ما يطابق الـManual. 
+
+---
+
+# 5.13 SLA Clock
+
+النظام يحتسب:
+
+```text
+Started At
+Due At
+Elapsed Time
+Remaining Time
+Paused Time
+Overdue Time
+```
+
+ويأخذ في الاعتبار:
+
+```text
+Weekends
+Company Holidays
+Working Hours
+Tenant Calendar
+```
+
+---
+
+# 5.14 SLA Escalation
+
+مثلاً:
+
+```text
+80% SLA consumed
+→ Warning
+
+100%
+→ Overdue
+
+120%
+→ Escalate to TA Section Head
+
+150%
+→ Escalate to P&C Manager
+```
+
+Configurable.
+
+---
+
+# 5.15 Approval Workflow
+
+بعد Submit:
+
+```text
+Requester
+   ↓
+Manager
+   ↓
+Project / Department Approval
+   ↓
+Budget Approval
+   ↓
+HR / Talent Acquisition
+   ↓
+Final Approval
+```
+
+لكن Approval Matrix لا تكون Hard-Coded.
+
+---
+
+# 5.16 Dynamic Approval Matrix
+
+تعتمد على:
+
+```text
+Company
+Department
+Project
+Position
+Grade
+Salary Range
+Hiring Type
+Priority
+Planned vs Unplanned
+Number of Vacancies
+```
+
+مثلاً:
+
+```text
+1 Technician
+Budgeted
+→ Project Manager + HR
+```
+
+بينما:
+
+```text
+20 Engineers
+Unplanned
+→ BU Head + Finance + HR Manager + CEO
+```
+
+حسب إعدادات الشركة.
+
+---
+
+# 5.17 Budget Control
+
+قبل Approval يمكن فحص:
+
+```text
+Budget Available?
+```
+
+مثلاً:
+
+```text
+Project Workforce Budget
+5,000,000 EGP
+
+Committed
+4,100,000
+
+New Request Impact
+620,000
+
+Remaining
+280,000
+```
+
+نتيجة:
+
+```text
+Within Budget
+```
+
+أو:
+
+```text
+Budget Exception Required
+```
+
+---
+
+# 5.18 Headcount Control
+
+بجانب الميزانية:
+
+```text
+Approved Headcount: 50
+Current: 43
+Open Requisitions: 5
+Requested: 4
+```
+
+Projected:
+
+```text
+52
+```
+
+فيظهر:
+
+```text
+Headcount Limit Exceeded
+```
+
+---
+
+# 5.19 Replacement Validation
+
+لو:
+
+```text
+Hiring Type = Replacement
+```
+
+يظهر:
+
+```text
+Employee Search
+```
+
+ويختار الموظف المستبدل.
+
+النظام يجلب:
+
+```text
+Name
+HR Code
+Position
+Project
+Last Working Day
+Resignation Status
+```
+
+وهذا يطابق requirement الموجودة في الـManual الخاصة بإدخال HR Code واسم الموظف المستقيل. 
+
+---
+
+# 5.20 Replacement Control
+
+لا يجب أن نستطيع عمل 3 Replacement Requests لنفس الموظف.
+
+يظهر:
+
+```text
+Existing Replacement Request Detected
+MR-2026-00133
+```
+
+---
+
+# 5.21 Requisition Creation
+
+بعد Approval:
+
+```text
+Manpower Request
+      ↓
+Job Requisition
+```
+
+مثال:
+
+```text
+MR-2026-00182
+20 Vacancies
+
+→
+
+REQ-2026-00451
+Position: Fiber Technician
+Vacancies: 20
+```
+
+---
+
+# 5.22 One Request → Multiple Requisitions
+
+مثلاً Manpower Request:
+
+```text
+10 Engineers
+30 Technicians
+5 Riggers
+```
+
+ينتج:
+
+```text
+REQ-001 Engineer
+REQ-002 Technician
+REQ-003 Rigger
+```
+
+---
+
+# 5.23 One Requisition → Multiple Hires
+
+مثلاً:
+
+```text
+Fiber Technician
+Vacancies: 30
+```
+
+يمكن تعيين 30 Candidate على نفس Requisition.
+
+---
+
+# 5.24 Requisition Information
+
+```text
+Requisition ID
+Position
+Department
+Project
+Customer
+Location
+
+Vacancies
+Filled
+Remaining
+
+Recruiter
+Hiring Manager
+
+Salary Range
+
+Required Skills
+Education
+Experience
+
+Employment Type
+
+Priority
+
+Open Date
+Target Fill Date
+Status
+```
+
+---
+
+# 5.25 Recruiter Assignment
+
+Auto or Manual.
+
+مثلاً Rule:
+
+```text
+Ericsson
+→ Recruiter A
+
+Huawei/Nokia
+→ Recruiter B
+
+Blue Collar
+→ Recruiter C
+
+Head Office
+→ Recruiter D
+```
+
+أو:
+
+```text
+Round Robin
+```
+
+---
+
+# 5.26 Candidate Database
+
+كل Candidate يصبح:
+
+```text
+Candidate Profile
+```
+
+مستقل عن Requisition.
+
+لأن نفس Candidate يمكن التقديم على أكثر من وظيفة.
+
+---
+
+# 5.27 Candidate Master Record
+
+```text
+Candidate ID
+Full Name AR
+Full Name EN
+
+Mobile
+WhatsApp
+Email
+
+Nationality
+Current Location
+
+Current Position
+Current Employer
+
+Years Experience
+
+Expected Salary
+Current Salary
+
+Availability
+Notice Period
+
+Education
+
+Skills
+Certifications
+
+CV
+
+Source
+Recruiter
+
+Candidate Status
+```
+
+---
+
+# 5.28 Candidate ID
+
+مثلاً:
+
+```text
+CAN-2026-002541
+```
+
+---
+
+# 5.29 Candidate Sources
+
+الـManual يذكر:
+
+```text
+Job Advertisement
+Database Search
+```
+
+ضمن Sourcing. 
+
+النظام يوسع Source Tracking:
+
+```text
+LinkedIn
+Website
+Employee Referral
+Recruiter
+Job Portal
+Database
+Walk-In
+WhatsApp
+Email
+University
+Agency
+Customer Referral
+Internal Candidate
+Previous Applicant
+Other
+```
+
+---
+
+# 5.30 Source Attribution
+
+نحتفظ بـ:
+
+```text
+Source
+Source Campaign
+Source Link
+Referrer
+Recruitment Agency
+Cost
+```
+
+وبالتالي نعرف:
+
+> أي Source يعطينا أفضل Hires؟
+
+---
+
+# 5.31 Recruitment Campaign
+
+مثال:
+
+```text
+Campaign:
+Technician Hiring — Alexandria
+
+Target:
+100 Candidates
+
+Channels:
+Facebook
+LinkedIn
+Referral
+Job Fair
+```
+
+---
+
+# 5.32 Candidate Duplicate Detection
+
+قبل إنشاء Candidate:
+
+نفحص:
+
+```text
+Mobile
+Email
+National ID if collected
+Passport
+Name + DOB
+```
+
+ويظهر:
+
+```text
+Possible Existing Candidate
+```
+
+---
+
+# 5.33 Candidate History
+
+لو Candidate قدم في 2025 وتم رفضه ثم قدم في 2026:
+
+```text
+Candidate
+│
+├── Application 2025
+│   Rejected
+│
+└── Application 2026
+    Active
+```
+
+لا ننشئ Candidate جديد.
+
+---
+
+# 5.34 Candidate vs Application
+
+مهم جدًا.
+
+```text
+Candidate
+    ↓
+Application
+```
+
+Candidate واحد لديه:
+
+```text
+Application A
+Project Engineer
+
+Application B
+Site Engineer
+```
+
+وكل Application لها Pipeline مستقلة.
+
+---
+
+# 5.35 Candidate Pipeline
+
+وفق الـManual:
+
+```text
+New
+   ↓
+Sourcing
+   ↓
+Screening
+   ↓
+Shortlisted
+   ↓
+Requester Review
+   ↓
+Interview
+   ↓
+Assessment
+   ↓
+Selected
+   ↓
+Offer
+   ↓
+Accepted
+   ↓
+Hired
+```
+
+مع حالات:
+
+```text
+Rejected
+Withdrawn
+No Show
+On Hold
+Talent Pool
+```
+
+---
+
+# 5.36 Sourcing & Screening
+
+الـManual يحدد أن Talent Acquisition مسؤول عن:
+
+* Job advertisement posting
+* Database search
+* CV screening
+* Phone screening
+* Salary expectation validation
+* Candidate availability validation
+
+والـOutput هو Shortlisted Candidates. 
+
+نحول كل واحدة إلى Activity قابلة للتسجيل.
+
+---
+
+# 5.37 Screening Form
+
+مثلاً:
+
+```text
+Qualification Match
+Experience Match
+Technical Background
+Location Match
+Salary Expectation
+Availability
+Communication
+Language
+Notice Period
+Customer Experience
+```
+
+Result:
+
+```text
+Recommended
+Maybe
+Rejected
+```
+
+---
+
+# 5.38 Knockout Questions
+
+يمكن إعداد أسئلة إلزامية.
+
+مثلاً:
+
+```text
+Valid driving license?
+Working at heights?
+Available in Alexandria?
+Minimum 3 years FTTH?
+Expected salary <= X?
+```
+
+وبعضها:
+
+```text
+Auto Reject
+```
+
+إذا لم يتحقق.
+
+---
+
+# 5.39 Screening Score
+
+مثلاً:
+
+```text
+Experience        25
+Technical Match   25
+Salary Fit        15
+Availability      15
+Location          10
+Communication     10
+--------------------
+Total            100
+```
+
+نتيجة:
+
+```text
+82 / 100
+```
+
+لكن Recruitment Team يستطيع override مع سبب.
+
+---
+
+# 5.40 Shortlist
+
+Talent Acquisition يرسل:
+
+```text
+Shortlisted Candidates
+```
+
+إلى Requester.
+
+الـManual يجعل Requester مسؤولًا عن Review candidate profiles وقبول أو رفض المرشحين وتأكيد المقابلات. 
+
+---
+
+# 5.41 Requester Review Workspace
+
+Manager يرى:
+
+```text
+Candidate A
+Candidate B
+Candidate C
+```
+
+ويستطيع:
+
+```text
+Accept
+Reject
+Need More Info
+Hold
+```
+
+مع:
+
+```text
+Comment
+```
+
+ولا يرى Candidate Compensation Details إلا حسب Permission.
+
+---
+
+# 5.42 Bulk Shortlist Review
+
+مثلاً 50 Technician Candidates.
+
+Manager يستطيع:
+
+```text
+Select 12
+Reject 28
+Hold 10
+```
+
+بدل فتح Profile واحد واحد.
+
+---
+
+# 5.43 Interview Management
+
+وفق الـManual، Assessment & Interview تشمل حسب الدور:
+
+```text
+Technical Interview
+HSE Assessment
+HR Interview
+```
+
+ويشارك فيها Technical Department وHSE وTalent Acquisition حسب الحاجة. 
+
+لذلك Interview Model يكون Dynamic.
+
+---
+
+# 5.44 Interview Types
+
+```text
+HR Interview
+Technical Interview
+HSE Assessment
+Hiring Manager Interview
+Customer Interview
+Panel Interview
+Final Interview
+Practical Test
+Language Test
+Online Assessment
+```
+
+---
+
+# 5.45 Interview Workflow by Position
+
+مثلاً:
+
+### Technician
+
+```text
+HR Screening
+   ↓
+Technical Test
+   ↓
+HSE
+   ↓
+Project Manager
+```
+
+### Finance Employee
+
+```text
+HR Screening
+   ↓
+Technical Interview
+   ↓
+Finance Manager
+```
+
+### Senior Manager
+
+```text
+HR
+ ↓
+Department Head
+ ↓
+P&C Manager
+ ↓
+CEO
+```
+
+Configurable.
+
+---
+
+# 5.46 Interview Scheduling
+
+النظام يدعم:
+
+```text
+Date
+Time
+Duration
+Timezone
+Location
+Online Link
+
+Interviewers
+Candidate
+Recruiter
+```
+
+مع Invitations.
+
+---
+
+# 5.47 Interview Availability
+
+لو مربوط بـCalendar:
+
+```text
+Recruiter
+Interviewer
+Hiring Manager
+```
+
+يمكن البحث عن Available Slot.
+
+---
+
+# 5.48 Interview Status
+
+```text
+Scheduled
+Confirmed
+Completed
+Rescheduled
+Cancelled
+Candidate No Show
+Interviewer No Show
+```
+
+---
+
+# 5.49 Interview Evaluation Form
+
+مثلاً:
+
+```text
+Technical Skills
+Communication
+Experience
+Problem Solving
+Cultural Fit
+Salary Fit
+Availability
+Leadership
+Customer Exposure
+```
+
+لكل عنصر:
+
+```text
+1–5
+```
+
+---
+
+# 5.50 Independent Interviewer Feedback
+
+مهم لمنع Bias.
+
+يمكن Configurable:
+
+```text
+Interviewer A
+cannot view Interviewer B score
+until submitting own evaluation
+```
+
+---
+
+# 5.51 Interview Recommendation
+
+```text
+Strong Hire
+Hire
+Borderline
+No Hire
+Strong No Hire
+```
+
+أو Corporate terminology الخاصة بالشركة.
+
+---
+
+# 5.52 HSE Assessment
+
+الـManual يجعل HSE Assessment applicable for safety-sensitive roles. 
+
+لذلك إذا:
+
+```text
+Safety Sensitive = Yes
+```
+
+يضيف النظام HSE Stage تلقائيًا.
+
+---
+
+# 5.53 HSE Screening Checklist
+
+مثلاً:
+
+```text
+Medical Eligibility
+Height Work Requirement
+PPE Understanding
+Safety Awareness
+Required Certification
+Customer Safety Requirement
+```
+
+Result:
+
+```text
+Pass
+Conditional Pass
+Fail
+```
+
+---
+
+# 5.54 Practical Tests
+
+للـBlue Collar/Technical Roles:
+
+```text
+Fiber Splicing Test
+OTDR Test
+Civil Test
+Electrical Test
+Driving Test
+Rigger Practical
+```
+
+ويمكن حفظ:
+
+```text
+Score
+Assessor
+Evidence
+Photos
+Attachment
+```
+
+---
+
+# 5.55 Interview Panel
+
+Candidate يمكن تقييمه من:
+
+```text
+HR
+Technical
+HSE
+Project Manager
+Customer
+```
+
+والنظام يجمع Scores.
+
+---
+
+# 5.56 Weighted Evaluation
+
+مثلاً:
+
+```text
+Technical     40%
+HR            20%
+HSE           20%
+Project       20%
+```
+
+Total:
+
+```text
+86%
+```
+
+لكن Final Decision لا يعتمد على Score فقط.
+
+---
+
+# 5.57 Mandatory Gate
+
+مثلاً:
+
+```text
+HSE = Fail
+```
+
+حتى لو Overall Score = 90%.
+
+النتيجة:
+
+```text
+Not Eligible
+```
+
+لأن HSE Gate Mandatory.
+
+---
+
+# 5.58 Final Selection
+
+الـManual يحدد أن Final Selection تشمل:
+
+* Review interview feedback
+* Final candidate selection
+* Obtain required approvals
+
+بمشاركة Requester وTechnical Department وTalent Acquisition. 
+
+---
+
+# 5.59 Selection Comparison
+
+لو لدينا 4 مرشحين:
+
+| Candidate | Technical | HR | HSE  | Salary | Availability |
+| --------- | --------: | -: | ---- | -----: | ------------ |
+| A         |        90 | 80 | Pass |    25k | Immediate    |
+| B         |        85 | 92 | Pass |    23k | 30 Days      |
+| C         |        95 | 70 | Pass |    30k | 15 Days      |
+| D         |        80 | 85 | Fail |    22k | Immediate    |
+
+النظام يساعد في القرار لكنه لا يقرر بدل الفريق.
+
+---
+
+# 5.60 Selection Decision
+
+```text
+Selected
+Backup
+Rejected
+Talent Pool
+Hold
+```
+
+Backup مهم جدًا لو Candidate الأول رفض Offer.
+
+---
+
+# 5.61 Final Approval
+
+قبل Offer:
+
+```text
+Candidate Selected
+       ↓
+Hiring Approval
+       ↓
+Compensation Approval
+       ↓
+Offer Authorization
+```
+
+حسب Approval Matrix.
+
+---
+
+# 5.62 Salary Validation
+
+Compare:
+
+```text
+Requested Salary
+Approved Salary Range
+Grade Range
+Internal Equity
+Candidate Expectation
+```
+
+مثال:
+
+```text
+Approved Range:
+22k–26k
+
+Offer:
+27.5k
+```
+
+يظهر:
+
+```text
+Above Approved Range
+Exception Approval Required
+```
+
+---
+
+# 5.63 Job Offer Management
+
+الـManual يحدد أن Talent Acquisition:
+
+* Prepares job offer
+* Sends offer email/rejection message
+* Shares hiring document requirements
+* Explains training and certification requirements
+
+والـOutput هو Official Job Offer. 
+
+---
+
+# 5.64 Offer Template
+
+Template حسب:
+
+```text
+Company
+Country
+Employment Type
+Grade
+Language
+Position
+```
+
+مثلاً:
+
+```text
+Arabic
+English
+French
+```
+
+---
+
+# 5.65 Offer Fields
+
+```text
+Candidate
+Position
+Company
+Project
+Location
+Manager
+
+Basic / Gross / Net
+Allowances
+Benefits
+
+Employment Type
+Contract Duration
+
+Joining Date
+Probation
+
+Working Hours
+Work Schedule
+
+Offer Expiry Date
+Special Conditions
+```
+
+---
+
+# 5.66 Offer Versioning
+
+لو تفاوضنا:
+
+```text
+Offer V1
+25,000
+
+Offer V2
+27,000
+
+Offer V3
+28,000
+```
+
+لا نمسح القديم.
+
+---
+
+# 5.67 Offer Approval
+
+قبل Send:
+
+```text
+Draft
+ ↓
+Salary Approval
+ ↓
+HR Approval
+ ↓
+Final Approval
+ ↓
+Ready to Send
+```
+
+---
+
+# 5.68 Digital Offer
+
+Candidate يستطيع:
+
+```text
+Open Offer
+Download PDF
+Accept
+Reject
+Request Discussion
+```
+
+مع:
+
+```text
+Timestamp
+IP
+Accepted Version
+```
+
+---
+
+# 5.69 Offer Acceptance
+
+الـManual يحدد:
+
+```text
+Accept or Reject Offer
+Confirm Joining Date
+```
+
+ويحدد maximum 30 calendar days في Stage 7. 
+
+لذلك النظام يسجل:
+
+```text
+Offer Sent
+Offer Viewed
+Offer Accepted
+Offer Rejected
+Offer Expired
+```
+
+---
+
+# 5.70 Offer Rejection Reason
+
+```text
+Salary
+Counter Offer
+Location
+Accepted Another Job
+Personal Reason
+Joining Date
+Benefits
+Role
+No Response
+Other
+```
+
+مهم جدًا في Recruitment Analytics.
+
+---
+
+# 5.71 Counter Offer
+
+Candidate يمكن تسجيل:
+
+```text
+Requested Salary
+Requested Joining Date
+Comments
+```
+
+ثم:
+
+```text
+Negotiation
+```
+
+بدون إنشاء Candidate جديد.
+
+---
+
+# 5.72 Joining Date Confirmation
+
+بعد Acceptance:
+
+```text
+Proposed Joining Date
+Confirmed Joining Date
+```
+
+لأن الـManual يشترط Confirm joining date قبل handover. 
+
+---
+
+# 5.73 Candidate Pre-Hire Conversion
+
+بعد Acceptance:
+
+```text
+Candidate
+    ↓
+Pre-Hire Person
+```
+
+لكن لا يصبح:
+
+```text
+Active Employee
+```
+
+بعد.
+
+هذه نقطة مهمة.
+
+---
+
+# 5.74 Handover to Personnel
+
+الـManual ينص على أن Talent Acquisition ينقل complete approved hiring file إلى Personnel، ويشارك recruitment/offer documents، يؤكد joining date، ويبلغ Personnel لبدء onboarding وإنشاء employee record. 
+
+سنحولها إلى:
+
+```text
+Recruitment Handover Package
+```
+
+---
+
+# 5.75 Handover Package
+
+يشمل:
+
+```text
+Candidate Profile
+Approved Manpower Request
+Requisition
+Interview Evaluations
+Selection Approval
+Approved Offer
+Accepted Offer
+Joining Date
+Salary Details
+Project
+Manager
+Work Location
+Employment Type
+Required Documents
+Required Certifications
+Recruitment Notes
+```
+
+---
+
+# 5.76 Hiring Email Automation
+
+الـManual يحدد في onboarding أن Hiring Email تشمل:
+
+* English Candidate Name
+* Arabic Candidate Name
+* National ID
+* Mobile
+* Position
+* Project Code
+* Project Name
+* Direct Manager
+* Work Location
+* Net Salary
+* Allowances & Benefits
+* Social Insurance Number
+* Contract Signing Date
+* Joining Date
+
+
+
+بدل Email يدوي:
+
+```text
+Generate Hiring Notification
+```
+
+من البيانات الموجودة بالفعل.
+
+---
+
+# 5.77 Recruitment → Module 04 Integration
+
+بعد قبول العرض:
+
+```text
+Candidate
+      ↓
+Person Created / Matched
+      ↓
+Pre-Hire Employee Record
+```
+
+نرسل تلقائيًا:
+
+```text
+Name
+Mobile
+Email
+Position
+Project
+Manager
+Location
+Employment Type
+Joining Date
+```
+
+إلى Module 04.
+
+بدون إعادة إدخال.
+
+---
+
+# 5.78 Recruitment → Onboarding
+
+ثم:
+
+```text
+Offer Accepted
++
+Handover Complete
+      ↓
+Create Onboarding Case
+```
+
+وهذا سيكون الربط مع Module 06 القادم.
+
+---
+
+# 5.79 Internal Recruitment
+
+ندعم:
+
+```text
+Internal Candidate
+```
+
+مثلاً Employee يقدم على Position أخرى.
+
+بدل Candidate جديد:
+
+```text
+Employee
+   ↓
+Internal Application
+```
+
+---
+
+# 5.80 Internal Vacancy
+
+يمكن نشر Vacancy:
+
+```text
+Internal Only
+External Only
+Both
+```
+
+---
+
+# 5.81 Employee Referral
+
+Employee يستطيع:
+
+```text
+Refer Candidate
+```
+
+ويتابع Status محدود:
+
+```text
+Submitted
+Under Review
+Interview
+Closed
+```
+
+بدون رؤية معلومات سرية.
+
+---
+
+# 5.82 Talent Pool
+
+Candidates الجيدون غير المختارين:
+
+```text
+Talent Pool
+```
+
+مثلاً:
+
+```text
+FTTH Engineers
+Riggers
+Project Managers
+Finance
+Fresh Graduates
+```
+
+---
+
+# 5.83 Talent Pool Expiration
+
+Candidate consent/data retention حسب سياسة الشركة.
+
+النظام يستطيع:
+
+```text
+Archive after X months
+```
+
+أو:
+
+```text
+Request Consent Renewal
+```
+
+حسب Tenant Policy.
+
+---
+
+# 5.84 Blacklist / Do Not Rehire
+
+يجب التعامل معها بحذر وصلاحيات محدودة.
+
+Status مثل:
+
+```text
+Do Not Proceed
+```
+
+مع:
+
+```text
+Reason
+Authorized By
+Effective Date
+Review Date
+Evidence
+```
+
+ولا تظهر لكل Recruiter بدون Permission.
+
+---
+
+# 5.85 Candidate Privacy
+
+Candidate Data Access:
+
+```text
+Talent Acquisition
+Hiring Manager — Limited
+Technical Interviewer — Limited
+HSE — Relevant Data Only
+HR Manager
+```
+
+مثلاً Interviewer لا يحتاج رؤية:
+
+```text
+Candidate Current Salary
+National ID
+Private Notes
+```
+
+---
+
+# 5.86 Candidate Notes Classification
+
+Notes:
+
+```text
+General
+Recruiter Only
+HR Confidential
+Interview Feedback
+Compliance
+```
+
+---
+
+# 5.87 Recruitment Document Management
+
+Documents:
+
+```text
+CV
+Certificates
+National ID
+Portfolio
+Technical Test
+Interview Evaluation
+Offer
+Approval
+Other
+```
+
+وكل Document Type له Permission.
+
+---
+
+# 5.88 Candidate Communication Center
+
+كل Communication داخل Profile:
+
+```text
+Email
+SMS
+WhatsApp
+Phone Call Log
+Internal Note
+```
+
+مع:
+
+```text
+Date
+Sender
+Template
+Status
+```
+
+---
+
+# 5.89 Communication Templates
+
+مثل:
+
+```text
+Application Received
+Screening Invitation
+Interview Invitation
+Interview Reminder
+Rejection
+Offer
+Document Request
+Offer Reminder
+Joining Reminder
+```
+
+باللغات:
+
+```text
+Arabic
+English
+French
+```
+
+---
+
+# 5.90 Bulk Communication
+
+مثلاً:
+
+```text
+Send Interview Invitation
+to 50 Technicians
+```
+
+مع Personalization:
+
+```text
+{{CandidateName}}
+{{InterviewDate}}
+{{Location}}
+```
+
+---
+
+# 5.91 Recruitment Calendar
+
+يعرض:
+
+```text
+Interviews
+Assessments
+Job Fairs
+Joining Dates
+Offer Expiry
+Hiring Deadlines
+```
+
+---
+
+# 5.92 Recruitment Task Management
+
+لكل Recruiter:
+
+```text
+Call Ahmed
+Review 12 CVs
+Send 4 Offers
+Collect Interview Feedback
+Follow Up Joining
+```
+
+---
+
+# 5.93 Recruiter Workload
+
+Dashboard:
+
+```text
+Recruiter A
+12 Open Requisitions
+86 Active Candidates
+7 Interviews Today
+3 Offers Pending
+2 SLA Breaches
+```
+
+---
+
+# 5.94 Hiring Manager Dashboard
+
+يرى:
+
+```text
+My Open Requests
+My Vacancies
+Candidates Waiting My Review
+Interviews
+Offers
+Upcoming Joiners
+SLA Delays
+```
+
+---
+
+# 5.95 Recruitment Funnel
+
+مثال:
+
+```text
+Applications        1,200
+Screened              640
+Shortlisted           280
+Interviewed           140
+Selected               52
+Offers                  45
+Accepted                39
+Joined                  36
+```
+
+---
+
+# 5.96 Conversion Rates
+
+```text
+Application → Screen
+Screen → Interview
+Interview → Offer
+Offer → Accept
+Accept → Join
+```
+
+مثلاً:
+
+```text
+Offer Acceptance Rate:
+86.7%
+```
+
+---
+
+# 5.97 Time-to-Hire
+
+نفرق بين:
+
+```text
+Time to Approve
+Time to Source
+Time to Interview
+Time to Offer
+Time to Accept
+Time to Join
+```
+
+والـTotal:
+
+```text
+Request → Joining
+```
+
+---
+
+# 5.98 Time-to-Fill
+
+```text
+Requisition Open
+     ↓
+Vacancy Filled
+```
+
+لكل:
+
+```text
+Position
+Project
+Recruiter
+Customer
+Location
+```
+
+---
+
+# 5.99 Aging Dashboard
+
+مثلاً:
+
+```text
+REQ-1001  5 Days
+REQ-1002  19 Days
+REQ-1003  47 Days ⚠
+```
+
+---
+
+# 5.100 SLA Dashboard
+
+```text
+On Time          82%
+At Risk          11%
+Overdue           7%
+```
+
+By:
+
+```text
+Recruiter
+Hiring Manager
+Department
+Stage
+Project
+```
+
+---
+
+# 5.101 Recruitment KPI Dashboard
+
+```text
+Open Vacancies
+Filled Vacancies
+Time to Fill
+Time to Hire
+Offer Acceptance
+Candidate Dropout
+Source Effectiveness
+Recruiter Productivity
+Hiring Manager Response Time
+Cost per Hire
+SLA Compliance
+```
+
+---
+
+# 5.102 Source Effectiveness
+
+مثلاً:
+
+```text
+LinkedIn
+500 Candidates
+20 Hires
+
+Referral
+90 Candidates
+25 Hires
+```
+
+قد نجد أن Referral أعلى Quality رغم Volume أقل.
+
+---
+
+# 5.103 Cost per Hire
+
+يمكن حساب:
+
+```text
+Job Ads
+Agency Fees
+Referral Bonus
+Assessment Cost
+Recruiter Cost
+Travel
+Medical
+Other
+```
+
+ثم:
+
+```text
+Total Recruitment Cost
+÷
+Number of Hires
+```
+
+---
+
+# 5.104 Project Recruitment Dashboard
+
+مثلاً:
+
+```text
+Ericsson Project
+
+Required     150
+Approved     145
+Recruited    112
+Joined        98
+Pending       14
+Gap           52
+```
+
+---
+
+# 5.105 Manpower Gap
+
+```text
+Required
+-
+Active
+-
+Confirmed Joiners
+=
+Remaining Gap
+```
+
+مثلاً:
+
+```text
+Need      100
+Active     72
+Joining    11
+----------------
+Gap        17
+```
+
+---
+
+# 5.106 Joining Forecast
+
+مثلاً:
+
+```text
+Next 7 Days:
+12 Joiners
+
+Next 30 Days:
+34 Joiners
+```
+
+وهذا مهم للمشروعات.
+
+---
+
+# 5.107 Hiring Risk Alerts
+
+النظام يكتشف:
+
+```text
+Critical Project Understaffed
+Offer Acceptance Falling
+High Rejection Rate
+Salary Range Below Market
+Hiring Manager Delay
+Candidate Drop-Off
+Too Many Vacancies Assigned to One Recruiter
+```
+
+لكن أول نسخة يمكن أن تكون Rule-Based وليس AI.
+
+---
+
+# 5.108 Recruitment Automation Rules
+
+مثلاً:
+
+```text
+IF candidate waiting 48h for manager review
+THEN reminder manager
+```
+
+أو:
+
+```text
+IF offer expires in 24h
+THEN notify candidate + recruiter
+```
+
+---
+
+# 5.109 AI Assistance — Optional
+
+يمكن إضافة لاحقًا:
+
+```text
+CV Parsing
+Candidate Summary
+Job Description Drafting
+Skill Matching
+Interview Question Suggestions
+Candidate Ranking Assistance
+Duplicate Detection Assistance
+```
+
+لكن مهم:
+
+> AI لا يكون Final Hiring Decision Maker.
+
+القرار النهائي يظل بشريًا.
+
+---
+
+# 5.110 CV Parsing
+
+AI/Parser يستخرج:
+
+```text
+Name
+Email
+Mobile
+Experience
+Education
+Skills
+Employers
+Certifications
+```
+
+ثم:
+
+```text
+Candidate reviews/Recruiter verifies
+```
+
+قبل اعتماد البيانات.
+
+---
+
+# 5.111 Candidate Matching
+
+مثلاً:
+
+```text
+Candidate Match:
+87%
+```
+
+بناءً على:
+
+```text
+Required Skills
+Experience
+Location
+Availability
+Certifications
+```
+
+لكن لا يستخدم Sensitive Attributes في Ranking.
+
+---
+
+# 5.112 Recruitment Audit Trail
+
+كل خطوة:
+
+```text
+Candidate moved:
+Screening → Shortlist
+
+By:
+Recruiter A
+
+Date:
+10-Aug-2026
+
+Reason:
+Passed screening
+```
+
+والـApproval أيضًا محفوظ.
+
+---
+
+# 5.113 No Silent Candidate Deletion
+
+Candidate Record لا يحذف بدون:
+
+```text
+Retention Rule
+Authorized Delete/Anonymize
+Audit
+```
+
+---
+
+# 5.114 Recruitment Permissions
+
+أمثلة:
+
+```text
+ManpowerRequest.Create
+ManpowerRequest.View
+ManpowerRequest.Approve
+
+Requisition.Create
+Requisition.Edit
+Requisition.Close
+
+Candidate.View
+Candidate.Edit
+Candidate.Export
+
+Interview.Schedule
+Interview.Evaluate
+
+Offer.Create
+Offer.Approve
+Offer.Send
+
+Recruitment.Report.View
+Recruitment.Export
+```
+
+مع Scope من Module 03.
+
+---
+
+# 5.115 Example Permission Scope
+
+Project Manager:
+
+```text
+ManpowerRequest.Create
+Scope: My Projects
+
+Candidate.View
+Scope: Candidates for My Projects
+
+Interview.Evaluate
+Scope: Assigned Interviews
+```
+
+ولا يرى Candidate Database بالكامل.
+
+---
+
+# 5.116 Recruitment Security
+
+معلومات حساسة:
+
+```text
+Candidate Salary
+National ID
+Evaluation
+Rejection Reason
+Internal Notes
+Offer
+```
+
+كل Field له Visibility.
+
+---
+
+# 5.117 Recruitment Workflow State Machine
+
+يمكن تمثيله:
+
+```text
+Draft Request
+      ↓
+Request Submitted
+      ↓
+Approved
+      ↓
+Requisition Open
+      ↓
+Candidates Sourced
+      ↓
+Screening
+      ↓
+Requester Review
+      ↓
+Assessment
+      ↓
+Selection
+      ↓
+Offer
+      ↓
+Accepted
+      ↓
+Handover
+      ↓
+Onboarding
+```
+
+مع branches:
+
+```text
+Rejected
+Cancelled
+On Hold
+Withdrawn
+No Show
+Offer Rejected
+```
+
+---
+
+# 5.118 Connection With Organization Module
+
+Job Requisition لا يستخدم Position Free Text.
+
+بل:
+
+```text
+Position
+```
+
+من Module 02.
+
+وبالتالي يحصل تلقائيًا على:
+
+```text
+Job Description
+Skills
+Grade
+Department
+Reporting Line
+HSE Classification
+```
+
+---
+
+# 5.119 Connection With Employee Master
+
+عند Rehire:
+
+النظام يكتشف:
+
+```text
+Existing Person
+```
+
+ثم لا ينشئ Duplicate.
+
+---
+
+# 5.120 Connection With Project Structure
+
+Request يمكن أن يكون:
+
+```text
+Company Hiring
+Department Hiring
+Project Hiring
+Customer Hiring
+```
+
+ويمكن ربط الموظف لاحقًا بمشروع واحد أو أكثر.
+
+---
+
+# 5.121 Connection With Payroll
+
+قبل Offer:
+
+```text
+Salary Range Validation
+```
+
+بعد Hire:
+
+```text
+Approved Salary
+```
+
+تنتقل إلى Payroll/Compensation Process حسب الصلاحيات.
+
+---
+
+# 5.122 Connection With HSE
+
+لو Position:
+
+```text
+Safety Sensitive = Yes
+```
+
+Recruitment يعرف أن:
+
+```text
+HSE Assessment Required
+```
+
+ويتم لاحقًا إرسال Requirements للـOnboarding.
+
+---
+
+# 5.123 Connection With Customer Requirements
+
+مثلاً Ericsson Position يتطلب:
+
+```text
+Customer Interview
+Specific Certification
+Medical
+Customer Portal ID
+```
+
+يتم تحميلها تلقائيًا من Position/Project Rules.
+
+---
+
+# 5.124 Recruitment Exception Workflow
+
+لو أي Process خرج عن Policy:
+
+```text
+Salary Exception
+Experience Exception
+Qualification Exception
+Age Requirement Exception
+Certification Exception
+Headcount Exception
+Budget Exception
+```
+
+لا يتم Override يدوي بدون سجل.
+
+بل:
+
+```text
+Exception Request
+   ↓
+Reason
+   ↓
+Approval
+   ↓
+Proceed
+```
+
+---
+
+# 5.125 Requisition Closure
+
+أسباب:
+
+```text
+Filled
+Cancelled
+Budget Cancelled
+Project Cancelled
+Requirement Changed
+Position Removed
+Duplicate Request
+No Longer Needed
+```
+
+---
+
+# 5.126 Partial Fill
+
+مثلاً:
+
+```text
+Required:
+20
+
+Joined:
+13
+```
+
+Status:
+
+```text
+Partially Filled
+```
+
+ولا يغلق Requisition إلا حسب قرار Recruiter/Manager.
+
+---
+
+# 5.127 Vacancy Reservation
+
+عند Selected:
+
+```text
+Candidate A
+```
+
+يمكن:
+
+```text
+Reserve Vacancy
+```
+
+حتى لا يتم تقديم Offer لعدد أكبر من vacancies بشكل غير مقصود.
+
+---
+
+# 5.128 Over-Hiring Control
+
+لو:
+
+```text
+Vacancies = 10
+```
+
+و:
+
+```text
+Accepted Offers = 10
+```
+
+النظام يمنع Offer #11 إلا:
+
+```text
+Over-Hiring Approval
+```
+
+---
+
+# 5.129 Candidate Joining Dropout
+
+مهم جدًا.
+
+الحالة:
+
+```text
+Offer Accepted
+But Did Not Join
+```
+
+نسجل:
+
+```text
+No Show on Joining
+```
+
+ويتم تحرير Vacancy تلقائيًا.
+
+---
+
+# 5.130 Recruitment Data Model
+
+Core Tables:
+
+```text
+ManpowerPlans
+ManpowerDemands
+ManpowerRequests
+ManpowerRequestApprovals
+
+JobRequisitions
+RequisitionVacancies
+RecruiterAssignments
+
+Candidates
+CandidateContacts
+CandidateEducation
+CandidateExperience
+CandidateSkills
+CandidateDocuments
+
+Applications
+ApplicationStages
+ApplicationHistory
+
+Screenings
+ScreeningAnswers
+
+Interviews
+InterviewParticipants
+InterviewEvaluations
+
+Assessments
+AssessmentResults
+
+Selections
+
+Offers
+OfferVersions
+OfferApprovals
+OfferResponses
+
+HiringHandovers
+
+RecruitmentSLA
+RecruitmentTasks
+RecruitmentCommunications
+
+TalentPools
+CandidateTalentPools
+```
+
+---
+
+# 5.131 Main Business Rules
+
+```text
+01. No recruitment without approved manpower request unless authorized exception exists.
+
+02. Every requisition must be tied to an approved position or approved custom exception.
+
+03. Number of hires cannot exceed approved vacancies without approval.
+
+04. Replacement request must reference the employee being replaced.
+
+05. Candidate and Application are separate entities.
+
+06. One candidate may have multiple applications.
+
+07. Interview evaluation must be attributable to an interviewer.
+
+08. Offer cannot be sent before required approvals.
+
+09. Offer versions cannot overwrite previous approved versions.
+
+10. Accepted offer must generate a pre-hire/handover process.
+
+11. Candidate must not become Active Employee directly from ATS.
+
+12. Recruitment SLA must be calculated per stage and priority.
+
+13. Sensitive candidate information must follow permission scope.
+
+14. Hiring decisions must remain auditable.
+
+15. Rejected/withdrawn candidates should retain historical application data based on retention policy.
+```
+
+---
+
+# 5.132 Full End-to-End Example
+
+لنأخذ مثالًا عمليًا:
+
+```text
+Ericsson Project
+needs
+10 Fiber Technicians
+```
+
+### Step 1
+
+Project Manager creates:
+
+```text
+MR-2026-000145
+
+Position:
+Fiber Technician
+
+Vacancies:
+10
+
+Priority:
+P0
+
+Project:
+Ericsson Cairo
+
+Reason:
+New Rollout
+```
+
+### Step 2
+
+Approvals complete.
+
+```text
+Approved
+```
+
+### Step 3
+
+System creates:
+
+```text
+REQ-2026-000351
+```
+
+and assigns Talent Acquisition.
+
+### Step 4
+
+Recruiter sources:
+
+```text
+64 Candidates
+```
+
+### Step 5
+
+Screening:
+
+```text
+64
+↓
+35 qualified
+```
+
+### Step 6
+
+Requester Review:
+
+```text
+35
+↓
+22 selected for interview
+```
+
+### Step 7
+
+Technical + HSE + HR:
+
+```text
+22
+↓
+14 Passed
+```
+
+### Step 8
+
+Final Selection:
+
+```text
+10 Selected
+3 Backup
+1 Talent Pool
+```
+
+### Step 9
+
+Offers:
+
+```text
+10 Sent
+```
+
+Results:
+
+```text
+8 Accepted
+1 Rejected
+1 Negotiating
+```
+
+### Step 10
+
+Backup Candidate receives offer.
+
+Final:
+
+```text
+10 Accepted
+```
+
+### Step 11
+
+Recruitment Handover:
+
+```text
+10 Pre-Hire Records
+```
+
+### Step 12
+
+Module 06 receives:
+
+```text
+10 Onboarding Cases
+```
+
+هذه هي الدورة الرقمية الكاملة بدل Excel + Email + WhatsApp + ملفات منفصلة.
+
+---
+
+# 5.133 Recruitment Command Center
+
+Dashboard النهائية:
+
+```text
+People & Culture
+Recruitment Command Center
+
+Open Manpower Requests       36
+Approved Vacancies          184
+Open Requisitions            42
+Active Candidates           728
+
+Interviews Today             23
+Offers Pending               17
+Accepted Awaiting Joining    31
+
+Critical P0 Vacancies        24
+SLA Breaches                  7
+
+--------------------------------
+
+Vacancy Funnel
+
+Requested      240
+Approved       218
+Filled         149
+Joining         31
+Gap             38
+```
+
+---
+
+# 5.134 العلاقة مع الـPeople & Culture Manual
+
+هذا التصميم لا يغير دورة الـHiring الموجودة في المصدر، بل يحولها إلى Software Workflow.
+
+الـManual يحدد بوضوح ثماني مراحل من Hiring Request Initiation حتى Handover to Personnel، ويوزع الأدوار بين Requester وTalent Acquisition وTechnical وHSE ثم Personnel، ويحدد outputs وSLAs لكل مرحلة. 
+
+والنظام المقترح يحافظ على هذا الهيكل، ثم يضيف حوله ما يحتاجه التطبيق فعليًا مثل:
+
+```text
+Approval Engine
+Budget & Headcount Control
+Candidate Database
+Interview Scheduling
+Offer Versioning
+Talent Pools
+SLA Monitoring
+Dashboards
+Audit
+Automation
+```
+
+بدون تغيير الـProcess الأصلي نفسه.
+
+---
+
+## Module 05 Final Scope
+
+```text
+Workforce Demand
++
+Manpower Planning Link
++
+Manpower Request
++
+Approval Workflow
++
+Budget / Headcount Validation
++
+Job Requisition
++
+Candidate Database
++
+Applications
++
+Sourcing
++
+Screening
++
+Shortlisting
++
+Requester Review
++
+Interviews
++
+Technical Assessment
++
+HSE Assessment
++
+Final Selection
++
+Offer Management
++
+Offer Approval
++
+Offer Acceptance
++
+Pre-Hire Conversion
++
+Recruitment Handover
++
+SLA Engine
++
+Talent Pool
++
+Recruitment Analytics
++
+Recruitment Automation
+```
+
+والخطوة التالية المنطقية هي:
+
+**Module 06 — Onboarding, Pre-Employment Compliance & Employee Activation**
+
+لأن الـManual نفسه يبدأ بعد الـOffer Acceptance مباشرة بمرحلة Onboarding، ويحتوي على 9 مراحل واضحة من Onboarding Initiation حتى Employment Activation. 

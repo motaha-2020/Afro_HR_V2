@@ -1,0 +1,3180 @@
+تمام. **Cluster H** هنا ليس مجرد Offboarding Module، بل يجب أن يكون **Separation Orchestration Engine** ينسق بين Personnel وPayroll وIT وFinance وOperations وAsset Management وCluster E بدون أن يكرر ملكية بياناتهم.
+
+الـManual يدعم هذا التصميم مباشرة: يبدأ offboarding من resignation أو contract expiration أو termination أو end of project assignment، ثم system access deactivation، handover، clearance، legal & financial closure، وأخيرًا file closure & archiving. كما يحدد أن IT access يجب تعطيله في موعد أقصاه آخر يوم عمل، وأن clearance يشمل IT/Operations/HR/Admin/Finance/Direct Manager، وأن final settlement يتضمن final salary وunused leave وdeductions وother entitlements. 
+
+# Cluster H
+
+## Offboarding, Resignation, Termination, Clearance, Asset Recovery, Knowledge Handover, Final Settlement, Exit Interview & Post-Employment Obligations ERD
+
+القاعدة الأساسية:
+
+> **Separation Event ≠ Offboarding Case ≠ Clearance ≠ Final Settlement ≠ Legal Closure ≠ Employee Status Change**
+
+كل واحدة Entity مستقلة مرتبطة بالأخرى.
+
+---
+
+# 1. الهدف المعماري
+
+Cluster H يجب أن يجيب عن أسئلة تشغيلية فعلية مثل:
+
+```text
+لماذا الموظف يغادر؟
+من طلب الانفصال؟
+ما آخر يوم عمل؟
+هل الـnotice period مكتمل؟
+هل resignation approved؟
+هل handover مكتمل؟
+هل اللابتوب والموبايل والـID returned؟
+هل هناك advance أو petty cash أو liabilities؟
+هل IT access اتقفل في الوقت الصحيح؟
+هل final settlement جاهز؟
+هل Form 6 والتأمينات أغلقت؟
+هل medical insurance انتهى؟
+هل الموظف مؤهل لإعادة التعيين؟
+هل عليه NDA / non-compete / confidentiality obligation بعد الخروج؟
+هل exit interview اتعمل؟
+هل ملف الموظف اتقفل وأرشف؟
+```
+
+---
+
+# 2. Domains
+
+أقسم Cluster H إلى:
+
+```text
+H01 Separation Event
+H02 Separation Case
+H03 Resignation Management
+H04 Termination Management
+H05 Notice Period
+H06 Knowledge & Responsibility Handover
+H07 Clearance Management
+H08 Asset & Custody Recovery
+H09 System Access Revocation
+H10 Financial Clearance
+H11 Final Settlement Orchestration
+H12 Personnel & Legal Closure
+H13 Exit Interview
+H14 Rehire Eligibility & Alumni
+H15 Post-Employment Obligations
+H16 Separation Audit, SLA & Archive
+```
+
+---
+
+# 3. Position داخل النظام
+
+```text
+                    EMPLOYEE
+                       │
+                       ▼
+               SEPARATION EVENT
+                       │
+                       ▼
+                OFFBOARDING CASE
+                       │
+     ┌─────────────────┼───────────────────┐
+     ▼                 ▼                   ▼
+ NOTICE PERIOD      HANDOVER           CLEARANCE
+                                           │
+                    ┌──────────────────────┼──────────────────────┐
+                    ▼                      ▼                      ▼
+                 ASSETS                 ACCESS                FINANCE
+                    │                      │                      │
+                    └──────────────┬───────┴──────────────┬──────┘
+                                   ▼                      ▼
+                           PERSONNEL CLOSURE       FINAL SETTLEMENT
+                                   │                      │
+                                   └──────────┬───────────┘
+                                              ▼
+                                         EXIT INTERVIEW
+                                              │
+                                              ▼
+                                    REHIRE / ALUMNI STATUS
+                                              │
+                                              ▼
+                                           ARCHIVE
+```
+
+---
+
+# 4. H01 — Separation Event
+
+الـEvent هو السبب الرسمي الذي بدأ العملية.
+
+## separation_event
+
+```text
+separation_event
+----------------
+separation_event_id PK
+
+tenant_id FK
+company_id FK
+
+employee_id FK
+
+event_type
+
+event_date
+reported_at
+
+initiated_by_type
+initiated_by_user_id FK nullable
+initiated_by_employee_id FK nullable
+
+source_module
+source_entity_id nullable
+
+reason_code_id FK
+reason_details
+
+proposed_last_working_day
+confirmed_last_working_day nullable
+
+voluntary_flag
+
+company_initiated_flag
+
+legal_review_required
+
+disciplinary_case_id FK nullable
+
+event_status
+
+created_at
+created_by
+```
+
+---
+
+# 5. Separation Types
+
+لا نستخدم resignation/termination فقط.
+
+```text
+Resignation
+Termination
+Disciplinary Termination
+Contract Expiry
+End of Project
+Retirement
+Mutual Separation
+Redundancy
+Absence / Abandonment
+Death
+Medical Separation
+Legal / Regulatory Separation
+Transfer to Another Legal Entity
+Other
+```
+
+---
+
+# 6. Voluntary vs Involuntary
+
+هذا Dimension مستقل.
+
+مثلاً:
+
+```text
+Resignation
+→ Voluntary
+
+Retirement
+→ Voluntary / Policy Driven
+
+Redundancy
+→ Involuntary
+
+Disciplinary Termination
+→ Involuntary
+```
+
+يساعد جدًا في analytics.
+
+---
+
+# 7. Separation Reason Master
+
+## separation_reason
+
+```text
+separation_reason_id PK
+
+reason_code
+reason_name_ar
+reason_name_en
+reason_name_fr
+
+reason_category
+
+voluntary_default
+
+rehire_impact_default
+
+legal_review_default
+
+active_flag
+```
+
+مثال:
+
+```text
+Better Opportunity
+Salary
+Manager Relationship
+Relocation
+Career Change
+Performance
+Misconduct
+Project End
+Contract Expiry
+Retirement
+Medical
+Absence
+Company Restructure
+Death
+```
+
+---
+
+# 8. H02 — Offboarding Case
+
+## offboarding_case
+
+```text
+offboarding_case
+----------------
+offboarding_case_id PK
+
+tenant_id FK
+company_id FK
+
+case_number UNIQUE
+
+employee_id FK
+separation_event_id FK
+
+case_status
+case_stage
+
+case_owner_user_id FK
+case_owner_team_id FK
+
+priority
+
+confirmed_last_working_day
+
+notice_period_required_flag
+
+clearance_required_flag
+
+final_settlement_required_flag
+
+exit_interview_required_flag
+
+rehire_review_required_flag
+
+legal_review_required_flag
+
+overall_completion_percentage
+
+target_close_date
+
+closed_at nullable
+closed_by nullable
+
+closure_status
+closure_notes
+
+created_at
+created_by
+```
+
+---
+
+# 9. Offboarding Status
+
+```text
+Draft
+Initiated
+Pending Approval
+Notice Period
+Handover In Progress
+Clearance In Progress
+Financial Closure
+Personnel Closure
+Final Settlement Pending
+Exit Interview Pending
+Ready to Close
+Closed
+Cancelled
+Suspended
+```
+
+---
+
+# 10. Case Stage ≠ Status
+
+مثلاً:
+
+```text
+Status = In Progress
+Stage = Clearance
+```
+
+هذا أفضل من ضخ عشرات statuses.
+
+---
+
+# 11. H03 — Resignation
+
+## employee_resignation
+
+```text
+employee_resignation_id PK
+
+employee_id FK
+offboarding_case_id FK
+
+submitted_date
+
+requested_last_working_day
+
+resignation_reason_id FK
+
+resignation_statement
+
+resignation_channel
+
+manager_acknowledged_at nullable
+
+retention_discussion_required
+
+retention_discussion_completed
+
+withdrawal_allowed
+
+withdrawn_at nullable
+
+withdrawal_reason nullable
+
+resignation_status
+```
+
+---
+
+# 12. Resignation Status
+
+```text
+Draft
+Submitted
+Acknowledged
+Retention Discussion
+Pending Approval
+Approved
+Rejected
+Withdrawn
+Converted to Mutual Separation
+Offboarding Started
+```
+
+---
+
+# 13. Retention Discussion
+
+الـManual ينص على أن HR Operations يناقش retention opportunities قبل تنسيق offboarding. 
+
+نعمل:
+
+## retention_discussion
+
+```text
+retention_discussion_id PK
+
+employee_resignation_id FK
+
+conducted_by_user_id FK
+
+discussion_date
+
+primary_resignation_reason
+
+retention_possible_flag
+
+employee_open_to_retention_flag
+
+retention_option_type
+
+retention_notes
+
+recommended_action
+
+decision
+```
+
+---
+
+# 14. Retention Option Types
+
+```text
+Salary Review
+Role Change
+Project Change
+Manager Change
+Work Location Change
+Promotion Consideration
+Leave / Break
+Flexible Arrangement
+No Retention Option
+```
+
+لكن هذه مجرد options/recommendations؛ التنفيذ يتم في modules المالكة.
+
+---
+
+# 15. H04 — Termination
+
+Termination يجب ألا تكون مجرد resignation_reason.
+
+## employee_termination
+
+```text
+employee_termination_id PK
+
+employee_id FK
+offboarding_case_id FK
+
+termination_type
+
+termination_reason_id FK
+
+recommended_by_user_id FK
+
+termination_date
+
+effective_last_working_day
+
+disciplinary_case_id FK nullable
+
+performance_case_reference nullable
+
+legal_review_id FK nullable
+
+termination_basis
+
+notice_required_flag
+
+payment_in_lieu_flag
+
+approval_workflow_id FK
+
+approval_status
+
+employee_notified_at nullable
+
+termination_status
+```
+
+---
+
+# 16. Termination Types
+
+```text
+Disciplinary
+Performance
+Probation Failure
+Redundancy
+Contractual
+Medical
+Absence / Abandonment
+Business Closure
+Project Closure
+Legal / Regulatory
+Other
+```
+
+---
+
+# 17. Cluster E Boundary
+
+في disciplinary termination:
+
+```text
+Cluster E
+Investigation
+↓
+Approved Disciplinary Decision
+↓
+Termination Instruction
+↓
+Cluster H
+Offboarding
+```
+
+Cluster H لا يعيد التحقيق.
+
+ولا يخزن:
+
+```text
+Witnesses
+Evidence
+Statements
+Investigator Notes
+```
+
+بل فقط:
+
+```text
+disciplinary_case_id
+decision_reference
+approved_action
+effective_date
+```
+
+---
+
+# 18. H05 — Notice Period
+
+## notice_period
+
+```text
+notice_period_id PK
+
+offboarding_case_id FK
+
+notice_type
+
+contractual_notice_days
+policy_notice_days
+
+required_notice_days
+
+notice_start_date
+notice_end_date
+
+served_days
+
+waived_days
+
+payment_in_lieu_days
+
+shortfall_days
+
+notice_status
+```
+
+---
+
+# 19. Notice Types
+
+```text
+Employee Notice
+Employer Notice
+Mutual Waiver
+Immediate Separation
+Payment in Lieu
+No Notice Required
+```
+
+---
+
+# 20. Notice Adjustment
+
+## notice_adjustment
+
+```text
+notice_adjustment_id PK
+
+notice_period_id FK
+
+adjustment_type
+
+days
+
+reason
+
+approved_by_user_id FK
+
+approval_reference
+
+created_at
+```
+
+مثل:
+
+```text
+Waiver
+Extension
+Shortfall
+Payment in Lieu
+Early Release
+```
+
+---
+
+# 21. Notice Pay Bridge
+
+إذا نتج مبلغ مالي:
+
+```text
+Notice Adjustment
+↓
+Final Settlement Input
+```
+
+ولا يتم الحساب المالي النهائي داخل H.
+
+---
+
+# 22. H06 — Knowledge Handover
+
+الـManual يطلب Complete handover form وtransfer ongoing responsibilities وcontinuity plan. 
+
+## handover_plan
+
+```text
+handover_plan_id PK
+
+offboarding_case_id FK
+
+employee_id FK
+
+direct_manager_id FK
+
+handover_to_employee_id FK nullable
+
+handover_start_date
+target_completion_date
+
+handover_status
+
+manager_approval_status
+
+completed_at nullable
+```
+
+---
+
+# 23. Handover Items
+
+## handover_item
+
+```text
+handover_item_id PK
+
+handover_plan_id FK
+
+item_type
+
+title
+
+description
+
+priority
+
+source_system nullable
+source_reference nullable
+
+handover_to_employee_id FK nullable
+
+due_date
+
+status
+
+employee_confirmed
+receiver_confirmed
+manager_confirmed
+
+completed_at nullable
+```
+
+---
+
+# 24. Handover Item Types
+
+```text
+Project
+Task
+Customer
+Supplier
+Document
+Contract
+Site
+Access Responsibility
+Reporting Responsibility
+Financial Responsibility
+Approval Responsibility
+Team Responsibility
+Knowledge Item
+Other
+```
+
+---
+
+# 25. Project Handover
+
+يمكن ربط:
+
+```text
+handover_item
+→ project_id
+→ work package
+→ task
+→ issue
+→ customer
+```
+
+لكن ownership يبقى Project Management system.
+
+---
+
+# 26. Knowledge Artifact
+
+## handover_knowledge_artifact
+
+```text
+handover_knowledge_artifact_id PK
+
+handover_item_id FK
+
+artifact_type
+
+document_id FK nullable
+url_reference nullable
+source_entity_type nullable
+source_entity_id nullable
+
+description
+
+confidentiality_level
+```
+
+---
+
+# 27. Critical Knowledge Risk
+
+## knowledge_loss_assessment
+
+```text
+knowledge_loss_assessment_id PK
+
+offboarding_case_id FK
+
+employee_id FK
+
+knowledge_criticality
+
+replacement_readiness
+
+documentation_completeness
+
+handover_risk_score
+
+business_continuity_risk
+
+mitigation_required_flag
+
+assessed_by
+assessed_at
+```
+
+---
+
+# 28. لماذا هذه Table مهمة؟
+
+لو Senior Technical Expert سيغادر بعد 15 يوم:
+
+```text
+Handover complete = 80%
+```
+
+قد لا يكون كافيًا.
+
+لو لديه:
+
+```text
+Mission Critical Knowledge
+No successor
+Low documentation
+```
+
+النظام يرفع escalation.
+
+---
+
+# 29. H07 — Clearance
+
+Clearance ليست Checkbox واحدة.
+
+## clearance_plan
+
+```text
+clearance_plan_id PK
+
+offboarding_case_id FK
+
+clearance_profile_id FK
+
+created_at
+
+target_completion_date
+
+clearance_status
+
+completion_percentage
+
+final_approved_at nullable
+```
+
+---
+
+# 30. Clearance Profile
+
+يختلف حسب employee category.
+
+## clearance_profile
+
+```text
+clearance_profile_id PK
+
+profile_code
+profile_name
+
+company_id FK
+
+employment_type_id FK nullable
+employee_category_id FK nullable
+job_family_id FK nullable
+
+active_flag
+```
+
+---
+
+# 31. Clearance Requirement
+
+## clearance_requirement
+
+```text
+clearance_requirement_id PK
+
+clearance_profile_id FK
+
+department_type
+
+requirement_code
+requirement_name
+
+mandatory_flag
+
+blocking_final_settlement_flag
+blocking_case_closure_flag
+
+sequence_order
+
+sla_days nullable
+```
+
+---
+
+# 32. Employee Clearance Item
+
+## employee_clearance_item
+
+```text
+employee_clearance_item_id PK
+
+clearance_plan_id FK
+clearance_requirement_id FK
+
+owner_department_id FK nullable
+owner_user_id FK nullable
+
+clearance_status
+
+due_date
+
+completed_at nullable
+
+approved_by_user_id FK nullable
+
+exception_flag
+
+exception_approval_id FK nullable
+
+notes
+```
+
+---
+
+# 33. Clearance Status
+
+```text
+Pending
+In Progress
+Cleared
+Not Applicable
+Exception Approved
+Blocked
+Disputed
+Rejected
+```
+
+---
+
+# 34. Clearance Departments
+
+بناءً على الـManual:
+
+```text
+IT
+Operations
+HR
+Administration
+Finance
+Direct Manager
+Personnel
+```
+
+ويمكن إضافة:
+
+```text
+Warehouse
+Fleet
+Procurement
+Legal
+Security
+Project Management
+Customer Account
+```
+
+حسب الشركة. 
+
+---
+
+# 35. H08 — Asset Recovery
+
+لا نكرر Asset Master.
+
+نستخدم reference.
+
+## offboarding_asset_obligation
+
+```text
+offboarding_asset_obligation_id PK
+
+offboarding_case_id FK
+
+asset_id FK
+
+asset_category
+
+assigned_date
+
+expected_return_flag
+
+return_due_date
+
+return_status
+
+returned_at nullable
+
+condition_at_return
+
+assessed_damage_flag
+
+damage_reference_id FK nullable
+
+financial_liability_flag
+```
+
+---
+
+# 36. Asset Return Status
+
+```text
+Assigned
+Return Required
+Returned
+Returned Damaged
+Missing
+Lost
+Employee Claims Not Held
+Transferred to Another Custodian
+Written Off
+```
+
+---
+
+# 37. Assets Example
+
+الـManual يذكر تحديدًا:
+
+```text
+Laptop
+Hardware
+ID Card
+Medical Card
+Other Assets
+```
+
+والنظام يمكن أن يوسعها إلى:
+
+```text
+Mobile
+SIM
+Vehicle
+Tools
+PPE
+Access Token
+Uniform
+Warehouse Custody
+Test Equipment
+```
+
+
+
+---
+
+# 38. Asset Liability
+
+لو Asset مفقود:
+
+```text
+Asset Module
+↓
+Damage / Loss Assessment
+↓
+Approved Liability
+↓
+Financial Clearance
+↓
+Final Settlement Input
+```
+
+لا يحسب H مبلغ الخصم بنفسه.
+
+---
+
+# 39. H09 — System Access Revocation
+
+هذه منطقة Security وليست مجرد IT clearance.
+
+## offboarding_access_account
+
+```text
+offboarding_access_account_id PK
+
+offboarding_case_id FK
+
+identity_account_id FK nullable
+
+system_id FK
+
+account_identifier
+
+access_type
+
+revocation_required_flag
+
+revocation_deadline
+
+revocation_status
+
+revoked_at nullable
+
+revoked_by_user_id FK nullable
+
+verification_status
+```
+
+---
+
+# 40. Access Types
+
+```text
+Corporate Email
+ERP
+HR System
+Project System
+VPN
+Cloud
+Customer Portal
+Git / Code
+Database
+Financial System
+Attendance
+Physical Access
+Admin Account
+Other
+```
+
+---
+
+# 41. Access Revocation Rule
+
+الـManual يحدد:
+
+> كل access يجب تعطيله no later than employee's last working day. 
+
+لذلك:
+
+```text
+revocation_deadline
+=
+confirmed_last_working_day
+```
+
+إلا في حالات immediate termination حيث تكون:
+
+```text
+revocation_deadline
+=
+termination_effective_datetime
+```
+
+---
+
+# 42. Security Timing Profiles
+
+## access_revocation_profile
+
+```text
+access_revocation_profile_id PK
+
+separation_type
+
+access_category
+
+timing_rule
+
+offset_minutes
+
+immediate_flag
+```
+
+مثلاً:
+
+```text
+Resignation
+Corporate Email
+Last working day 17:00
+
+Disciplinary Termination
+Privileged Access
+Immediate
+
+Contract Expiry
+Standard Systems
+End of last working day
+```
+
+---
+
+# 43. Access Verification
+
+## access_revocation_verification
+
+```text
+access_revocation_verification_id PK
+
+offboarding_access_account_id FK
+
+verified_by_user_id FK
+
+verified_at
+
+verification_method
+
+result
+
+evidence_reference nullable
+```
+
+حتى لا يكون status مجرد "IT قال إنه قفل".
+
+---
+
+# 44. H10 — Financial Clearance
+
+الـManual يذكر:
+
+```text
+Advance clearance
+Petty cash settlement
+Liability verification
+```
+
+
+
+نعمل:
+
+## financial_clearance
+
+```text
+financial_clearance_id PK
+
+offboarding_case_id FK
+
+employee_id FK
+
+clearance_status
+
+finance_owner_user_id FK
+
+outstanding_amount
+
+recoverable_amount
+
+payable_amount
+
+currency_id FK
+
+finalized_at nullable
+```
+
+---
+
+# 45. Financial Obligation
+
+## employee_financial_obligation
+
+```text
+employee_financial_obligation_id PK
+
+financial_clearance_id FK
+
+obligation_type
+
+source_module
+source_entity_id
+
+description
+
+amount
+
+currency_id FK
+
+direction
+
+approval_status
+
+settlement_status
+```
+
+---
+
+# 46. Obligation Types
+
+```text
+Advance
+Petty Cash
+Loan
+Expense Balance
+Asset Liability
+Training Bond
+Notice Shortfall
+Unpaid Benefit Contribution
+Overpayment Recovery
+Travel Advance
+Other
+```
+
+---
+
+# 47. Direction
+
+```text
+Employee Owes Company
+Company Owes Employee
+```
+
+ولا نعتمد sign موجب/سالب فقط.
+
+---
+
+# 48. H11 — Final Settlement Orchestration
+
+هنا مهم جدًا:
+
+> Cluster H يجمع inputs وينسق الـworkflow، لكن **Payroll Engine هو الذي يحسب** إذا كانت السياسة تقول إن payroll يملك final settlement calculation.
+
+الـManual يذكر أن legal & financial closure يشمل final salary، unused leave، deductions، other entitlements. 
+
+---
+
+# 49. Final Settlement Case
+
+## final_settlement_case
+
+```text
+final_settlement_case_id PK
+
+offboarding_case_id FK
+employee_id FK
+
+settlement_period_id FK nullable
+
+calculation_owner
+
+settlement_status
+
+input_freeze_at nullable
+
+calculation_requested_at nullable
+
+calculated_at nullable
+
+approved_at nullable
+
+payment_due_date nullable
+
+paid_at nullable
+
+payroll_run_id FK nullable
+
+finance_payment_reference nullable
+```
+
+---
+
+# 50. Final Settlement Input
+
+## final_settlement_input
+
+```text
+final_settlement_input_id PK
+
+final_settlement_case_id FK
+
+input_type
+
+source_module
+source_entity_id
+
+amount nullable
+quantity nullable
+rate nullable
+
+currency_id FK nullable
+
+effective_date
+
+approval_status
+
+included_flag
+```
+
+---
+
+# 51. Input Types
+
+```text
+Final Salary
+Unused Leave
+Overtime
+Allowance
+KPI Bonus
+Expense Reimbursement
+Notice Pay
+Notice Shortfall
+Loan
+Advance
+Asset Deduction
+Benefit Adjustment
+Tax
+Social Insurance
+End of Service Benefit
+Severance
+Other Entitlement
+Other Deduction
+```
+
+---
+
+# 52. Why Snapshot?
+
+قبل calculation:
+
+```text
+Final Settlement Input Freeze
+```
+
+بعدها لا نسمح بإضافة value silently.
+
+أي تغيير:
+
+```text
+Settlement Adjustment
+```
+
+---
+
+# 53. Final Settlement Adjustment
+
+## final_settlement_adjustment
+
+```text
+final_settlement_adjustment_id PK
+
+final_settlement_case_id FK
+
+adjustment_type
+
+reason
+
+amount
+
+requested_by
+approved_by nullable
+
+created_at
+
+adjustment_status
+```
+
+---
+
+# 54. Settlement Status
+
+```text
+Draft
+Collecting Inputs
+Ready for Calculation
+Calculation Requested
+Calculated
+Under Review
+Approved
+Payment Pending
+Paid
+Rejected
+Recalculation Required
+Closed
+```
+
+---
+
+# 55. Settlement Approval
+
+مثلاً configurable:
+
+```text
+Payroll
+↓
+HR / Personnel
+↓
+Finance
+↓
+Authorized Management
+```
+
+حسب threshold.
+
+---
+
+# 56. Settlement Statement
+
+## final_settlement_statement
+
+```text
+final_settlement_statement_id PK
+
+final_settlement_case_id FK
+
+statement_version
+
+gross_entitlements
+total_deductions
+net_settlement
+
+currency_id FK
+
+generated_document_id FK
+
+employee_acknowledged_flag
+
+acknowledged_at nullable
+```
+
+---
+
+# 57. Employee Dispute
+
+الموظف قد يعترض على final settlement.
+
+## settlement_dispute
+
+```text
+settlement_dispute_id PK
+
+final_settlement_case_id FK
+
+employee_id FK
+
+submitted_at
+
+dispute_reason
+
+disputed_amount nullable
+
+status
+
+resolution_summary
+
+resolved_at nullable
+```
+
+وقد يتحول إلى Cluster E grievance إذا كان formal.
+
+---
+
+# 58. H12 — Personnel & Legal Closure
+
+Cluster G هو owner للـofficial personnel/legal records.
+
+Cluster H فقط orchestrates.
+
+## personnel_closure_task
+
+```text
+personnel_closure_task_id PK
+
+offboarding_case_id FK
+
+task_type
+
+source_module
+
+owner_user_id FK
+
+due_date
+
+status
+
+completed_at nullable
+
+source_record_id nullable
+```
+
+---
+
+# 59. Closure Tasks
+
+```text
+Contract Closure
+Social Insurance Form 6
+Medical Insurance Termination
+Benefit Termination
+Original Document Return
+Personnel File Closure
+HR Status Update
+Archive Initiation
+```
+
+وهذا مطابق لما يذكره الـManual في legal closure وfile closure. 
+
+---
+
+# 60. Social Insurance Exit
+
+لا نخزن Form 6 هنا.
+
+Cluster G يقوم:
+
+```text
+social_insurance_transaction
+transaction_type = Exit
+```
+
+Cluster H يرى فقط:
+
+```text
+Pending / Completed
+```
+
+---
+
+# 61. Medical Insurance Termination
+
+نفس الشيء:
+
+```text
+Cluster H
+requests termination
+↓
+Cluster G
+updates medical enrollment
+```
+
+---
+
+# 62. H13 — Exit Interview
+
+## exit_interview
+
+```text
+exit_interview_id PK
+
+offboarding_case_id FK
+
+employee_id FK
+
+interviewer_user_id FK nullable
+
+scheduled_at nullable
+completed_at nullable
+
+interview_method
+
+participation_status
+
+overall_experience_score nullable
+
+rehire_interest_flag nullable
+
+employee_comments
+
+confidentiality_level
+```
+
+---
+
+# 63. Exit Interview Question
+
+## exit_interview_question
+
+```text
+exit_interview_question_id PK
+
+questionnaire_version_id FK
+
+question_code
+
+question_text_ar
+question_text_en
+question_text_fr
+
+question_type
+
+category
+
+required_flag
+```
+
+---
+
+# 64. Exit Interview Response
+
+## exit_interview_response
+
+```text
+exit_interview_response_id PK
+
+exit_interview_id FK
+exit_interview_question_id FK
+
+response_text nullable
+
+response_score nullable
+
+response_option nullable
+```
+
+---
+
+# 65. Exit Categories
+
+مثلاً:
+
+```text
+Compensation
+Manager
+Career
+Workload
+Culture
+Project
+Location
+Benefits
+Learning
+Tools
+Work Environment
+HR Support
+Leadership
+Customer Pressure
+Safety
+Other
+```
+
+---
+
+# 66. Exit Reason Confirmation
+
+الفكرة المهمة:
+
+```text
+Separation Reason
+```
+
+هو formal/administrative reason.
+
+أما:
+
+```text
+Exit Interview Driver
+```
+
+فقد يكون أعمق.
+
+مثلاً:
+
+```text
+Official reason:
+Better Opportunity
+
+Exit interview:
+Primary driver = Manager Relationship
+Secondary = Compensation
+```
+
+لا نخلط الاثنين.
+
+---
+
+# 67. Exit Interview Confidentiality
+
+Manager لا ينبغي أن يرى raw text إذا كان ذلك قد يعرّض الموظف أو يقلل صدق المقابلات.
+
+يمكنه رؤية aggregate insights.
+
+---
+
+# 68. H14 — Rehire Eligibility
+
+## rehire_eligibility
+
+```text
+rehire_eligibility_id PK
+
+employee_id FK
+offboarding_case_id FK
+
+rehire_status
+
+eligible_from nullable
+
+reason_code
+
+reviewed_by_user_id FK
+
+reviewed_at
+
+conditions nullable
+
+expiry_date nullable
+```
+
+---
+
+# 69. Rehire Status
+
+```text
+Eligible
+Eligible with Conditions
+Review Required
+Not Eligible
+Permanent No Rehire
+Not Determined
+```
+
+---
+
+# 70. لا نربط Rehire مباشرة بسبب الانفصال
+
+مثلاً:
+
+```text
+Resignation
+```
+
+لا يعني automatically eligible.
+
+و:
+
+```text
+Termination
+```
+
+لا يعني automatically not eligible.
+
+Rule engine + authorized review.
+
+---
+
+# 71. Rehire Conditions
+
+مثلاً:
+
+```text
+Different Project
+Different Manager
+After 6 Months
+Required Training
+Debt Settlement
+Document Completion
+Legal Approval Required
+```
+
+---
+
+# 72. Alumni Record
+
+إذا أرادت الشركة Alumni functionality:
+
+## alumni_record
+
+```text
+alumni_record_id PK
+
+former_employee_id FK
+
+separation_date
+
+former_job_id FK
+former_position_id FK
+
+rehire_status
+
+alumni_status
+
+personal_contact_consent_flag
+
+contact_email nullable
+contact_mobile nullable
+
+communication_consent_flag
+```
+
+---
+
+# 73. Privacy
+
+لا يجوز نقل corporate email بعد الخروج كمصدر اتصال دائم.
+
+يجب أن يكون:
+
+```text
+Personal contact
++
+employee consent
+```
+
+---
+
+# 74. H15 — Post-Employment Obligations
+
+هذه نقطة مهمة غالبًا لا توجد في HR systems الصغيرة.
+
+## post_employment_obligation
+
+```text
+post_employment_obligation_id PK
+
+offboarding_case_id FK
+employee_id FK
+
+obligation_type
+
+source_contract_id FK nullable
+
+effective_from
+effective_to nullable
+
+obligation_summary
+
+employee_acknowledged_flag
+
+document_reference_id FK nullable
+
+status
+```
+
+---
+
+# 75. Obligation Types
+
+```text
+Confidentiality
+NDA
+Non-Solicitation
+Non-Compete
+IP Ownership
+Asset Return
+Customer Confidentiality
+Data Return / Deletion
+Loan Repayment
+Training Bond
+Other
+```
+
+طبعًا applicability قانونيًا تختلف حسب البلد والسياسة، لذلك ليست hard-coded legal enforcement.
+
+---
+
+# 76. Post-Employment Reminder
+
+مثلاً:
+
+```text
+Customer Confidentiality
+valid 24 months
+```
+
+لا نحتاج notification دائم، لكن يجب الحفاظ على record.
+
+---
+
+# 77. H16 — Separation Approval
+
+## separation_approval_request
+
+```text
+separation_approval_request_id PK
+
+offboarding_case_id FK
+
+approval_type
+
+workflow_instance_id FK
+
+requested_at
+
+approval_status
+
+decision_at nullable
+```
+
+---
+
+# 78. Approval Types
+
+```text
+Resignation Acceptance
+Early Release
+Notice Waiver
+Termination
+Redundancy
+Final Settlement
+Asset Liability
+Rehire Eligibility
+Case Closure
+```
+
+---
+
+# 79. Separation SLA
+
+## offboarding_sla_instance
+
+```text
+offboarding_sla_instance_id PK
+
+offboarding_case_id FK
+
+sla_type
+
+start_at
+target_at
+
+completed_at nullable
+
+breached_flag
+
+escalation_level
+
+pause_reason nullable
+```
+
+---
+
+# 80. SLA Types
+
+```text
+Resignation Acknowledgement
+Manager Approval
+Handover Completion
+Asset Return
+IT Access Revocation
+Finance Clearance
+Personnel Closure
+Final Settlement
+Case Closure
+```
+
+---
+
+# 81. Immediate Termination Mode
+
+نحتاج special flow.
+
+```text
+Disciplinary Termination
+↓
+Immediate Access Revocation
+↓
+Employee Notification
+↓
+Asset Recovery
+↓
+Controlled Handover
+↓
+Financial / Personnel Closure
+```
+
+لا نستخدم نفس ترتيب resignation.
+
+---
+
+# 82. Death Case
+
+هذا أيضًا مختلف جدًا.
+
+لا نطلب:
+
+```text
+Exit interview
+Employee handover confirmation
+Employee asset acknowledgement
+```
+
+بل نحتاج:
+
+```text
+Next of Kin
+Benefits
+Insurance Claims
+Final Entitlements
+Asset Recovery Coordination
+Legal Documents
+Personnel Closure
+```
+
+---
+
+# 83. Death Case Extension
+
+## deceased_employee_case
+
+```text
+deceased_employee_case_id PK
+
+offboarding_case_id FK
+
+date_of_death
+
+notification_source
+
+death_certificate_document_id FK nullable
+
+next_of_kin_contact_id FK nullable
+
+beneficiary_review_required
+
+insurance_claim_required
+
+special_handling_flag
+```
+
+---
+
+# 84. Absence / Abandonment
+
+أيضًا flow خاص:
+
+```text
+Unauthorized Absence
+↓
+Contact Attempts
+↓
+Formal Notices
+↓
+Investigation / Legal Review
+↓
+Decision
+↓
+Separation Event
+```
+
+غالبًا Cluster E يبدأ قبل H.
+
+---
+
+# 85. Contract Expiry
+
+```text
+Cluster G
+Contract Expiry Engine
+↓
+Renewal Decision = Do Not Renew
+↓
+Cluster H
+Separation Event = Contract Expiry
+```
+
+لا يحتاج resignation.
+
+---
+
+# 86. End of Project
+
+يجب ألا يعني دائمًا separation.
+
+أولًا:
+
+```text
+Project Ends
+↓
+Redeployment Check
+```
+
+ثم:
+
+```text
+Internal Assignment Available?
+Yes → Transfer
+No  → Separation
+```
+
+---
+
+# 87. Redeployment Assessment
+
+## redeployment_assessment
+
+```text
+redeployment_assessment_id PK
+
+offboarding_case_id FK
+
+employee_id FK
+
+redeployment_required_flag
+
+assessment_date
+
+eligible_for_redeployment
+
+matching_opportunity_count
+
+selected_opportunity_id FK nullable
+
+assessment_status
+
+decision
+```
+
+يرتبط بـCluster F Internal Mobility.
+
+---
+
+# 88. Retirement
+
+يمكن أن يحتوي:
+
+```text
+Retirement Eligibility
+Retirement Date
+Benefits
+Pension / Social Insurance
+Knowledge Transfer
+Succession Link
+```
+
+ويستفيد من Cluster F succession.
+
+---
+
+# 89. Offboarding Checklist Generation
+
+Checklist لا تكون واحدة لكل الناس.
+
+تتولد حسب:
+
+```text
+Separation Type
+Employment Type
+Job
+Project
+Assets
+System Access
+Benefit Status
+Country
+Legal Entity
+```
+
+---
+
+# 90. Checklist Rule
+
+## offboarding_requirement_rule
+
+```text
+offboarding_requirement_rule_id PK
+
+separation_type
+
+employment_type_id FK nullable
+employee_category_id FK nullable
+job_id FK nullable
+
+requirement_type
+
+required_flag
+
+blocking_flag
+
+sequence
+
+active_flag
+```
+
+---
+
+# 91. Example
+
+Field Technician:
+
+```text
+PPE
+Tool Custody
+Site Access
+Medical Card
+Warehouse Custody
+```
+
+Office Employee:
+
+```text
+Laptop
+Email
+Access Card
+Mobile
+```
+
+Project Manager:
+
+```text
+Project Handover
+Customer Accounts
+Approvals Transfer
+Petty Cash
+Laptop
+Mobile
+```
+
+---
+
+# 92. Offboarding Control Tower
+
+أقترح Dashboard case-centric:
+
+```text
+Employee
+Reason
+Last Working Day
+Case Stage
+
+Notice         100%
+Handover        80%
+Assets          75%
+Access         100%
+Finance         60%
+Personnel       50%
+Settlement      40%
+
+Overall         72%
+
+Critical Blockers:
+- Laptop not returned
+- Petty cash pending
+- Form 6 pending
+```
+
+---
+
+# 93. Final Close Gate
+
+لا نسمح:
+
+```text
+case_status = Closed
+```
+
+إلا إذا كانت closure rules مستوفاة.
+
+## offboarding_close_gate
+
+```text
+offboarding_close_gate_id PK
+
+offboarding_case_id FK
+
+handover_complete
+access_revoked
+clearance_complete
+financial_clearance_complete
+personnel_closure_complete
+final_settlement_complete
+required_documents_archived
+
+blocking_item_count
+
+close_eligible
+
+evaluated_at
+```
+
+---
+
+# 94. Exception to Close
+
+في بعض الحالات قد يوجد:
+
+```text
+Missing Asset under Legal Recovery
+Settlement Dispute
+Government Processing Pending
+```
+
+لكن business يريد إغلاق HR lifecycle.
+
+نحتاج:
+
+## offboarding_closure_exception
+
+```text
+offboarding_closure_exception_id PK
+
+offboarding_case_id FK
+
+blocking_item_type
+
+reason
+
+residual_obligation
+
+approved_by
+
+approved_at
+
+followup_owner
+
+status
+```
+
+---
+
+# 95. Close ≠ Forget
+
+حتى بعد employee status = Separated:
+
+قد تظل:
+
+```text
+Loan collection
+Legal matter
+Insurance claim
+Asset recovery
+Settlement dispute
+```
+
+open.
+
+---
+
+# 96. Residual Obligation
+
+## post_separation_obligation
+
+```text
+post_separation_obligation_id PK
+
+offboarding_case_id FK
+
+obligation_type
+
+owner_department_id FK
+
+due_date nullable
+
+amount nullable
+
+status
+
+source_entity_type
+source_entity_id
+
+closed_at nullable
+```
+
+---
+
+# 97. Employee Status Change
+
+Cluster H لا يكتب status مباشرة بشكل uncontrolled.
+
+عند close gate:
+
+```text
+Offboarding approved
+↓
+Employee Movement / Lifecycle Instruction
+↓
+Employee Master
+status = Separated
+effective_date = ...
+```
+
+---
+
+# 98. System Deactivation Timing
+
+Identity Cluster يحصل على:
+
+```text
+employee.separation.scheduled
+employee.separation.immediate
+employee.last_working_day.changed
+```
+
+حتى يقوم بschedule.
+
+---
+
+# 99. Event Model
+
+أهم Events:
+
+```text
+separation.event.created
+resignation.submitted
+resignation.approved
+termination.approved
+
+offboarding.started
+
+notice.started
+notice.completed
+
+handover.started
+handover.completed
+
+asset.return.required
+asset.returned
+asset.missing
+
+access.revocation.requested
+access.revoked
+
+clearance.item.completed
+clearance.completed
+
+financial.clearance.completed
+
+final.settlement.ready
+final.settlement.approved
+final.settlement.paid
+
+personnel.closure.completed
+
+exit.interview.completed
+
+rehire.status.finalized
+
+offboarding.closed
+```
+
+---
+
+# 100. Integration with Payroll
+
+Cluster H يرسل:
+
+```text
+Final Settlement Request
++
+Approved inputs
++
+Last Working Day
++
+Notice Data
+```
+
+Payroll يعيد:
+
+```text
+Calculated Settlement
+Payroll Run Reference
+Payment Result
+```
+
+---
+
+# 101. Integration with Leave
+
+Leave Engine يرسل فقط:
+
+```text
+Approved unused leave balance
+```
+
+حسب policy/date.
+
+H لا يحسب leave balance بنفسه.
+
+---
+
+# 102. Integration with Attendance
+
+قد يحتاج final salary:
+
+```text
+Attendance until LWD
+OT
+Absence
+```
+
+لكن Payroll يأخذ validated payroll inputs؛ H لا يقرأ raw punches لحساب final settlement.
+
+---
+
+# 103. Integration with Assets
+
+Asset Module يملك:
+
+```text
+Asset
+Custody
+Condition
+Loss
+Damage
+```
+
+H فقط tracks offboarding obligation.
+
+---
+
+# 104. Integration with Finance
+
+Finance يملك:
+
+```text
+Advances
+Petty Cash
+Receivables
+Payments
+```
+
+H يأخذ clearance status والapproved amounts.
+
+---
+
+# 105. Integration with Cluster G
+
+Cluster G يقوم:
+
+```text
+Contract Closure
+Social Insurance Exit
+Medical Insurance Termination
+Benefit Closure
+Personnel Archive
+Original Document Return
+```
+
+H orchestrates فقط.
+
+---
+
+# 106. Integration with Cluster F
+
+في:
+
+```text
+Retirement
+Critical Role Exit
+Project End
+```
+
+Cluster H يمكن أن يرسل event:
+
+```text
+critical_employee_separation.scheduled
+```
+
+إلى Succession / Talent.
+
+---
+
+# 107. Integration with Cluster E
+
+في termination:
+
+```text
+Approved ER Outcome
+↓
+Cluster H
+```
+
+وفي settlement dispute أو exit grievance:
+
+```text
+Cluster H
+↓
+Cluster E
+```
+
+---
+
+# 108. Access Model
+
+### Employee
+
+يرى:
+
+```text
+My resignation
+Last working day
+My handover
+My clearance status
+Assets to return
+Settlement status
+Exit interview
+```
+
+---
+
+### Direct Manager
+
+يرى:
+
+```text
+Handover
+Continuity plan
+Last working day
+Clearance items assigned to manager
+```
+
+ولا يرى بالضرورة:
+
+```text
+Financial details
+Legal notes
+Confidential termination evidence
+```
+
+---
+
+# 109. Personnel
+
+يرى:
+
+```text
+Case lifecycle
+Contract closure
+Insurance closure
+Personnel records
+Archive
+```
+
+---
+
+# 110. Finance
+
+يرى:
+
+```text
+Financial clearance
+Approved liability
+Settlement financial stage
+```
+
+---
+
+# 111. IT
+
+يرى:
+
+```text
+Systems to revoke
+Deadline
+Account status
+```
+
+ولا يرى salary أو termination details beyond need-to-know.
+
+---
+
+# 112. Legal
+
+يرى فقط الحالات التي تحتاج legal review.
+
+---
+
+# 113. Confidential Termination
+
+قد يكون manager نفسه غير مسموح له برؤية سبب termination بالكامل.
+
+لذلك:
+
+```text
+separation_reason_visibility
+```
+
+يمكن أن يكون:
+
+```text
+HR Only
+HR + Legal
+Manager Visible
+Employee Visible
+```
+
+---
+
+# 114. Exit Analytics
+
+Dashboard:
+
+```text
+Separations
+Voluntary Turnover
+Involuntary Turnover
+Resignations
+Terminations
+Contract Expiry
+Project End
+
+Average Offboarding Duration
+Clearance SLA %
+Access Revocation SLA %
+Asset Recovery %
+Settlement Cycle Time
+
+Top Exit Reasons
+Turnover by Department
+Turnover by Manager
+Turnover by Project
+Turnover by Tenure
+Turnover by Job Family
+
+Regrettable Turnover
+Critical Talent Loss
+Rehire Eligibility
+```
+
+---
+
+# 115. Regrettable Turnover
+
+لا نخزن:
+
+```text
+regrettable = yes
+```
+
+من manager feeling فقط.
+
+نعمل assessment.
+
+## regrettable_turnover_assessment
+
+```text
+regrettable_turnover_assessment_id PK
+
+offboarding_case_id FK
+
+critical_skill_flag
+high_performer_flag
+succession_candidate_flag
+replacement_difficulty
+business_impact
+
+overall_result
+
+reviewed_by
+```
+
+---
+
+# 116. Exit Root Cause
+
+## separation_root_cause
+
+```text
+separation_root_cause_id PK
+
+offboarding_case_id FK
+
+root_cause_type
+
+primary_flag
+
+evidence_source
+
+confidence_level
+
+notes
+```
+
+---
+
+# 117. Why formal reason ≠ root cause
+
+مثلاً:
+
+```text
+Formal:
+Resignation
+
+Stated:
+Better Opportunity
+
+Root Cause:
+Compensation + Manager + Career Path
+```
+
+Analytics لازم يحافظ على الثلاثة منفصلة.
+
+---
+
+# 118. AI Layer — مفيد
+
+AI يمكن أن يساعد في:
+
+```text
+Summarize exit interview
+Identify recurring exit themes
+Generate handover checklist draft
+Detect missing clearance items
+Summarize open obligations
+Estimate knowledge loss risk
+Detect unusual access not revoked
+Classify resignation reasons
+Compare exit patterns by project
+```
+
+---
+
+# 119. AI — ممنوع
+
+لا يجعله:
+
+```text
+Automatically terminate employee
+Decide no-rehire
+Determine misconduct
+Calculate legal severance without approved rules
+Waive notice
+Approve asset deductions
+```
+
+---
+
+# 120. Physical Tables
+
+تقريبًا:
+
+```text
+separation_event
+separation_reason
+
+offboarding_case
+
+employee_resignation
+retention_discussion
+
+employee_termination
+
+notice_period
+notice_adjustment
+
+handover_plan
+handover_item
+handover_knowledge_artifact
+knowledge_loss_assessment
+
+clearance_profile
+clearance_requirement
+clearance_plan
+employee_clearance_item
+
+offboarding_asset_obligation
+
+offboarding_access_account
+access_revocation_profile
+access_revocation_verification
+
+financial_clearance
+employee_financial_obligation
+
+final_settlement_case
+final_settlement_input
+final_settlement_adjustment
+final_settlement_statement
+settlement_dispute
+
+personnel_closure_task
+
+exit_interview
+exit_interview_question
+exit_interview_response
+
+rehire_eligibility
+alumni_record
+
+post_employment_obligation
+post_separation_obligation
+
+deceased_employee_case
+
+redeployment_assessment
+
+separation_approval_request
+offboarding_sla_instance
+
+offboarding_requirement_rule
+offboarding_close_gate
+offboarding_closure_exception
+
+regrettable_turnover_assessment
+separation_root_cause
+```
+
+حوالي **40–45 Table**.
+
+---
+
+# 121. أهم Business Rules
+
+أثبت هذه القواعد:
+
+1. كل offboarding يبدأ بـSeparation Event.
+2. Separation Event لا يغير employee status مباشرة.
+3. Resignation وTermination لهما lifecycle مختلف.
+4. Disciplinary termination يأتي من approved Cluster E outcome.
+5. Contract expiry يأتي من Cluster G.
+6. Project end لا يعني automatic termination؛ redeployment first إذا policy تطلب ذلك.
+7. Last Working Day يجب أن يكون effective-dated ومؤكدًا.
+8. Notice Period منفصل عن separation reason.
+9. Notice waiver يحتاج approval.
+10. Handover لا يساوي clearance.
+11. Clearance profile configurable حسب نوع الموظف.
+12. Asset recovery لا يكرر Asset Master.
+13. IT access يجب أن يكون له deadline وverification.
+14. Immediate termination يمكن أن يعطل access قبل باقي الخطوات.
+15. Financial clearance لا يساوي final settlement.
+16. Final settlement H يجمع inputs؛ payroll/finance يحسب وينفذ حسب ownership.
+17. Settlement inputs تُجمّد قبل الحساب.
+18. أي تعديل بعد freeze يكون adjustment رسمي.
+19. Cluster G يملك legal/personnel closure.
+20. Cluster H لا يكرر Form 6 أو insurance records.
+21. Exit interview data يمكن أن تكون أكثر تقييدًا من separation reason.
+22. Rehire eligibility قرار مستقل عن separation type.
+23. Case closure لا يعني انتهاء كل residual obligations.
+24. Post-separation obligations تبقى trackable بعد employee separation.
+25. No hard delete لأي separation case.
+26. كل waiver/exception يحتاج documented approval.
+27. Employee Master status يتغير فقط عبر approved lifecycle instruction.
+28. Asset liability لا تخصم من settlement قبل approval.
+29. Open investigation لا يتحول termination إلا بقرار نهائي معتمد.
+30. Death/abandonment/retirement لها workflows مختلفة وليست variation بسيطة من resignation.
+
+---
+
+# 122. State Machine — Resignation
+
+```text
+Draft
+↓
+Submitted
+↓
+Acknowledged
+↓
+Retention Discussion
+↓
+Approval
+├── Rejected
+├── Withdrawn
+└── Approved
+       ↓
+   Notice Period
+       ↓
+   Offboarding
+```
+
+---
+
+# 123. State Machine — Termination
+
+```text
+Recommendation / Trigger
+↓
+Review
+↓
+Legal Review if required
+↓
+Approval
+↓
+Employee Notification
+↓
+Effective Separation
+↓
+Offboarding
+```
+
+---
+
+# 124. State Machine — Clearance
+
+```text
+Generated
+↓
+Assigned
+↓
+In Progress
+├── Blocked
+├── Exception
+└── Cleared
+      ↓
+Final Clearance
+```
+
+---
+
+# 125. State Machine — Final Settlement
+
+```text
+Created
+↓
+Collecting Inputs
+↓
+Input Freeze
+↓
+Calculation
+↓
+Review
+↓
+Approval
+↓
+Payment
+↓
+Closed
+```
+
+---
+
+# 126. State Machine — Full Separation
+
+```text
+Separation Event
+       ↓
+Offboarding Case
+       ↓
+Approval / Notice
+       ↓
+Handover
+       ↓
+Access + Assets + Clearance
+       ↓
+Financial Clearance
+       ↓
+Personnel Legal Closure
+       ↓
+Final Settlement
+       ↓
+Exit Interview
+       ↓
+Rehire Review
+       ↓
+Employee Status = Separated
+       ↓
+Archive / Residual Obligations
+```
+
+---
+
+# 127. أهم نقطة معمارية
+
+يجب ألا يكون لدينا زر:
+
+> **Terminate Employee**
+
+يقوم في transaction واحدة بـ:
+
+```text
+status = inactive
+close payroll
+disable email
+cancel insurance
+calculate settlement
+```
+
+هذا تصميم خطير.
+
+الصحيح:
+
+```text
+Approved Separation
+↓
+Orchestrated tasks
+↓
+Controlled execution
+↓
+Verified close gate
+```
+
+لأن كل خطوة لها Owner مختلف وAudit مختلف.
+
+---
+
+# 128. Separation Control Principle
+
+وأثبت هذه السلسلة:
+
+> **Decision to Separate ≠ Last Working Day ≠ Access Revocation ≠ Clearance ≠ Financial Liability ≠ Final Settlement ≠ Legal Closure ≠ Employee Master Deactivation**
+
+هذه واحدة من أهم boundaries في النظام كله.
+
+---
+
+# 129. النتيجة بعد Cluster H
+
+أصبح عندنا lifecycle كامل:
+
+```text
+Hire
+↓
+Onboard
+↓
+Activate
+↓
+Work
+↓
+Develop
+↓
+Manage
+↓
+Separate
+↓
+Close
+↓
+Archive
+```
+
+لكن separation نفسها أصبحت controlled business process وليست HR checkbox.
+
+**الخطوة التالية المنطقية بعد Cluster H هي Cluster I — Expense, Travel, Business Trips, Per Diem, Advances, Reimbursements & Travel Policy ERD**؛ خصوصًا أن لدينا field workforce ومشروعات داخل وخارج القاهرة، وسنحتاج فصل واضح بين `Location Allowance` الموجود في Payroll وبين `Business Trip / Travel Expense / Per Diem / Advance / Reimbursement` حتى لا نخلط بدلًا ثابتًا بسياسة سفر ومصروفات فعلية.

@@ -1,0 +1,1930 @@
+تمام. نبدأ الآن من قلب النظام نفسه، لأن أي خطأ هنا سينتقل لاحقًا إلى Payroll وAttendance وRecruitment وPerformance وباقي الـModules.
+
+سأبنيها كـ **Logical Database Schema + Core ERD v1.0** للنواة التالية:
+
+**Tenant → Company → Organization Unit → Job → Position → Employee → Employment → Assignment → Contract → Compensation**
+
+وسأحافظ على القاعدة الأساسية: **كل كيان له Owner واحد، والبيانات التاريخية لا تُستبدل بل تُؤرشف باستخدام effective dating.**
+
+الـManual يدعم هذه البنية؛ فهو يربط الموظف بـPosition وProject وDirect Manager وWork Location وSalary وJoining Date، ثم يستخدم نفس البيانات في Onboarding وPayroll وHR Operations وOffboarding.  كما أن الهيكل التنظيمي الحالي يوضح فصل المسؤوليات بين OD وPersonnel وPayroll وHR Operations وTalent Acquisition، وهو ما يدعم فصل الـData Domains وعدم دمجها في جداول ضخمة. 
+
+# 1. Core ERD — المستوى الأعلى
+
+```text
+TENANT
+  │
+  └──< COMPANY
+         │
+         ├──< ORGANIZATION_UNIT
+         │        │
+         │        └──< POSITION
+         │                │
+         │                └── JOB
+         │
+         └──< EMPLOYEE
+                 │
+                 └──< EMPLOYMENT
+                         │
+                         ├──< ASSIGNMENT
+                         │       ├── POSITION
+                         │       ├── ORG UNIT
+                         │       └── PROJECT
+                         │
+                         ├──< CONTRACT
+                         │
+                         └──< EMPLOYEE_COMPENSATION
+```
+
+والعلاقات الرئيسية:
+
+```text
+Tenant       1 ─── N Company
+
+Company      1 ─── N Organization Unit
+
+Job          1 ─── N Position
+
+Org Unit     1 ─── N Position
+
+Employee     1 ─── N Employment
+
+Employment   1 ─── N Assignment
+
+Position     1 ─── N Assignment over time
+
+Employment   1 ─── N Contract
+
+Employment   1 ─── N Compensation Record
+```
+
+---
+
+# 2. Schema Structure
+
+أقترح من الآن تقسيم PostgreSQL إلى:
+
+```text
+platform
+org
+core_hr
+workforce
+personnel
+compensation
+integration
+audit
+```
+
+فتكون الجداول:
+
+```text
+platform.tenants
+platform.companies
+
+org.organization_units
+org.jobs
+org.positions
+
+core_hr.employees
+core_hr.employments
+
+workforce.employee_assignments
+
+personnel.employment_contracts
+
+compensation.employee_compensations
+```
+
+---
+
+# 3. `platform.tenants`
+
+هذا هو أعلى مستوى في النظام.
+
+```text
+platform.tenants
+```
+
+### Columns
+
+| Field            | Type         | Rule                    |
+| ---------------- | ------------ | ----------------------- |
+| tenant_id        | UUID         | PK                      |
+| tenant_code      | VARCHAR(50)  | UNIQUE                  |
+| tenant_name      | VARCHAR(200) | NOT NULL                |
+| status           | VARCHAR(30)  | ACTIVE/SUSPENDED/CLOSED |
+| default_language | VARCHAR(10)  | ar/en/fr                |
+| default_timezone | VARCHAR(50)  | NOT NULL                |
+| created_at       | TIMESTAMPTZ  | NOT NULL                |
+| updated_at       | TIMESTAMPTZ  | NOT NULL                |
+
+مثال:
+
+```text
+tenant_id   = UUID
+tenant_code = AFRO
+tenant_name = Afro Group
+```
+
+---
+
+# 4. `platform.companies`
+
+الـTenant قد يحتوي أكثر من Legal Company.
+
+```text
+platform.companies
+```
+
+### Columns
+
+| Field               | Type         | Relationship      |
+| ------------------- | ------------ | ----------------- |
+| company_id          | UUID         | PK                |
+| tenant_id           | UUID         | FK → tenants      |
+| company_code        | VARCHAR(50)  | UNIQUE per tenant |
+| legal_name          | VARCHAR(250) |                   |
+| display_name        | VARCHAR(200) |                   |
+| country_code        | VARCHAR(3)   |                   |
+| registration_number | VARCHAR(100) |                   |
+| tax_number          | VARCHAR(100) |                   |
+| base_currency       | VARCHAR(3)   |                   |
+| status              | VARCHAR(30)  |                   |
+| effective_from      | DATE         |                   |
+| effective_to        | DATE         | nullable          |
+
+Constraint:
+
+```text
+UNIQUE(tenant_id, company_code)
+```
+
+---
+
+# 5. Tenant vs Company
+
+لا نخلطهما.
+
+مثال مستقبلي:
+
+```text
+Tenant
+Afro Group
+
+Companies
+├── Afro Egypt
+├── Afro KSA
+├── Afro Madagascar
+└── Afro Côte d'Ivoire
+```
+
+نفس الـSaaS tenant.
+
+لكن:
+
+* Payroll مختلف.
+* Labor rules مختلفة.
+* Currency مختلفة.
+* Legal entity مختلفة.
+
+---
+
+# 6. `org.organization_units`
+
+هذا الجدول يمثل:
+
+```text
+Sector
+Department
+Section
+Unit
+Division
+Team
+```
+
+بدل إنشاء table منفصل لكل مستوى.
+
+```text
+org.organization_units
+```
+
+### Columns
+
+```text
+org_unit_id UUID PK
+
+tenant_id UUID FK
+company_id UUID FK
+
+org_unit_code VARCHAR
+
+name_en VARCHAR
+name_ar VARCHAR
+name_fr VARCHAR
+
+org_unit_type VARCHAR
+
+parent_org_unit_id UUID FK → organization_units
+
+manager_position_id UUID nullable
+
+cost_center_id UUID nullable
+
+status VARCHAR
+
+effective_from DATE
+effective_to DATE
+
+created_at
+updated_at
+```
+
+---
+
+# 7. Self-Referencing Hierarchy
+
+```text
+organization_units
+     │
+     └── parent_org_unit_id
+```
+
+مثال:
+
+```text
+Company
+  └── Operations Sector
+        └── Telecom Department
+              └── FTTH Section
+                    └── Cairo Team
+```
+
+لا نحتاج:
+
+```text
+sector_table
+department_table
+section_table
+team_table
+```
+
+---
+
+# 8. لماذا `org_unit_type`؟
+
+لأن كل شركة قد تستخدم هيكلًا مختلفًا.
+
+مثال:
+
+```text
+SECTOR
+DIRECTORATE
+DEPARTMENT
+SECTION
+UNIT
+TEAM
+PROJECT_OFFICE
+```
+
+وتكون الأنواع نفسها Configurable.
+
+---
+
+# 9. `org.jobs`
+
+الـJob يمثل تعريف الوظيفة.
+
+```text
+org.jobs
+```
+
+### Columns
+
+```text
+job_id UUID PK
+
+tenant_id UUID
+job_code VARCHAR
+
+job_title_en
+job_title_ar
+job_title_fr
+
+job_family_id UUID
+job_subfamily_id UUID
+
+career_level_id UUID
+
+default_grade_id UUID nullable
+
+job_description TEXT
+
+job_purpose TEXT
+
+status
+
+effective_from
+effective_to
+```
+
+مثال:
+
+```text
+JOB-PM-001
+Project Manager
+```
+
+---
+
+# 10. Job ليس Position
+
+هذا الفصل أساسي.
+
+```text
+JOB
+Project Manager
+```
+
+قد يستخدم في:
+
+```text
+Position 1
+Project Manager - Huawei
+
+Position 2
+Project Manager - Nokia
+
+Position 3
+Project Manager - Ericsson
+```
+
+---
+
+# 11. `org.positions`
+
+هذا أحد أهم الجداول في النظام.
+
+```text
+org.positions
+```
+
+### Columns
+
+```text
+position_id UUID PK
+
+tenant_id UUID
+company_id UUID
+
+position_code VARCHAR
+
+job_id UUID FK
+
+org_unit_id UUID FK
+
+grade_id UUID FK
+
+reports_to_position_id UUID nullable FK
+
+default_location_id UUID nullable
+
+cost_center_id UUID nullable
+
+position_type VARCHAR
+
+headcount_capacity INT
+
+status VARCHAR
+
+effective_from DATE
+effective_to DATE
+
+created_at
+updated_at
+```
+
+---
+
+# 12. Position Status
+
+لا نستخدم فقط:
+
+```text
+ACTIVE
+INACTIVE
+```
+
+بل:
+
+```text
+PLANNED
+APPROVED
+VACANT
+PARTIALLY_FILLED
+FILLED
+FROZEN
+CLOSED
+```
+
+مثال:
+
+```text
+Position:
+Fiber Technician
+
+Headcount Capacity:
+10
+
+Current Filled:
+7
+
+Vacancy:
+3
+```
+
+لكن `current_filled` لا أخزنه غالبًا كحقيقة Master.
+
+يُحسب من Assignments الفعالة.
+
+---
+
+# 13. Reporting Structure
+
+المفضل:
+
+```text
+positions.reports_to_position_id
+```
+
+وليس:
+
+```text
+employee.manager_id
+```
+
+كمرجع رئيسي.
+
+لأن الهيكل يقول:
+
+> هذه الـPosition ترفع لهذه الـPosition.
+
+ثم الشخص الذي يشغل الـPosition يصبح المدير فعليًا.
+
+---
+
+# 14. لكن ماذا عن Project Manager؟
+
+في حالات المشاريع قد نحتاج أيضًا:
+
+```text
+assignment.manager_employee_id
+```
+
+لأن Operational Reporting قد يختلف عن Administrative Reporting.
+
+وبالفعل الـOrg Chart نفسه يفرق بين Administrative Reporting Line وFunctional Reporting Line. 
+
+لذلك سنحتاج لاحقًا:
+
+```text
+reporting_relationships
+```
+
+لدعم:
+
+```text
+ADMINISTRATIVE
+FUNCTIONAL
+PROJECT
+MATRIX
+```
+
+---
+
+# 15. `core_hr.employees`
+
+هذا يمثل الشخص داخل HR.
+
+```text
+core_hr.employees
+```
+
+### Columns
+
+```text
+employee_id UUID PK
+
+tenant_id UUID
+
+employee_code VARCHAR
+
+first_name_en
+middle_name_en
+last_name_en
+
+first_name_ar
+middle_name_ar
+last_name_ar
+
+display_name
+
+date_of_birth
+nationality_code
+
+primary_mobile
+primary_email
+
+employee_status
+
+created_at
+updated_at
+```
+
+لكن كما ذكرنا:
+
+لا نضع كل شيء هنا.
+
+---
+
+# 16. Employee Supporting Tables
+
+يفضل:
+
+```text
+core_hr.employee_contacts
+
+core_hr.employee_addresses
+
+core_hr.employee_identifiers
+
+core_hr.employee_emergency_contacts
+
+core_hr.employee_dependents
+
+core_hr.employee_bank_accounts
+```
+
+---
+
+# 17. Employee Identifier Design
+
+```text
+core_hr.employee_identifiers
+```
+
+```text
+identifier_id UUID PK
+
+employee_id UUID FK
+
+identifier_type VARCHAR
+
+identifier_number VARCHAR
+
+country_code
+
+issue_date
+expiry_date
+
+is_primary BOOLEAN
+
+verification_status
+
+verified_at
+```
+
+مثال:
+
+```text
+NATIONAL_ID
+PASSPORT
+SOCIAL_INSURANCE
+WORK_PERMIT
+ENGINEERS_SYNDICATE
+TECHNICIAN_LICENSE
+```
+
+وهذا أنسب من أعمدة ثابتة لأن الـManual نفسه يطلب أنواعًا مختلفة من الوثائق والهوية بحسب نوع الموظف. 
+
+---
+
+# 18. Employee vs Employment
+
+هذه نقطة محورية.
+
+Employee:
+
+```text
+Mohamed Taha
+```
+
+Employment:
+
+```text
+Mohamed works for Afro Egypt
+from 2026-01-01
+under Permanent Employment
+```
+
+وبالتالي:
+
+```text
+Employee 1:N Employment
+```
+
+---
+
+# 19. `core_hr.employments`
+
+```text
+core_hr.employments
+```
+
+### Columns
+
+```text
+employment_id UUID PK
+
+tenant_id UUID
+company_id UUID
+
+employee_id UUID FK
+
+employment_number VARCHAR nullable
+
+employment_type VARCHAR
+
+worker_category VARCHAR
+
+employment_status VARCHAR
+
+hire_date DATE
+
+seniority_date DATE nullable
+
+probation_start_date DATE
+probation_end_date DATE
+
+termination_date DATE nullable
+termination_reason_id UUID nullable
+
+effective_from DATE
+effective_to DATE nullable
+
+created_at
+updated_at
+```
+
+---
+
+# 20. Employment Type
+
+Configurable:
+
+```text
+PERMANENT
+TEMPORARY
+FIXED_TERM
+PROJECT_BASED
+DAILY_WORKER
+OUTSOURCED
+INTERN
+CONSULTANT
+```
+
+وهذا مهم جدًا لأن الـManual يطبق العمليات على permanent وtemporary وproject-based وwhite-collar وblue-collar employees. 
+
+---
+
+# 21. Worker Category منفصل
+
+لا أجعل:
+
+```text
+employment_type = blue collar
+```
+
+لأنهما شيئان مختلفان.
+
+نحتاج:
+
+```text
+employment_type
+
+worker_category
+```
+
+مثال:
+
+```text
+Employment Type:
+Permanent
+
+Worker Category:
+Blue Collar
+```
+
+---
+
+# 22. `workforce.employee_assignments`
+
+هذا الجدول هو الرابط الفعلي بين الموظف والعمل.
+
+```text
+workforce.employee_assignments
+```
+
+### Columns
+
+```text
+assignment_id UUID PK
+
+tenant_id UUID
+company_id UUID
+
+employment_id UUID FK
+employee_id UUID FK
+
+position_id UUID FK
+
+org_unit_id UUID FK
+
+project_id UUID nullable
+
+site_id UUID nullable
+
+location_id UUID nullable
+
+manager_employee_id UUID nullable
+
+assignment_type VARCHAR
+
+allocation_percentage NUMERIC(5,2)
+
+is_primary BOOLEAN
+
+status VARCHAR
+
+start_date DATE
+end_date DATE nullable
+
+created_at
+updated_at
+```
+
+---
+
+# 23. لماذا نحتفظ `employee_id` و`employment_id` معًا؟
+
+من ناحية normalization يمكن الاكتفاء بـ:
+
+```text
+employment_id
+```
+
+ومن خلاله نصل إلى employee.
+
+لكن عمليًا في HR analytics والاستعلامات الثقيلة، وجود:
+
+```text
+employee_id
+```
+
+قد يكون مفيدًا.
+
+إذا استخدمناه، يجب أن نضمن Database Constraint أو service rule يمنع عدم التطابق.
+
+---
+
+# 24. Assignment Types
+
+```text
+PRIMARY
+PROJECT
+SITE
+ACTING
+SECONDMENT
+TEMPORARY
+SHADOWING
+CUSTOMER
+```
+
+---
+
+# 25. مثال Project Manager متعدد المشاريع
+
+موظف:
+
+```text
+EMP-00023
+```
+
+Employment:
+
+```text
+Afro Egypt
+```
+
+Primary Assignment:
+
+```text
+Operations Department
+Project Manager Position
+100%
+```
+
+Project Assignments:
+
+```text
+Huawei Project    50%
+Nokia Project     30%
+Ericsson Project  20%
+```
+
+لا نغير Employee.
+
+ولا ننشئ له 3 سجلات Employee.
+
+---
+
+# 26. N:M Employee ↔ Project
+
+بالتالي العلاقة الطبيعية:
+
+```text
+Employee N ─── M Project
+```
+
+ويحلها:
+
+```text
+employee_assignments
+```
+
+أو لاحقًا:
+
+```text
+project_allocations
+```
+
+بحسب مستوى التفصيل.
+
+---
+
+# 27. Project Ownership
+
+Project ليس HR Master بالضرورة.
+
+لذلك:
+
+```text
+integration.project_references
+```
+
+يمكن أن يحتوي:
+
+```text
+project_id UUID
+
+external_project_id
+
+project_code
+project_name
+
+customer_id
+
+source_system
+
+status
+
+last_synced_at
+```
+
+والـOwner الحقيقي قد يكون ERP أو Project Management System.
+
+---
+
+# 28. `personnel.employment_contracts`
+
+العلاقة:
+
+```text
+Employment 1:N Contract
+```
+
+وليس:
+
+```text
+Employee 1:1 Contract
+```
+
+لأن الموظف قد يكون له:
+
+```text
+Original Contract
+Renewal
+Amendment
+New Fixed Term Contract
+```
+
+---
+
+# 29. Contract Table
+
+```text
+personnel.employment_contracts
+```
+
+```text
+contract_id UUID PK
+
+tenant_id UUID
+company_id UUID
+
+employment_id UUID FK
+
+contract_number VARCHAR
+
+contract_type VARCHAR
+
+start_date DATE
+end_date DATE nullable
+
+probation_days INT nullable
+
+notice_period_days INT nullable
+
+working_hours_rule_id UUID nullable
+
+status VARCHAR
+
+signed_date DATE nullable
+
+effective_from DATE
+effective_to DATE nullable
+
+created_at
+updated_at
+```
+
+---
+
+# 30. Contract Status
+
+```text
+DRAFT
+PENDING_SIGNATURE
+ACTIVE
+EXPIRING
+EXPIRED
+TERMINATED
+SUPERSEDED
+```
+
+---
+
+# 31. Contract Versioning
+
+لا نعدل عقدًا موقعًا.
+
+نستخدم:
+
+```text
+personnel.contract_versions
+```
+
+أو:
+
+```text
+contract_amendments
+```
+
+مثال:
+
+```text
+Contract v1
+Salary 20,000
+
+Amendment v2
+Salary 23,000
+```
+
+لكن salary itself يبقى في Compensation Domain.
+
+---
+
+# 32. لماذا لا نخزن Salary كحقيقة داخل Contract؟
+
+قد يكون العقد يحتوي salary text قانونيًا.
+
+لكن Payroll يحتاج Compensation structure مستقلة.
+
+الحل:
+
+العقد يمكن أن يحتفظ بـ:
+
+```text
+compensation_package_id
+```
+
+أو Snapshot قانوني للمبلغ.
+
+لكن **System of Record للحسابات** هو Compensation Domain.
+
+---
+
+# 33. `compensation.employee_compensations`
+
+العلاقة:
+
+```text
+Employment 1:N Compensation Package
+```
+
+لأن التعويض يتغير بمرور الوقت.
+
+---
+
+# 34. Compensation Header
+
+```text
+compensation.employee_compensations
+```
+
+```text
+employee_compensation_id UUID PK
+
+tenant_id UUID
+company_id UUID
+
+employment_id UUID FK
+
+currency_code VARCHAR(3)
+
+pay_frequency VARCHAR
+
+grade_id UUID nullable
+
+reason_code VARCHAR
+
+effective_from DATE
+effective_to DATE nullable
+
+status VARCHAR
+
+approved_by UUID
+
+approved_at TIMESTAMPTZ
+```
+
+---
+
+# 35. Compensation Components
+
+لا نخزن كل component كعمود.
+
+```text
+compensation.employee_compensation_components
+```
+
+```text
+component_record_id UUID PK
+
+employee_compensation_id UUID FK
+
+component_id UUID FK
+
+amount NUMERIC
+
+calculation_type VARCHAR
+
+percentage NUMERIC nullable
+
+quantity NUMERIC nullable
+
+rate NUMERIC nullable
+
+taxable BOOLEAN
+
+social_insurance_applicable BOOLEAN
+
+effective_from DATE
+effective_to DATE
+```
+
+---
+
+# 36. `compensation.salary_components`
+
+Master table:
+
+```text
+component_id UUID
+
+component_code
+
+component_name
+
+component_type
+
+calculation_method
+
+taxable_default
+
+insurance_default
+
+recurring
+
+status
+```
+
+Types:
+
+```text
+EARNING
+ALLOWANCE
+BONUS
+DEDUCTION
+EMPLOYER_CONTRIBUTION
+```
+
+---
+
+# 37. مثال Compensation
+
+```text
+Employee: EMP-00100
+
+Basic Salary        18,000
+Transportation       2,000
+Mobile                 500
+Field Allowance      RULE BASED
+KPI Bonus            VARIABLE
+```
+
+في DB:
+
+```text
+employee_compensation
+        │
+        ├── BASIC
+        ├── TRANSPORT
+        ├── MOBILE
+        └── ...
+```
+
+---
+
+# 38. Grade لا يساوي Salary
+
+Grade قد يحدد:
+
+```text
+Salary Range
+Benefits Eligibility
+Leave Rules
+Approval Authority
+```
+
+لكن راتب الشخص الحقيقي يبقى:
+
+```text
+employee_compensation
+```
+
+---
+
+# 39. Core Logical ERD
+
+الصورة الآن تصبح:
+
+```text
+                         ┌──────────────┐
+                         │    Tenant    │
+                         └──────┬───────┘
+                                │ 1:N
+                         ┌──────▼───────┐
+                         │   Company    │
+                         └──────┬───────┘
+                                │
+               ┌────────────────┴─────────────┐
+               │                              │
+               ▼                              ▼
+      Organization Unit                   Employee
+               │                              │
+          ┌────┴────┐                         │ 1:N
+          │         │                         ▼
+          ▼         ▼                    Employment
+         Job     Position                     │
+                    │                          │
+                    │                    ┌─────┼────────┐
+                    │                    │     │        │
+                    ▼                    ▼     ▼        ▼
+                Assignment <──────── Position Contract Compensation
+                    │
+                    ├── Project
+                    ├── Site
+                    ├── Location
+                    └── Manager
+```
+
+---
+
+# 40. Key Relationship Matrix
+
+| Parent           | Child                  | Cardinality   |
+| ---------------- | ---------------------- | ------------- |
+| Tenant           | Company                | 1:N           |
+| Tenant           | Employee               | 1:N           |
+| Company          | Org Unit               | 1:N           |
+| Org Unit         | Org Unit               | 1:N recursive |
+| Job              | Position               | 1:N           |
+| Org Unit         | Position               | 1:N           |
+| Position         | Position               | 1:N reporting |
+| Employee         | Employment             | 1:N           |
+| Company          | Employment             | 1:N           |
+| Employment       | Assignment             | 1:N           |
+| Position         | Assignment             | 1:N           |
+| Project          | Assignment             | 1:N           |
+| Employment       | Contract               | 1:N           |
+| Employment       | Compensation           | 1:N           |
+| Compensation     | Compensation Component | 1:N           |
+| Salary Component | Employee Component     | 1:N           |
+
+---
+
+# 41. أهم Unique Constraints
+
+لا نكتفي بالـPK.
+
+نحتاج مثلًا:
+
+```text
+UNIQUE(tenant_id, employee_code)
+
+UNIQUE(tenant_id, company_code)
+
+UNIQUE(tenant_id, job_code)
+
+UNIQUE(company_id, position_code)
+
+UNIQUE(company_id, employment_number)
+
+UNIQUE(company_id, contract_number)
+```
+
+---
+
+# 42. أهم Data Integrity Rules
+
+## Rule 1
+
+لا يمكن أن يكون Employment تابعًا لشركة خارج Tenant الموظف.
+
+## Rule 2
+
+لا يمكن Assignment أن يشير إلى Position من Company أخرى إلا في حالة Secondment مصرح بها.
+
+## Rule 3
+
+إجمالي Project Allocation للموظف لا يتجاوز:
+
+```text
+100%
+```
+
+إلا إذا Configuration يسمح بذلك.
+
+## Rule 4
+
+لا يوجد أكثر من:
+
+```text
+ONE PRIMARY ASSIGNMENT
+```
+
+فعال في نفس الفترة لنفس Employment.
+
+## Rule 5
+
+لا يجوز وجود عقدين Active متداخلين إلا إذا نوع العقد يسمح بذلك.
+
+## Rule 6
+
+لا يجوز وجود Compensation packages متداخلة زمنيًا لنفس pay basis بدون سبب معتمد.
+
+---
+
+# 43. Temporal Overlap Prevention
+
+هذه من أهم قواعد قاعدة البيانات.
+
+مثال:
+
+```text
+Salary A
+01-Jan → 31-Mar
+
+Salary B
+15-Mar → Current
+```
+
+هناك overlap.
+
+يجب منعها.
+
+PostgreSQL يمكنه دعم ذلك باستخدام:
+
+```text
+EXCLUDE CONSTRAINT
+```
+
+مع date ranges.
+
+وهذه ميزة قوية جدًا نستخدمها في:
+
+```text
+Assignments
+Compensation
+Contracts
+Reporting Lines
+Grade Assignment
+```
+
+---
+
+# 44. Effective-Dated Model
+
+بدل update:
+
+```text
+Salary 20K → 25K
+```
+
+نعمل:
+
+```text
+Record 1
+20K
+2026-01-01 → 2026-07-31
+
+Record 2
+25K
+2026-08-01 → NULL
+```
+
+ونفس النمط مع:
+
+```text
+Position
+Manager
+Project
+Department
+Grade
+Location
+```
+
+---
+
+# 45. لماذا هذا مهم للـPayroll؟
+
+إذا شغّلنا Payroll شهر يناير 2027 ونريد معرفة:
+
+> ما كان Department الموظف في يونيو 2026؟
+
+يجب أن تستطيع قاعدة البيانات الإجابة.
+
+لو كنا نغير Current Value فقط، لن تستطيع.
+
+---
+
+# 46. Audit Metadata
+
+كل جدول Business حساس يفضل أن يحتوي:
+
+```text
+created_at
+created_by
+
+updated_at
+updated_by
+
+version
+```
+
+وبعض الجداول:
+
+```text
+approved_at
+approved_by
+```
+
+---
+
+# 47. Optimistic Locking
+
+نضيف:
+
+```text
+version INT
+```
+
+للجداول الحساسة.
+
+مثال:
+
+مستخدمان يفتحان نفس Compensation.
+
+User A يعدله.
+
+User B يعدل نسخة قديمة.
+
+بدل overwrite صامت:
+
+```text
+409 Conflict
+```
+
+ويطلب Refresh.
+
+---
+
+# 48. Referential Delete Rules
+
+لا نستخدم Cascade Delete بشكل واسع.
+
+مثال:
+
+```text
+Employee
+```
+
+لا يجوز حذفه لأن له Payroll.
+
+لذلك:
+
+```text
+ON DELETE RESTRICT
+```
+
+غالبًا.
+
+بينما جداول configuration الفرعية قد تستخدم:
+
+```text
+ON DELETE CASCADE
+```
+
+بحذر.
+
+---
+
+# 49. Employee Status
+
+لا نضع Status واحدًا يغطي كل شيء.
+
+هناك فرق بين:
+
+```text
+Person Status
+
+Employment Status
+
+Assignment Status
+
+User Account Status
+```
+
+مثال:
+
+```text
+Employee:
+ACTIVE
+
+Employment:
+ACTIVE
+
+Assignment:
+SUSPENDED
+
+User:
+LOCKED
+```
+
+وهذا ممكن جدًا.
+
+---
+
+# 50. Employment Status State Machine
+
+أقترح:
+
+```text
+DRAFT
+PRE_EMPLOYMENT
+ACTIVE
+ON_LEAVE
+SUSPENDED
+NOTICE_PERIOD
+TERMINATED
+CLOSED
+```
+
+ولا يسمح بأي transition عشوائي.
+
+مثال:
+
+```text
+PRE_EMPLOYMENT
+      ↓
+ACTIVE
+      ↓
+NOTICE_PERIOD
+      ↓
+TERMINATED
+      ↓
+CLOSED
+```
+
+---
+
+# 51. Position State Machine
+
+```text
+PLANNED
+   ↓
+APPROVED
+   ↓
+VACANT
+   ↓
+FILLED
+   ↓
+VACANT
+```
+
+ويمكن:
+
+```text
+APPROVED → FROZEN
+APPROVED → CLOSED
+```
+
+---
+
+# 52. Contract State Machine
+
+```text
+DRAFT
+ ↓
+PENDING_SIGNATURE
+ ↓
+ACTIVE
+ ↓
+EXPIRING
+ ↓
+EXPIRED
+```
+
+أو:
+
+```text
+ACTIVE → TERMINATED
+```
+
+---
+
+# 53. Assignment State Machine
+
+```text
+PLANNED
+ ↓
+APPROVED
+ ↓
+ACTIVE
+ ↓
+ENDED
+```
+
+مع:
+
+```text
+ACTIVE → SUSPENDED
+```
+
+---
+
+# 54. Employee Code Generation
+
+لا ننشئه عشوائيًا من Backend.
+
+نستخدم:
+
+```text
+platform.number_sequences
+```
+
+مثال:
+
+```text
+AFR-EGY-EMP-000001
+```
+
+Configuration:
+
+```text
+Prefix: AFR-EGY-EMP
+Padding: 6
+Next Number: 1932
+```
+
+---
+
+# 55. Position Code كذلك
+
+مثال:
+
+```text
+EGY-OPS-PM-0012
+```
+
+لكن UUID يبقى PK الحقيقي.
+
+---
+
+# 56. External Identifiers
+
+نحتاج جدولًا عامًا لاحقًا:
+
+```text
+integration.external_entity_mappings
+```
+
+مثل:
+
+```text
+entity_type = EMPLOYEE
+internal_id = UUID
+system = NAMA_ERP
+external_id = 002315
+```
+
+نفس الموظف قد يكون:
+
+```text
+HR Code
+ERP ID
+Payroll ID
+Customer ID
+Insurance ID
+```
+
+ولا ينبغي أن تصبح هذه كلها PKs.
+
+---
+
+# 57. Core Master Data Boundary
+
+إذن ownership يصبح:
+
+```text
+Tenant              → Platform
+Company             → Platform
+
+Org Unit            → Organization
+Job                 → Organization
+Position            → Organization
+
+Employee            → Core HR
+Employment          → Core HR
+
+Assignment          → Workforce
+
+Contract            → Personnel
+
+Compensation        → Compensation
+```
+
+وهذه نقطة يجب ألا تتغير أثناء التطوير إلا بقرار Architecture.
+
+---
+
+# 58. ما الذي لا نضعه داخل Employee؟
+
+لا نضع:
+
+```text
+department
+job_title
+position
+manager
+project
+salary
+contract_end
+shift
+leave_balance
+insurance_status
+```
+
+كحقول مباشرة في `employees`.
+
+لأنها كلها Temporal أو Owned by Domains أخرى.
+
+---
+
+# 59. Employee API لاحقًا
+
+عندما يطلب Frontend:
+
+```text
+GET /employees/{id}
+```
+
+الـAPI يمكن أن يرجع View مجمعة:
+
+```json
+{
+  "employee": {},
+  "currentEmployment": {},
+  "primaryAssignment": {},
+  "currentPosition": {},
+  "currentContract": {},
+  "currentCompensation": {}
+}
+```
+
+لكن هذا **API View**.
+
+وليس جدولًا ضخمًا في Database.
+
+---
+
+# 60. Read Models
+
+لاحقًا يمكن بناء:
+
+```text
+employee_current_profile_view
+```
+
+تجمع:
+
+```text
+Employee
++
+Employment
++
+Assignment
++
+Position
++
+Job
++
+Department
++
+Manager
+```
+
+للـUI.
+
+وبذلك نحصل على سرعة قراءة بدون تكرار Business Data.
+
+---
+
+# 61. Materialized Views
+
+للـDashboard قد نستخدم:
+
+```text
+mv_current_employee_profile
+
+mv_headcount_by_department
+
+mv_vacant_positions
+
+mv_employee_project_allocations
+```
+
+لكنها:
+
+> Derived Read Models
+
+وليست Source of Truth.
+
+---
+
+# 62. أول Database Domain Boundary النهائي
+
+يمكن تمثيل النواة كالآتي:
+
+```text
+┌──────────────────────────────┐
+│ PLATFORM                     │
+│ tenants                      │
+│ companies                    │
+└──────────────┬───────────────┘
+               │
+┌──────────────▼───────────────┐
+│ ORGANIZATION                 │
+│ organization_units           │
+│ jobs                         │
+│ positions                    │
+└──────────────┬───────────────┘
+               │
+┌──────────────▼───────────────┐
+│ CORE HR                      │
+│ employees                    │
+│ employments                  │
+│ identifiers                  │
+│ contacts                     │
+└──────────────┬───────────────┘
+               │
+       ┌───────┴────────┐
+       │                │
+       ▼                ▼
+┌─────────────┐   ┌───────────────┐
+│ WORKFORCE   │   │ PERSONNEL     │
+│ assignments │   │ contracts     │
+└──────┬──────┘   └───────────────┘
+       │
+       ▼
+┌──────────────────────────────┐
+│ COMPENSATION                 │
+│ employee_compensations       │
+│ compensation_components      │
+└──────────────────────────────┘
+```
+
+# 63. ما أعتبره Core Schema v1.0
+
+لو أردنا غدًا أن يبدأ Backend Team، أول Migration set يجب أن يحتوي فقط تقريبًا:
+
+```text
+001 tenants
+002 companies
+
+003 organization_unit_types
+004 organization_units
+
+005 job_families
+006 jobs
+007 grades
+008 positions
+
+009 employees
+010 employee_contacts
+011 employee_identifiers
+
+012 employments
+
+013 employee_assignments
+
+014 employment_contracts
+
+015 salary_components
+016 employee_compensations
+017 employee_compensation_components
+
+018 external_entity_mappings
+
+019 audit_log
+020 domain_events
+```
+
+ليس 200 جدول من اليوم الأول.
+
+نبني قلب النظام أولًا.
+
+---
+
+# 64. قبل الانتقال لباقي Modules
+
+هناك خمسة قرارات Database يجب أن نثبتها الآن:
+
+**1. Person vs Employee:** أوصي حاليًا باستخدام `employee` كـCore Entity، وإذا توسع النظام لاحقًا ليشمل candidates/external workers بعمق يمكن إدخال `person` abstraction.
+
+**2. Organization Hierarchy:** جدول واحد recursive `organization_units`، وليس table لكل level.
+
+**3. Job vs Position:** فصل كامل ولا رجوع عنه.
+
+**4. Employee vs Assignment:** Project/Location/Manager لا تعيش داخل Employee.
+
+**5. Salary:** Effective-dated component model، وليس salary columns داخل employee.
+
+هذه القرارات الخمسة ستحدد جودة النظام بدرجة كبيرة.
+
+## الخطوة التالية
+
+الآن لدينا **Core Logical ERD**. الترتيب المنطقي التالي هو استكمال الـERD حول هذه النواة، لكن **بـModule Clusters** بدل القفز إلى جميع الجداول مرة واحدة:
+
+**Cluster A — Recruitment → Onboarding → Personnel/Documents → Employee Activation**
+
+ثم:
+
+**Cluster B — Attendance → Shift/Roster → Leave → Availability**
+
+ثم:
+
+**Cluster C — Compensation → Payroll → Allowances → KPI Payment → Cost Allocation**
+
+ثم Talent / Performance / Learning / ER / Service Desk / Offboarding.
+
+وأرى أن نبدأ مباشرة بـ **Cluster A ERD: Recruitment → Candidate → Offer → Onboarding → Employee Creation → Documents → Contract → Activation**؛ لأنه سيحدد بالضبط اللحظة التي تتحول فيها بيانات الـCandidate إلى Golden Employee Record، وهي واحدة من أخطر نقاط الـduplication في أي HR system.
