@@ -6,7 +6,7 @@ occupying host port 5432 — this stack uses **55432** instead).
 ## Option A — from the server shell
 
 ```bash
-git clone <repo-url> afro_hr_v2 && cd afro_hr_v2/deploy
+git clone https://github.com/motaha-2020/Afro_HR_V2.git afro_hr_v2 && cd afro_hr_v2/deploy
 cp .env.example .env && nano .env      # set POSTGRES_PASSWORD
 docker compose -p afrohr up -d
 docker logs -f afrohr-migrate          # should end with "migrations + seed applied"
@@ -14,7 +14,7 @@ docker logs -f afrohr-migrate          # should end with "migrations + seed appl
 
 ## Option B — from Portainer
 
-Stacks → Add stack → Repository → point at this repo, compose path
+Stacks → Add stack → Repository → URL `https://github.com/motaha-2020/Afro_HR_V2`, compose path
 `deploy/docker-compose.yml`, and add `POSTGRES_PASSWORD` as an environment
 variable. Deploy.
 
